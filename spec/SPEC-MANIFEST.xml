@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPEC-MANIFEST.xml — Progressive Disclosure Index for Digital Call Board
+
+  PURPOSE: An AI agent reads THIS FILE FIRST to understand the spec structure,
+  then uses Read tool with offset/limit to load only the sections it needs.
+  This avoids loading all 10 specs (~3000 lines) into context at once.
+
+  USAGE PATTERN:
+  1. Agent reads this manifest (small, fits in context)
+  2. Agent identifies which spec(s) and section(s) are relevant to its task
+  3. Agent reads ONLY those sections using: Read(file, offset=line, limit=N)
+  4. Agent never needs to load a full spec unless doing a cross-cutting change
+
+  ALL line numbers are approximate (within +/- 3 lines). Always read a few
+  extra lines above/below the target.
+-->
+<manifest version="4" updated="2026-03-21" project="Digital Call Board">
+
+  <!-- ============================================================
+       PROJECT SUMMARY (read this to understand what you're building)
+       ============================================================ -->
+  <summary>
+    <product>Digital Call Board — a web app replacing the physical backstage call board for theater productions</product>
+    <stack>Next.js 14+ App Router, TypeScript strict, Drizzle ORM, PostgreSQL 16, Tailwind CSS, shadcn/ui, NextAuth.js, Nodemailer (SMTP), Supabase (prod DB + Storage + Realtime), Vercel (prod hosting), Docker (dev only)</stack>
+    <theme>Theater backstage aesthetic — warm dark wood, cork boards, amber work lights, Playfair Display serif headings, paper-pinned bulletin posts. NOT a generic SaaS app.</theme>
+    <roles count="3">
+      <role name="director" level="owner">Creates theaters/productions, manages schedule, manages members, full admin</role>
+      <role name="staff" level="admin">Elevated from Cast by Director. Can post, chat with anyone, view conflicts. Cannot delete production or manage other staff.</role>
+      <role name="cast" level="member">Joins via invite link. Views bulletin/schedule, submits conflicts once, chats with director/staff only. Cannot message other cast.</role>
+    </roles>
+    <invite-model>Single invite link per production. Everyone joins as Cast. Director promotes to Staff.</invite-model>
+    <env-vars note="SMTP vars required for transactional email (see SPEC-007 Section 4.2)">
+      <var name="SMTP_HOST" description="SMTP server hostname" />
+      <var name="SMTP_PORT" description="SMTP port (587 for TLS)" />
+      <var name="SMTP_USER" description="SMTP username" />
+      <var name="SMTP_PASSWORD" description="SMTP password" />
+      <var name="EMAIL_FROM" description="From address for emails (e.g., noreply@yourdomain.com)" />
+    </env-vars>
+  </summary>
+
+  <!-- ============================================================
+       DATABASE TABLES (quick reference — read spec for full SQL)
+       ============================================================ -->
+  <database>
+    <table name="users" spec="SPEC-002" line="314" columns="id, email, name, password_hash, google_id, email_verified, avatar_url, age_range, failed_login_attempts, locked_until, created_at, updated_at" />
+    <table name="sessions" spec="SPEC-002" line="342" columns="id, token(256-bit), user_id, expires_at, created_at" />
+    <table name="password_reset_tokens" spec="SPEC-002" line="352" columns="id, user_id, token_hash(SHA-256), expires_at, created_at" />
+    <table name="email_verification_tokens" spec="SPEC-002" line="128" columns="id, user_id, token_hash, expires_at, created_at" />
+    <table name="production_members" spec="SPEC-002" line="360" columns="id, production_id, user_id, role(director|staff|cast), joined_at" />
+    <table name="invite_tokens" spec="SPEC-002" line="369" columns="id, production_id, token, expires_at(30d), max_uses(100), use_count, created_at" />
+    <table name="theaters" spec="SPEC-003" line="207" columns="id, owner_id, name(200), city(100), state(100), created_at" />
+    <table name="productions" spec="SPEC-003" line="216" columns="id, theater_id, name(200), estimated_cast_size, first_rehearsal, opening_night, closing_night, is_archived, archived_at, created_at, updated_at" />
+    <table name="rehearsal_dates" spec="SPEC-003" line="236" columns="id, production_id, date, start_time, end_time, type(regular|tech|dress|performance), note(1000), is_cancelled, is_deleted, deleted_at, created_at" />
+    <table name="bulletin_posts" spec="SPEC-003" line="251" columns="id, production_id, author_id, title(200), body(10000/markdown), is_pinned, created_at, updated_at" />
+    <table name="cast_profiles" spec="SPEC-004" line="138" columns="id, production_id, user_id, display_name(200), phone(20), role_character(200), headshot_url, created_at, updated_at" />
+    <table name="cast_conflicts" spec="SPEC-004" line="155" columns="id, production_id, user_id, rehearsal_date_id, reason(500), submitted_at" />
+    <table name="conflict_submissions" spec="SPEC-004" line="165" columns="id, production_id, user_id, submitted_at" />
+    <table name="conversations" spec="SPEC-005" line="139" columns="id, production_id, created_at" />
+    <table name="conversation_participants" spec="SPEC-005" line="145" columns="id, conversation_id, user_id" />
+    <table name="messages" spec="SPEC-005" line="156" columns="id, conversation_id, sender_id, body(2000), is_read, is_deleted, created_at" />
+  </database>
+
+  <!-- ============================================================
+       SPECS — Progressive Disclosure Index
+       Each spec has: constraints (read first), sections (read on demand)
+       ============================================================ -->
+
+  <spec id="SPEC-001" file="spec/SPEC-001-product-overview.md" title="Product Overview and User Roles">
+    <success-metric>An AI reading only this spec can correctly answer "who can do what" for any action in the system without ambiguity</success-metric>
+    <immutable>
+      <constraint>Exactly 3 roles: director, staff, cast</constraint>
+      <constraint>Single invite link per production — no per-role links</constraint>
+      <constraint>Age gate at 13+ (COPPA)</constraint>
+      <constraint>90-day PII deletion after production archive</constraint>
+      <constraint>Cast cannot message cast</constraint>
+    </immutable>
+    <non-goals>Multi-tenant SaaS, native mobile apps, audience features, payments, parent accounts, auto-moderation</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="8" end="36" load="always" />
+      <section name="Problem Statement" line="38" end="43" load="on-demand" />
+      <section name="Target Users (3 roles)" line="50" end="103" load="when-implementing-roles" />
+      <section name="User Hierarchy and Lifecycle" line="105" end="120" load="when-implementing-roles" />
+      <section name="Scope (In/Out)" line="122" end="143" load="on-demand" />
+      <section name="Non-Functional Requirements" line="144" end="151" load="on-demand" />
+      <section name="Data Privacy and Compliance" line="152" end="187" load="when-implementing-auth-or-profiles" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-002" file="spec/SPEC-002-auth.md" title="Authentication and Authorization">
+    <success-metric>No unauthenticated request accesses protected data. No user performs actions their role forbids. No response reveals email existence.</success-metric>
+    <immutable>
+      <constraint>bcrypt cost factor 12</constraint>
+      <constraint>Session tokens 256-bit (32 bytes hex)</constraint>
+      <constraint>Invite tokens min 32 chars, 30-day expiry, max 100 uses</constraint>
+      <constraint>Rate limit 5/min/IP login, lockout after 10 failed in 15min</constraint>
+      <constraint>CSRF on all POST/PUT/DELETE</constraint>
+      <constraint>Security headers (CSP, HSTS, X-Frame-Options) on all responses</constraint>
+    </immutable>
+    <non-goals>Magic link auth, SMS auth, non-Google social login, 2FA/MFA, SSO/SAML, admin panel</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="44" load="always" />
+      <section name="Overview" line="46" end="53" load="on-demand" />
+      <section name="Google OAuth Flow" line="56" end="74" load="when-implementing-auth" />
+      <section name="Email/Password Flow" line="76" end="95" load="when-implementing-auth" />
+      <section name="Registration Flow + Age Gate" line="97" end="108" load="when-implementing-auth" />
+      <section name="Email Verification Token" line="110" end="136" load="when-implementing-auth" />
+      <section name="Invite Link Flow" line="138" end="159" load="when-implementing-invites" />
+      <section name="Password Reset Flow" line="161" end="179" load="when-implementing-auth" />
+      <section name="Email Delivery" line="181" end="197" load="when-implementing-email" />
+      <section name="RBAC Roles and Permission Matrix" line="198" end="232" load="when-implementing-middleware" />
+      <section name="Middleware" line="233" end="240" load="when-implementing-middleware" />
+      <section name="API Error Response Format" line="242" end="277" load="when-implementing-any-api" />
+      <section name="Session Management" line="279" end="288" load="when-implementing-auth" />
+      <section name="Security Headers" line="298" end="309" load="when-implementing-middleware" />
+      <section name="Database Schema (Auth)" line="311" end="388" load="when-implementing-auth-or-migrations" />
+      <section name="Test Scenarios (AUTH-01 to AUTH-29)" line="390" end="423" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-003" file="spec/SPEC-003-director-flow.md" title="Director Flow">
+    <success-metric>Identical wizard inputs produce byte-identical schedule output. Director manages full production lifecycle from dashboard.</success-metric>
+    <immutable>
+      <constraint>first_rehearsal &lt;= opening_night &lt;= closing_night (DB CHECK)</constraint>
+      <constraint>All text fields have max-length DB CHECK constraints</constraint>
+      <constraint>Markdown sanitized server-side before storage</constraint>
+      <constraint>Soft-delete default for rehearsal dates</constraint>
+      <constraint>Tech week overrides day filter; blocked dates override tech week</constraint>
+    </immutable>
+    <non-goals>Drag-and-drop schedule, calendar sync, email notifications, multi-production view, recurring templates</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="38" load="always" />
+      <section name="Director Onboarding Flow" line="44" end="53" load="when-implementing-onboarding" />
+      <section name="Add Theater/School" line="55" end="68" load="when-implementing-theater-crud" />
+      <section name="Add Production + Date Validation" line="70" end="87" load="when-implementing-production-crud" />
+      <section name="Schedule Builder Wizard (7 questions)" line="88" end="121" load="when-implementing-schedule-generator" />
+      <section name="Production Dashboard" line="123" end="126" load="when-implementing-dashboard" />
+      <section name="Schedule View" line="127" end="131" load="when-implementing-schedule-ui" />
+      <section name="Bulletin Board (Markdown, editing)" line="133" end="143" load="when-implementing-bulletin" />
+      <section name="Invite Link Section" line="145" end="152" load="when-implementing-invites" />
+      <section name="Member Roster (promote/demote/remove/reset)" line="154" end="162" load="when-implementing-roster" />
+      <section name="Demotion Side Effects" line="164" end="171" load="when-implementing-roster" />
+      <section name="Production Archival" line="173" end="188" load="when-implementing-archive" />
+      <section name="Schedule Manipulation" line="190" end="202" load="when-implementing-schedule-editing" />
+      <section name="Database Schema (Director)" line="204" end="265" load="when-implementing-migrations" />
+      <section name="Authorization Rules" line="267" end="274" load="when-implementing-middleware" />
+      <section name="Test Scenarios (DIR-01 to DIR-23)" line="275" end="302" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-004" file="spec/SPEC-004-cast-flow.md" title="Cast Flow">
+    <success-metric>Cast completes onboarding in under 3 minutes. Conflicts submitted exactly once unless Director resets.</success-metric>
+    <immutable>
+      <constraint>Conflicts immutable after submission — no edit endpoint</constraint>
+      <constraint>conflict_submissions UNIQUE(production_id, user_id) is authoritative guard</constraint>
+      <constraint>JPEG/PNG only via magic bytes, 5MB max, EXIF stripped, UUID filenames</constraint>
+      <constraint>Conflict reasons max 500 chars (DB CHECK)</constraint>
+    </immutable>
+    <non-goals>Cast-to-cast messaging, cast editing schedule, cast editing conflicts, cast seeing others' conflicts, self-service conflict reset, video/audio uploads</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="39" load="always" />
+      <section name="Cast Onboarding Flow" line="45" end="63" load="when-implementing-invite-join" />
+      <section name="Cast Profile Setup" line="65" end="88" load="when-implementing-profiles" />
+      <section name="Image Upload Requirements" line="80" end="87" load="when-implementing-uploads" />
+      <section name="Conflict Submission + Confirmation" line="89" end="110" load="when-implementing-conflicts" />
+      <section name="Race Condition Handling" line="112" end="122" load="when-implementing-conflicts" />
+      <section name="Director Conflict Reset" line="124" end="133" load="when-implementing-roster-actions" />
+      <section name="Database Schema (Profiles + Conflicts)" line="135" end="178" load="when-implementing-migrations" />
+      <section name="Bulletin Board (Cast View)" line="180" end="200" load="when-implementing-bulletin" />
+      <section name="Cast Navigation" line="202" end="222" load="when-implementing-nav" />
+      <section name="Test Scenarios (CAST-01 to CAST-20)" line="223" end="247" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-005" file="spec/SPEC-005-chat.md" title="Chat System">
+    <success-metric>Cast can NEVER see or message another cast member, even via direct API. Messages deliver in under 2 seconds via WebSocket.</success-metric>
+    <immutable>
+      <constraint>Cast-to-cast blocked at API level, not just UI (403)</constraint>
+      <constraint>Messages max 2000 chars (DB CHECK)</constraint>
+      <constraint>WebSocket validates session on upgrade + every 5 min (4401 close code)</constraint>
+      <constraint>Rate limit 30 messages/min/user</constraint>
+      <constraint>Director can delete any message; self-delete within exactly 5 minutes</constraint>
+    </immutable>
+    <non-goals>Group chats, file sharing, read receipts, typing indicators, message search, chat export, E2E encryption, automated filtering</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="42" load="always" />
+      <section name="Chat Rules by Role" line="48" end="56" load="when-implementing-chat-boundaries" />
+      <section name="Conversation Model + Deduplication" line="60" end="67" load="when-implementing-chat" />
+      <section name="Message Flow" line="69" end="77" load="when-implementing-chat" />
+      <section name="Contact List by Role" line="79" end="87" load="when-implementing-chat-contacts" />
+      <section name="Starting a New Conversation" line="89" end="95" load="when-implementing-chat" />
+      <section name="WebSocket Authentication" line="104" end="113" load="when-implementing-websocket" />
+      <section name="Rate Limiting" line="115" end="119" load="when-implementing-chat" />
+      <section name="Message Format" line="121" end="130" load="when-implementing-chat" />
+      <section name="Read Status" line="132" end="134" load="when-implementing-chat" />
+      <section name="Database Schema (Chat)" line="136" end="172" load="when-implementing-migrations" />
+      <section name="Message Moderation" line="174" end="188" load="when-implementing-chat-moderation" />
+      <section name="Access Control Enforcement" line="190" end="197" load="when-implementing-chat-middleware" />
+      <section name="Test Scenarios (CHAT-01 to CHAT-20)" line="198" end="222" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-006" file="spec/SPEC-006-schedule.md" title="Schedule and Conflict Management">
+    <success-metric>Identical wizard inputs produce byte-identical schedule. Director sees per-date conflict counts in one click.</success-metric>
+    <immutable>
+      <constraint>Schedule generation is a pure function of inputs</constraint>
+      <constraint>Conflict submission all-or-nothing in single transaction</constraint>
+      <constraint>conflict_submissions UNIQUE constraint is the authority</constraint>
+      <constraint>Soft-delete does NOT cascade-delete conflicts</constraint>
+      <constraint>start_time &lt; end_time (DB CHECK)</constraint>
+    </immutable>
+    <non-goals>Drag-and-drop calendar, recurring templates, calendar export, auto-conflict resolution, cast self-service editing, partial submission</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="38" load="always" />
+      <section name="Rehearsal Date Types + Colors" line="50" end="57" load="when-implementing-schedule-ui" />
+      <section name="Schedule Generation Algorithm" line="59" end="106" load="when-implementing-schedule-generator" />
+      <section name="Generated Schedule Structure" line="108" end="116" load="when-implementing-schedule" />
+      <section name="Conflict Submission Flow" line="117" end="143" load="when-implementing-conflicts" />
+      <section name="Director Aggregated View" line="144" end="166" load="when-implementing-director-schedule" />
+      <section name="Schedule Modification + Soft Delete" line="168" end="187" load="when-implementing-schedule-editing" />
+      <section name="Cast Schedule View" line="188" end="196" load="when-implementing-cast-schedule" />
+      <section name="Industry Research Notes" line="198" end="206" load="on-demand" />
+      <section name="Test Scenarios (SCHED-01 to SCHED-14)" line="208" end="226" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-007" file="spec/SPEC-007-infrastructure.md" title="Infrastructure and Deployment">
+    <success-metric>Dev: docker compose up db + npm run dev starts local env. Prod: Supabase + Vercel deployment running. Push to main auto-deploys within 2 minutes.</success-metric>
+    <immutable>
+      <constraint>.env never committed to git</constraint>
+      <constraint>NEXTAUTH_SECRET min 32 bytes random</constraint>
+      <constraint>Database queries use Drizzle ORM only — no supabase-js for data access</constraint>
+      <constraint>Supabase service role key never exposed to client</constraint>
+      <constraint>STORAGE_PROVIDER and NEXT_PUBLIC_REALTIME_PROVIDER env vars control dev/prod backends</constraint>
+    </immutable>
+    <non-goals>Kubernetes, horizontal scaling, Redis, Supabase JS client for database queries</non-goals>
+    <sections>
+      <section name="Goals (Immutable)" line="9" end="17" load="always" />
+      <section name="Non-Goals (Explicit Exclusions)" line="19" end="26" load="always" />
+      <section name="Success Metric" line="28" end="30" load="always" />
+      <section name="Immutable Constraints" line="32" end="40" load="always" />
+      <section name="Overview" line="43" end="52" load="on-demand" />
+      <section name="Tech Stack" line="54" end="69" load="when-setting-up-project" />
+      <section name="Architecture Diagram" line="71" end="92" load="on-demand" />
+      <section name="Development Environment" line="94" end="137" load="when-setting-up-project" />
+      <section name="Production Environment (Supabase + Vercel)" line="139" end="183" load="when-deploying-production" />
+      <section name="Environment Variables" line="185" end="224" load="when-setting-up-project" />
+      <section name="Database Management" line="226" end="272" load="when-implementing-db-ops" />
+      <section name=".gitignore" line="274" end="287" load="when-setting-up-project" />
+      <section name="Monitoring" line="289" end="293" load="on-demand" />
+      <section name="Logging" line="295" end="311" load="when-implementing-logging" />
+      <section name="Self-Hosted Fallback" line="313" end="324" load="on-demand" />
+      <section name="Test Scenarios (INFRA-01 to INFRA-12)" line="326" end="342" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-008" file="spec/SPEC-008-tdd.md" title="TDD Strategy and Test Plan">
+    <success-metric>No PR merges with failing tests. Every scenario ID has a test function. CI completes in under 5 minutes.</success-metric>
+    <immutable>
+      <constraint>TDD cycle: RED then GREEN then REFACTOR — never skip RED</constraint>
+      <constraint>Integration tests use real PostgreSQL, not mocks</constraint>
+      <constraint>Security tests run in every CI pipeline</constraint>
+      <constraint>Test DB is callboard_test (separate from dev/prod)</constraint>
+      <constraint>Each test suite wraps in transaction that rolls back</constraint>
+    </immutable>
+    <non-goals>E2E browser tests in v1, perf testing, visual regression, 100% coverage everywhere, manual QA docs</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="38" load="always" />
+      <section name="TDD Cycle" line="44" end="54" load="on-demand" />
+      <section name="Test Types" line="57" end="73" load="on-demand" />
+      <section name="Test Organization (directory tree)" line="75" end="116" load="when-creating-test-files" />
+      <section name="Test Tooling" line="118" end="127" load="when-setting-up-tests" />
+      <section name="Test Database Strategy" line="128" end="133" load="when-setting-up-tests" />
+      <section name="Test-to-Spec Mapping Table" line="135" end="149" load="when-writing-tests" />
+      <section name="Coverage Requirements" line="151" end="155" load="on-demand" />
+      <section name="Security Test Scenarios (SEC-01 to SEC-10)" line="157" end="172" load="when-writing-security-tests" />
+      <section name="CI Integration" line="174" end="185" load="when-setting-up-ci" />
+      <section name="Implementation Order (10 phases)" line="187" end="203" load="when-planning-work" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-009" file="spec/SPEC-009-frontend-architecture.md" title="Frontend Architecture and Theater Design System">
+    <success-metric>User feels backstage at a theater, not using generic SaaS. Fully usable at 375px. Every element keyboard-navigable.</success-metric>
+    <immutable>
+      <constraint>Tailwind CSS only — no CSS-in-JS</constraint>
+      <constraint>shadcn/ui for all base components</constraint>
+      <constraint>Playfair Display serif headings, Libre Franklin body</constraint>
+      <constraint>Warm HSL hue 25-40 for backgrounds — no cold blue/gray</constraint>
+      <constraint>No light mode, no image textures (CSS only)</constraint>
+      <constraint>4.5:1 contrast, 44x44px touch targets</constraint>
+    </immutable>
+    <non-goals>Light mode, CSS-in-JS, custom component library, animations, image textures, PWA, offline mode, native app</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="46" load="always" />
+      <section name="Tech Stack (Frontend)" line="52" end="67" load="when-setting-up-frontend" />
+      <section name="Project Structure (file tree)" line="68" end="134" load="when-creating-files" />
+      <section name="Theater Design Language" line="136" end="155" load="when-implementing-theme" />
+      <section name="Color Palette (all tokens)" line="156" end="175" load="when-implementing-theme" />
+      <section name="Texture and Surface CSS" line="176" end="184" load="when-implementing-theme" />
+      <section name="Schedule Color Codes" line="186" end="196" load="when-implementing-schedule-ui" />
+      <section name="Typography" line="197" end="208" load="when-implementing-theme" />
+      <section name="Spacing and Layout" line="210" end="217" load="when-implementing-layout" />
+      <section name="Responsive Breakpoints" line="219" end="233" load="when-implementing-layout" />
+      <section name="Navigation Structure (per role)" line="235" end="263" load="when-implementing-nav" />
+      <section name="Accessibility Requirements" line="265" end="273" load="when-implementing-components" />
+      <section name="Loading/Empty/Error States" line="275" end="284" load="when-implementing-pages" />
+      <section name="Client-Side Validation" line="286" end="294" load="when-implementing-forms" />
+      <section name="Test Scenarios (FE-01 to FE-10)" line="296" end="310" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <spec id="SPEC-010" file="spec/SPEC-010-pages-and-screens.md" title="Pages and Screens">
+    <success-metric>AI builder implements every page with correct layout, nav, access control, and behavior without clarifying questions.</success-metric>
+    <immutable>
+      <constraint>19 routes total</constraint>
+      <constraint>Cast sees only Bulletin Board + Chat nav</constraint>
+      <constraint>Dashboard shows: quick stats, upcoming schedule, recent posts, invite link</constraint>
+      <constraint>Bulletin board default tab is Posters</constraint>
+      <constraint>Conflict submission: 2 states only (not submitted / submitted read-only)</constraint>
+      <constraint>Schedule wizard: exactly 7 steps</constraint>
+      <constraint>Account deletion requires re-authentication</constraint>
+    </immutable>
+    <non-goals>Pixel-perfect mockups, animation specs, micro-copy, print styles, PDF export, deep-linking to posts</non-goals>
+    <sections>
+      <section name="Goals/Non-Goals/Constraints" line="9" end="41" load="always" />
+      <section name="Route Map (all 19 routes)" line="47" end="70" load="when-implementing-routing" />
+      <section name="Login Page" line="73" end="103" load="when-implementing-auth-ui" />
+      <section name="Registration Page" line="105" end="138" load="when-implementing-auth-ui" />
+      <section name="Dashboard" line="140" end="169" load="when-implementing-dashboard" />
+      <section name="Create Production + Schedule Wizard" line="171" end="192" load="when-implementing-wizard" />
+      <section name="Production Dashboard" line="194" end="223" load="when-implementing-dashboard" />
+      <section name="Schedule Page" line="225" end="240" load="when-implementing-schedule-ui" />
+      <section name="Bulletin Board Page" line="242" end="278" load="when-implementing-bulletin-ui" />
+      <section name="Member Roster Page" line="280" end="303" load="when-implementing-roster-ui" />
+      <section name="Chat Page" line="305" end="334" load="when-implementing-chat-ui" />
+      <section name="Conflict Submission Page" line="336" end="389" load="when-implementing-conflicts-ui" />
+      <section name="Cast Profile Setup Page" line="391" end="417" load="when-implementing-profiles-ui" />
+      <section name="Account Settings Page" line="419" end="429" load="when-implementing-account" />
+      <section name="Production Settings Page" line="431" end="440" load="when-implementing-settings" />
+      <section name="Page Transition Flows" line="442" end="459" load="when-implementing-routing" />
+      <section name="Test Scenarios (PAGE-01 to PAGE-12)" line="461" end="477" load="when-writing-tests" />
+    </sections>
+  </spec>
+
+  <!-- ============================================================
+       CROSS-REFERENCE GUIDE
+       "I'm working on X, which specs do I need?"
+       ============================================================ -->
+  <task-routing>
+    <task name="Setting up project from scratch" specs="SPEC-007:Tech Stack, SPEC-007:Development Environment, SPEC-007:Environment Variables, SPEC-007:.gitignore, SPEC-009:Project Structure" />
+    <task name="Implementing auth (login/register/OAuth)" specs="SPEC-002:Auth Flows, SPEC-002:Database Schema, SPEC-001:Data Privacy (age gate)" />
+    <task name="Implementing email delivery" specs="SPEC-002:Email Delivery, SPEC-007:Tech Stack (Nodemailer)" />
+    <task name="Implementing invite link join" specs="SPEC-002:Invite Link Flow, SPEC-004:Cast Onboarding Flow" />
+    <task name="Implementing RBAC middleware" specs="SPEC-002:Permission Matrix, SPEC-002:Middleware, SPEC-002:Error Format, SPEC-003:Authorization Rules" />
+    <task name="Implementing schedule generator" specs="SPEC-003:Schedule Builder Wizard, SPEC-006:Schedule Generation Algorithm, SPEC-006:Rehearsal Date Types" />
+    <task name="Implementing conflict submission" specs="SPEC-004:Conflict Submission, SPEC-004:Race Condition, SPEC-006:Conflict Management" />
+    <task name="Implementing bulletin board" specs="SPEC-003:Bulletin Board, SPEC-004:Bulletin Board Cast View, SPEC-010:Bulletin Board Page" />
+    <task name="Implementing chat" specs="SPEC-005:Chat Architecture, SPEC-005:WebSocket Auth, SPEC-005:Moderation, SPEC-005:Database Schema, SPEC-005:Starting a New Conversation, SPEC-005:Read Status" />
+    <task name="Implementing the frontend theme" specs="SPEC-009:Theater Design System, SPEC-009:Color Palette, SPEC-009:Typography, SPEC-009:Textures" />
+    <task name="Implementing any page" specs="SPEC-010:(specific page section), SPEC-009:Navigation Structure, SPEC-009:Loading/Empty States" />
+    <task name="Writing tests" specs="SPEC-008:Test Organization, SPEC-008:Test-to-Spec Mapping, (relevant spec):Test Scenarios" />
+    <task name="Database migrations" specs="SPEC-002:Database Schema, SPEC-003:Database Schema, SPEC-004:Database Schema, SPEC-005:Database Schema" />
+    <task name="Director roster management" specs="SPEC-003:Member Roster, SPEC-003:Demotion Side Effects, SPEC-004:Director Conflict Reset, SPEC-001:Staff Elevation Model" />
+    <task name="Production archival" specs="SPEC-003:Production Archival, SPEC-001:Data Privacy (90-day deletion), SPEC-007:Database Management" />
+  </task-routing>
+
+  <!-- ============================================================
+       IMPLEMENTATION PHASES (from SPEC-008)
+       ============================================================ -->
+  <phases>
+    <phase n="1" name="Infrastructure" specs="SPEC-007" priority="setup">Supabase project, Vercel project, local dev DB, env config</phase>
+    <phase n="2" name="Auth" specs="SPEC-002" priority="critical">Google OAuth + email/password, sessions, middleware, email delivery</phase>
+    <phase n="3" name="Director Theater + Production CRUD" specs="SPEC-003" priority="critical">Create theater, create production</phase>
+    <phase n="4" name="Schedule Builder" specs="SPEC-003, SPEC-006" priority="critical">7-question wizard, schedule generation</phase>
+    <phase n="5" name="Invite Link + Cast Onboarding" specs="SPEC-002, SPEC-004" priority="critical">Join flow, profile setup</phase>
+    <phase n="6" name="Cast Conflict Submission" specs="SPEC-004, SPEC-006" priority="critical">One-time conflicts, aggregated view</phase>
+    <phase n="7" name="Bulletin Board" specs="SPEC-003, SPEC-004" priority="high">Markdown posts, cast view</phase>
+    <phase n="8" name="Chat System" specs="SPEC-005" priority="high">WebSocket, role boundaries, moderation</phase>
+    <phase n="9" name="Director Aggregated Conflict View" specs="SPEC-006" priority="high">Per-date counts, summary table</phase>
+    <phase n="10" name="Polish" specs="SPEC-009, SPEC-010, SPEC-001" priority="medium">Theater theme, responsive, accessibility</phase>
+  </phases>
+
+</manifest>
