@@ -262,6 +262,7 @@ SELECT cron.schedule(
   'pii-cleanup',
   '0 3 * * *',  -- Daily at 3:00 AM UTC
   $$
+    BEGIN;
     WITH expired AS (
       SELECT id FROM productions
       WHERE is_archived = TRUE
@@ -280,6 +281,7 @@ SELECT cron.schedule(
     DELETE FROM conversations WHERE production_id IN (SELECT id FROM expired);
     DELETE FROM bulletin_posts WHERE production_id IN (SELECT id FROM expired);
     DELETE FROM invite_tokens WHERE production_id IN (SELECT id FROM expired);
+    COMMIT;
   $$
 );
 ```

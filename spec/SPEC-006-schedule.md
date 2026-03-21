@@ -196,7 +196,7 @@ The default "remove" action is a soft-delete. Hard-delete MUST show a confirmati
 
 When the Director performs any schedule modification (add, soft-delete, hard-delete, cancel, change date/time), the system MUST:
 
-1. Create a bulletin post with `is_system = TRUE` and `author_id = NULL`
+1. Create a bulletin post with `author_id` set to the Director's user_id who triggered the action
 2. Post title: "Schedule Updated"
 3. Post body: A machine-generated description following this format:
    - Add: "Rehearsal added: {date} {startTime}-{endTime} ({type})"

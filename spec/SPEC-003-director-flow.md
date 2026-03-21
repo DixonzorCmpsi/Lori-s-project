@@ -66,6 +66,7 @@ The Director registers their venue. This is the top-level organizational unit.
 **Behavior:**
 - In v1, a Director MUST have exactly one theater. The UI MUST NOT render a "create second theater" option
 - Theater is the parent container for productions
+- If the Director already has a theater, `POST /api/theaters` MUST return `409 Conflict` with message "You already have a theater." The `/theater/new` page MUST redirect to the dashboard if the Director already has a theater.
 
 ## 4. Add Production
 
@@ -84,6 +85,7 @@ Within a theater, the Director creates a production.
 - `first_rehearsal <= opening_night <= closing_night` — enforced at both API and database level
 - All dates must be in the future at time of creation
 - These constraints are CHECK constraints in the `productions` table
+- If the Director already has an active (non-archived) production, `POST /api/productions` MUST return `409 Conflict` with message "You already have an active production." The `/production/new` page MUST redirect to the existing production if one exists.
 
 ## 5. Schedule Builder Questions
 
