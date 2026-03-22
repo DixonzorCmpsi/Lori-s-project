@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { users, emailVerificationTokens } from "@/lib/db/schema";
+import { db } from "@/server/db";
+import { users, emailVerificationTokens } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { registerSchema } from "@/lib/validators";
-import { hashPassword, validatePasswordStrength } from "@/lib/auth/password";
-import { computeAge, deriveAgeRange } from "@/lib/auth/age-gate";
-import { generateToken, hashToken } from "@/lib/auth/tokens";
-import { sendVerificationEmail } from "@/lib/email";
-import { apiError, validationError } from "@/lib/api-error";
+import { registerSchema } from "@/shared/validators";
+import { hashPassword, validatePasswordStrength } from "@/server/auth/password";
+import { computeAge, deriveAgeRange } from "@/server/auth/age-gate";
+import { generateToken, hashToken } from "@/server/auth/tokens";
+import { sendVerificationEmail } from "@/server/email";
+import { apiError, validationError } from "@/server/api-error";
 
 export async function POST(request: NextRequest) {
   let body: unknown;

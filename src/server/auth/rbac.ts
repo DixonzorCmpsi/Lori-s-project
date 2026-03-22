@@ -1,8 +1,8 @@
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { productionMembers } from "@/lib/db/schema";
+import { auth } from "@/server/auth";
+import { db } from "@/server/db";
+import { productionMembers } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
-import { unauthorized, forbidden } from "@/lib/api-error";
+import { unauthorized, forbidden } from "@/server/api-error";
 
 type Role = "director" | "staff" | "cast";
 

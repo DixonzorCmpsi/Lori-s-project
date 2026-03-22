@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeAge, deriveAgeRange } from "@/lib/auth/age-gate";
+import { computeAge, deriveAgeRange } from "@/server/auth/age-gate";
 
 describe("Age gate", () => {
   // AUTH-26: User under 13 tries to register

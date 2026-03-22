@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev\" \"npx tsx src/lib/realtime/ws-server.ts\"",
+    "dev": "concurrently \"next dev\" \"npx tsx src/server/realtime/ws-server.ts\"",
     "dev:next": "next dev",
     "build": "next build",
     "start": "next start",

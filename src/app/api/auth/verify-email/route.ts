@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { users, emailVerificationTokens } from "@/lib/db/schema";
+import { db } from "@/server/db";
+import { users, emailVerificationTokens } from "@/server/db/schema";
 import { eq, and, gt } from "drizzle-orm";
-import { hashToken } from "@/lib/auth/tokens";
-import { apiError } from "@/lib/api-error";
+import { hashToken } from "@/server/auth/tokens";
+import { apiError } from "@/server/api-error";
 
 export async function POST(request: NextRequest) {
   let body: { token?: string };

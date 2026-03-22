@@ -76,62 +76,64 @@ src/
       forgot-password/page.tsx    -- Password reset request
       reset-password/page.tsx     -- New password form (from email link)
       verify-email/page.tsx       -- Email verification handler
+      complete-profile/page.tsx   -- Post-OAuth age gate (Google users)
     (join)/
       join/page.tsx               -- Invite link handler (token validation + redirect)
     (dashboard)/
-      layout.tsx                  -- Authenticated layout (sidebar/nav)
+      layout.tsx                  -- Authenticated layout (auth + age gate check)
       page.tsx                    -- Dashboard home (theater list or empty state)
+      account/page.tsx            -- Account settings (profile, password, delete)
       theater/
         new/page.tsx              -- Add theater form
       production/
-        new/page.tsx              -- Create production + schedule wizard
+        new/page.tsx              -- Create production + schedule wizard (7-step)
         [productionId]/
-          layout.tsx              -- Production layout (tabs/nav)
+          layout.tsx              -- Production layout (membership check + nav)
           page.tsx                -- Production dashboard (Director view)
           schedule/page.tsx       -- Schedule view (Director: edit, Cast: read-only)
           bulletin/page.tsx       -- Bulletin board (poster + schedule tabs)
           roster/page.tsx         -- Member roster (Director only)
-          chat/page.tsx           -- Chat interface
+          chat/page.tsx           -- Chat conversation list
           chat/[conversationId]/page.tsx -- Conversation view
           settings/page.tsx       -- Production settings (Director only)
           conflicts/page.tsx      -- Cast conflict submission
           profile/page.tsx        -- Cast profile setup
-    api/
-      health/route.ts             -- Health check endpoint
-      auth/[...nextauth]/route.ts -- NextAuth.js handler
-      (all other API routes)
-  components/
-    ui/                           -- shadcn/ui primitives (button, input, dialog, etc.)
-    layout/
-      sidebar.tsx                 -- Main navigation sidebar
-      header.tsx                  -- Page header with breadcrumbs
-      mobile-nav.tsx              -- Mobile bottom navigation
-    auth/
-      login-form.tsx              -- Email/password login form
-      google-button.tsx           -- Google OAuth button
-      age-gate.tsx                -- DOB age check component
-    production/
-      schedule-calendar.tsx       -- Calendar grid component
-      conflict-picker.tsx         -- Date selection for conflicts
-      bulletin-post.tsx           -- Single post card
-      bulletin-editor.tsx         -- Markdown post editor
-      member-row.tsx              -- Roster row with actions
-      invite-link-card.tsx        -- Invite link display + copy
-    chat/
-      conversation-list.tsx       -- Chat sidebar with conversations
-      message-bubble.tsx          -- Single message
-      message-input.tsx           -- Text input + send button
-      chat-provider.tsx           -- WebSocket context provider
-  lib/
-    auth.ts                       -- NextAuth config
-    db.ts                         -- Database client (Drizzle)
-    validators.ts                 -- Zod schemas for all forms
-    permissions.ts                -- Role check helpers
-    websocket.ts                  -- Realtime client (Supabase Realtime or ws based on env)
-    markdown.ts                   -- Markdown sanitizer config
-  styles/
+    api/                          -- All API route handlers
+    not-found.tsx                 -- 404 page
     globals.css                   -- Tailwind base + dark theme tokens
+    layout.tsx                    -- Root layout (fonts, toaster)
+  components/
+    ui/                           -- shadcn/ui primitives (button, etc.)
+    layout/
+      sidebar.tsx                 -- Main navigation sidebar (role-aware)
+      mobile-nav.tsx              -- Mobile bottom navigation
+  server/                         -- Server-only code (NEVER imported by client components)
+    auth/
+      index.ts                    -- NextAuth.js config (JWT, providers, callbacks)
+      password.ts                 -- bcrypt hashing, breached password check
+      tokens.ts                   -- 256-bit token generation, SHA-256 hashing
+      age-gate.ts                 -- DOB age computation, age range derivation
+      rbac.ts                     -- requireAuth, requireMember, requireRole helpers
+    db/
+      index.ts                    -- Drizzle database client
+      schema.ts                   -- All 16 tables with CHECK constraints
+    email.ts                      -- Nodemailer SMTP delivery
+    storage/
+      index.ts                    -- Headshot upload/delete/read (Supabase or local)
+    markdown.ts                   -- Server-side Markdown sanitization
+    api-error.ts                  -- Standardized API error responses
+  shared/                         -- Safe for both server and client imports
+    validators.ts                 -- Zod schemas for all forms
+    schedule/
+      generator.ts                -- Deterministic schedule generation (pure function)
+  types/
+    next-auth.d.ts                -- NextAuth session type augmentation
+  middleware.ts                   -- IP rate limiting, CSRF origin validation
 ```
+
+**Server/client boundary:** `src/server/` files use Node.js APIs (crypto, fs, pg) and MUST NOT be imported by `"use client"` components. `src/shared/` files are pure TypeScript safe for both. The `schedule/generator.ts` is in `shared/` because it's imported by the wizard page (client) and the API route (server).
+
+**Component philosophy (v1):** Components are inline within page files for simplicity. The spec's original component decomposition (login-form, bulletin-post, etc.) is deferred to a future refactor. Pages are self-contained and under 350 lines each.
 
 ## 4. Theater Backstage Design System
 

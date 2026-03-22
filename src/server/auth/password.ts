@@ -10,7 +10,7 @@ function getBreachedPasswords(): Set<string> {
   if (breachedPasswordSet) return breachedPasswordSet;
 
   try {
-    const filePath = join(process.cwd(), "src/lib/data/breached-passwords.txt");
+    const filePath = join(process.cwd(), "src/server/data/breached-passwords.txt");
     const content = readFileSync(filePath, "utf-8");
     breachedPasswordSet = new Set(
       content

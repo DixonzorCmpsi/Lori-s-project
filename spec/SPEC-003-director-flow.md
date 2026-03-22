@@ -310,9 +310,11 @@ CREATE TRIGGER trg_bulletin_posts_updated_at
 
 - All API endpoints that read a theater and all API endpoints that modify a theater MUST verify `theaters.owner_id = authenticated_user.id`
 - All API endpoints that modify a production MUST verify the user is a Director / Staff member of that production (via `production_members`)
+- **All API endpoints that modify a rehearsal date MUST verify the date belongs to the production in the URL** by including `AND rehearsal_dates.production_id = :productionId` in every WHERE clause. This prevents IDOR where a Director of Production A modifies dates in Production B by guessing a UUID
 - Bulletin post creation MUST verify the author is a Director / Staff member
 - These checks are enforced in middleware, not just at the query level
 - Soft-deleted rehearsal dates (`is_deleted = TRUE`) are hidden from cast schedule views but remain queryable by the Director for historical conflict reference
+- **Production creation + director auto-join MUST be wrapped in a single database transaction.** If the membership insert fails, the production insert must roll back to prevent orphaned productions with no director
 
 ## 9. Test Scenarios
 

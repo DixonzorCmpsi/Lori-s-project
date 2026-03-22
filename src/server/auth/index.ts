@@ -1,11 +1,11 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { db } from "@/server/db";
+import { users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyPassword } from "./password";
-import { sendLockoutEmail } from "@/lib/email";
+import { sendLockoutEmail } from "@/server/email";
 
 // No DrizzleAdapter — we use JWT strategy and manage users manually in signIn callback.
 // See SPEC-002 Section 2.1 and Section 4 for rationale.

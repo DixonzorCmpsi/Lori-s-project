@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hashPassword, verifyPassword, isBreachedPassword, validatePasswordStrength } from "@/lib/auth/password";
+import { hashPassword, verifyPassword, isBreachedPassword, validatePasswordStrength } from "@/server/auth/password";
 
 describe("Password utilities", () => {
   // AUTH-01 related: password hashing

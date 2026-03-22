@@ -59,6 +59,7 @@
     <table name="conversations" spec="SPEC-005" line="139" columns="id, production_id, created_at" />
     <table name="conversation_participants" spec="SPEC-005" line="145" columns="id, conversation_id, user_id" />
     <table name="messages" spec="SPEC-005" line="156" columns="id, conversation_id, sender_id, body(2000), is_read, is_deleted, created_at" />
+    <table name="chat_rate_limits" spec="SPEC-005" line="190" columns="id, user_id, window_start, message_count" />
   </database>
 
   <!-- ============================================================
