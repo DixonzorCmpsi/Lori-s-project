@@ -11,11 +11,11 @@
 - Implement Google OAuth 2.0 (Authorization Code + PKCE) as primary auth method
 - Implement email/password auth with bcrypt hashing as fallback auth method
 - Implement invite link system with 30-day expiry and configurable max uses per token
-- Generate 256-bit cryptographically random session tokens stored server-side in PostgreSQL
-- Implement password reset flow with 1-hour expiry, single-use hashed tokens, and full session invalidation
+- Use NextAuth.js JWT session strategy with a `token_version` column on the `users` table to enable server-side invalidation (password reset, logout-all)
+- Implement password reset flow with 1-hour expiry, single-use hashed tokens, and full session invalidation via `token_version` increment
 - Implement account lockout after 10 failed attempts within 15 minutes (30-minute lock duration)
 - Implement anti-enumeration: login and registration endpoints return identical responses regardless of email existence
-- Implement age gate at registration blocking users under 13 and discarding raw DOB after deriving age range
+- Implement age gate at registration (email/password) and post-OAuth profile completion (Google) blocking users under 13 and discarding raw DOB after deriving age range
 - Enforce RBAC middleware on every protected route: authenticate session, verify production membership, verify role permission
 
 ## Non-Goals (Explicit Exclusions)
@@ -34,12 +34,12 @@ No unauthenticated request can access protected data. No user can perform an act
 ## Immutable Constraints
 
 - bcrypt cost factor 12 for all password hashing. No lower cost factor permitted
-- Session tokens are 256-bit cryptographically random (32 bytes, hex-encoded)
+- NextAuth.js JWT session strategy — no database adapter, no database session table. Session state stored in signed JWT cookies. Server-side invalidation via `users.token_version` column (see Section 4)
 - Invite tokens are minimum 32 characters, cryptographically random, URL-safe
-- Rate limit: 5 login attempts per minute per IP. Returns 429
+- Rate limit: 5 login attempts per minute per IP. Returns 429. Implemented in Next.js middleware on the credentials callback route. In-memory store for dev, database-backed for production
 - Account lockout: 10 failed attempts within 15 minutes triggers 30-minute lock
-- CSRF protection on all state-changing POST/PUT/DELETE requests
-- HTTP security headers (CSP, X-Frame-Options, HSTS, etc.) on all responses
+- CSRF: NextAuth handles CSRF for its own routes. Custom API routes validate `Origin` header against `NEXTAUTH_URL`. The protected custom routes are: `/api/auth/register`, `/api/auth/verify-email`, `/api/auth/resend-verification`, `/api/auth/forgot-password`, `/api/auth/reset-password`. This is an explicit allowlist, not a pattern match
+- HTTP security headers (CSP, X-Frame-Options, HSTS, etc.) on all responses. CSP MUST allow Google OAuth domains (`accounts.google.com`, `oauth2.googleapis.com`, `lh3.googleusercontent.com`) and Next.js inline scripts (`'unsafe-inline'` on script-src)
 
 ---
 
@@ -59,19 +59,22 @@ All user sessions are stored server-side in PostgreSQL. Auth state is managed vi
 User clicks "Sign in with Google"
   -> Redirect to Google OAuth consent screen
   -> Google redirects back with auth code
-  -> Server exchanges code for tokens
-  -> Server looks up or creates user in DB
-  -> Server creates session, sets cookie
-  -> Redirect to dashboard
+  -> NextAuth exchanges code for tokens (PKCE + state validation automatic)
+  -> NextAuth signIn callback looks up or creates user in our `users` table
+  -> JWT issued with user ID + token_version
+  -> If new user (age_range is NULL): dashboard layout redirects to /complete-profile
+  -> If existing user: redirect to dashboard
 ```
 
 **Requirements:**
 - Use Authorization Code flow (not implicit)
 - Request scopes: `openid`, `email`, `profile`
 - Store Google `sub` (subject ID) in `users.google_id` for account linking
-- **CSRF protection:** OAuth flow MUST include a cryptographically random `state` parameter tied to the user's session. The callback MUST validate `state` before processing. Without this, an attacker can CSRF the callback to link their Google account to a victim's session
-- **PKCE:** OAuth flow MUST use Proof Key for Code Exchange (PKCE) with S256 challenge method to prevent authorization code interception. If using NextAuth.js, verify PKCE is enabled — do not disable it
-- **Safe account linking:** Only auto-link Google OAuth to an existing email/password account if the existing account has `email_verified = true` AND the Google ID token's `email_verified` claim is `true`. If either is unverified, create a separate account and prompt the user to verify and link manually. This prevents account takeover via a Google account registered with a victim's email address
+- **No DrizzleAdapter.** NextAuth.js is configured WITHOUT a database adapter. User creation and account linking are handled manually in the `signIn` callback using our `users` table and Drizzle ORM. The adapter's expected tables (`user`, `account`, `session`, `verificationToken`) do NOT exist in our schema and MUST NOT be created. This avoids schema conflicts (adapter expects text IDs, we use UUIDs) and double-write bugs
+- **User creation in signIn callback:** The `signIn` callback checks if a user exists by email. If not, it inserts into our `users` table with `google_id`, `email_verified: true`, and `age_range: NULL`. The NULL `age_range` signals that the user needs to complete the age gate at `/complete-profile`
+- **PKCE + CSRF:** NextAuth.js handles `state` parameter and PKCE automatically for the Google provider. Do not disable these
+- **Safe account linking:** Only auto-link Google OAuth to an existing email/password account if the existing account has `email_verified = true`. If unverified, do not link — the user can link manually later. Store `google_id` on the existing `users` row when linking
+- **Post-OAuth age gate:** New Google OAuth users have `age_range = NULL`. The authenticated dashboard layout (`src/app/(dashboard)/layout.tsx`) MUST check `age_range` and redirect to `/complete-profile` if NULL. The `/complete-profile` page collects DOB, validates the age gate (under 13 blocked), derives age_range, and stores it. Until age_range is set, the user cannot access any production features
 
 ### 2.2 Email + Password Flow
 
@@ -280,18 +283,20 @@ For validation errors, include a `fields` array with per-field details:
 
 ## 4. Session Management
 
-- Sessions stored in PostgreSQL `sessions` table
-- **Session token** (not the UUID primary key) is sent in the cookie. The token is a 256-bit cryptographically random string (`encode(gen_random_bytes(32), 'hex')`), stored in a `token` column on the sessions table. The UUID `id` is the internal primary key only and is never exposed to the client
-- Cookie flags: `HttpOnly`, `Secure`, `SameSite=Lax`
-- Session expiry: 30 days (rolling — refreshed on activity)
-- **Rolling refresh:** On every authenticated API request, the server checks if the session expires within the next 7 days. If so, the `expires_at` is extended to `NOW() + 30 days`. This ensures active users are never unexpectedly logged out. "Activity" means any authenticated HTTP request — not WebSocket frames, not page loads without API calls.
-- On logout: delete session row from DB and clear cookie
-- **Log out all devices:** Users can trigger deletion of ALL their sessions from account settings. This invalidates every active session for that user across all browsers/devices
+- **JWT strategy, no database adapter.** NextAuth.js uses `strategy: "jwt"`. Session state is stored in a signed, encrypted JWT cookie — NOT in a database table. There is no `sessions` table. There is no DrizzleAdapter. NextAuth does not create or manage any database tables.
+- Cookie flags: `HttpOnly`, `Secure`, `SameSite=Lax` (managed by NextAuth)
+- Session expiry: 30 days (`maxAge`), rolling refresh every 7 days (`updateAge`)
+- **JWT contents:** The JWT stores `user.id` and `user.tokenVersion` (set in the `jwt` callback). The `session` callback exposes `session.user.id` to client components.
+- **Server-side invalidation via `token_version`:** The `users` table has a `token_version INTEGER DEFAULT 0` column. On every authenticated API request that requires security validation (password reset, logout-all, role changes), the server reads `users.token_version` from the DB and compares it to the JWT's stored `tokenVersion`. If they don't match, the request is rejected with 401 and the client must re-authenticate. This is NOT checked on every single request — only on security-critical operations and periodically (e.g., every 15 minutes via a client-side refresh).
+- **Password reset invalidation:** When a user resets their password, `token_version` is incremented by 1 (`UPDATE users SET token_version = token_version + 1`). All existing JWTs for that user now have a stale `tokenVersion` and will fail the next validation check.
+- **Log out all devices:** Same mechanism — increment `token_version`. All other browser/device JWTs become invalid on their next security check.
+- **Single-device logout:** NextAuth's `signOut()` clears the JWT cookie on the current device. No DB operation needed.
+- **Why JWT instead of database sessions:** Database sessions require a DB read on every authenticated request (to look up the session row). JWT sessions require zero DB reads for basic auth — the JWT is self-contained. The `token_version` check adds a DB read only when needed (security events, periodic refresh). This is better for Vercel serverless where minimizing DB round-trips matters.
 
 ## 5. Security Requirements
 
 - All auth endpoints over HTTPS (enforced by Vercel edge network + HSTS header)
-- CSRF protection on all state-changing POST requests
+- CSRF protection on all state-changing POST requests. NextAuth.js handles CSRF for its own routes automatically. Custom API routes (`/api/auth/register`, `/api/auth/forgot-password`, etc.) MUST validate the `Origin` or `Referer` header against the app's `NEXTAUTH_URL` to prevent cross-site request forgery. Public endpoints (registration, forgot-password) that are anti-enumeration safe are lower risk but MUST still validate origin.
 - Passwords MUST NOT be logged. Passwords MUST NOT be exposed in API responses
 - Google OAuth client secret stored in environment variable, never in code
 - Rate limiting on login and registration endpoints
@@ -303,7 +308,7 @@ All responses MUST include the following headers (configured in `next.config.js`
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' wss:` | Prevent XSS, restrict resource loading |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://lh3.googleusercontent.com; connect-src 'self' wss: https://accounts.google.com https://oauth2.googleapis.com; font-src 'self' data:; form-action 'self' https://accounts.google.com` | Prevent XSS, restrict resource loading. Google domains allowed for OAuth. `'unsafe-inline'` on script-src required for Next.js inline scripts. |
 | `X-Frame-Options` | `DENY` | Prevent clickjacking |
 | `X-Content-Type-Options` | `nosniff` | Prevent MIME sniffing |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Limit referrer leakage |
@@ -324,7 +329,8 @@ CREATE TABLE users (
   google_id             TEXT UNIQUE,             -- NULL if email-only auth
   email_verified        BOOLEAN DEFAULT FALSE,
   avatar_url            TEXT,
-  age_range             TEXT CHECK (age_range IN ('13-17', '18+')),  -- derived from DOB at registration, raw DOB discarded
+  age_range             TEXT CHECK (age_range IS NULL OR age_range IN ('13-17', '18+')),  -- NULL = Google OAuth user who hasn't completed age gate yet
+  token_version         INTEGER NOT NULL DEFAULT 0,  -- Incremented on password reset and logout-all to invalidate JWTs
   failed_login_attempts INTEGER DEFAULT 0,
   locked_until          TIMESTAMPTZ,             -- NULL if not locked
   created_at            TIMESTAMPTZ DEFAULT NOW(),
@@ -344,15 +350,8 @@ CREATE TRIGGER trg_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-CREATE TABLE sessions (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  token      TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),  -- 256-bit, this goes in the cookie
-  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_sessions_token ON sessions(token);
+-- NOTE: No sessions table. NextAuth uses JWT strategy — session state is in the cookie.
+-- Session invalidation is handled via users.token_version (see Section 4).
 
 CREATE TABLE password_reset_tokens (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -384,13 +383,16 @@ CREATE TABLE invite_tokens (
 
 ### 6.1 Schema Notes
 
-- **Session token vs ID:** The `sessions.token` column is the value stored in the cookie. The `sessions.id` UUID is internal only, never exposed to the client. Token lookups use `idx_sessions_token`
-- **Password reset tokens:** The raw token is sent in the email link. Only the SHA-256 hash is stored in the DB. On reset, the server hashes the incoming token and compares against `token_hash`
-- **Director auto-join:** When a Director creates a production, the server MUST automatically insert a `production_members` row with `role = 'director'` for that user and production. This ensures the Director passes the same membership checks as all other users. Without this row, the Director would fail their own production access middleware.
+- **No sessions table.** Sessions are JWT cookies managed by NextAuth. There is no database session table. Session invalidation uses `users.token_version` (see Section 4)
+- **`token_version`:** Starts at 0. Incremented on password reset and logout-all. The JWT stores the version at issuance time. On security-critical operations, the server compares the JWT's version to the DB value. Mismatch = force re-login
+- **`age_range` NULL:** NULL means the user signed up via Google OAuth and has not yet completed the post-OAuth age gate at `/complete-profile`. The CHECK constraint allows NULL. The dashboard layout redirects to `/complete-profile` when `age_range` is NULL
+- **Password reset tokens:** The raw token is sent in the email link. Only the SHA-256 hash is stored in the DB. On reset, the server hashes the incoming token and compares against `token_hash`. On successful reset, `token_version` is incremented (invalidates all JWTs)
+- **Director auto-join:** When a Director creates a production, the server MUST automatically insert a `production_members` row with `role = 'director'` for that user and production. This ensures the Director passes the same membership checks as all other users. Without this row, the Director would fail their own production access middleware
 - **Invite token expiry:** `expires_at` defaults to 30 days. `use_count` is incremented on each join. Token is invalid when `expires_at < NOW()` OR `use_count >= max_uses`
 - **Account lockout:** `locked_until` is set to `NOW() + 30 minutes` after 10 failed attempts. `failed_login_attempts` resets to 0 on successful login. Login endpoint checks `locked_until > NOW()` before validating credentials
-- **Age range:** Raw date of birth is used only for the age gate check at registration. Only the derived `age_range` is persisted. The raw DOB is never stored
-- **updated_at trigger:** The `set_updated_at()` function is reused across all tables with `updated_at` columns (users, productions, bulletin_posts)
+- **Age range (email/password):** Raw date of birth is used only for the age gate check at registration. Only the derived `age_range` is persisted. The raw DOB is never stored
+- **updated_at trigger:** The `set_updated_at()` function is reused across all tables with `updated_at` columns (users, productions, bulletin_posts, cast_profiles). Created via `drizzle/0001_triggers.sql`
+- **NextAuth implementation:** NextAuth is configured with NO adapter (no `DrizzleAdapter`). All user CRUD happens in the `signIn` callback via Drizzle ORM on our `users` table. NextAuth does NOT create or manage any tables. The `@auth/drizzle-adapter` package is installed as a dependency but is NOT used
 
 ## 7. Test Scenarios
 

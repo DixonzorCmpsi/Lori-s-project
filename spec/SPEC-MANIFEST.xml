@@ -43,8 +43,8 @@
        DATABASE TABLES (quick reference — read spec for full SQL)
        ============================================================ -->
   <database>
-    <table name="users" spec="SPEC-002" line="314" columns="id, email, name, password_hash, google_id, email_verified, avatar_url, age_range, failed_login_attempts, locked_until, created_at, updated_at" />
-    <table name="sessions" spec="SPEC-002" line="342" columns="id, token(256-bit), user_id, expires_at, created_at" />
+    <table name="users" spec="SPEC-002" line="314" columns="id, email, name, password_hash, google_id, email_verified, avatar_url, age_range, token_version, failed_login_attempts, locked_until, created_at, updated_at" />
+    <!-- No sessions table — NextAuth uses JWT strategy. Session invalidation via users.token_version -->
     <table name="password_reset_tokens" spec="SPEC-002" line="352" columns="id, user_id, token_hash(SHA-256), expires_at, created_at" />
     <table name="email_verification_tokens" spec="SPEC-002" line="128" columns="id, user_id, token_hash, expires_at, created_at" />
     <table name="production_members" spec="SPEC-002" line="360" columns="id, production_id, user_id, role(director|staff|cast), joined_at" />

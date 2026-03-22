@@ -131,8 +131,11 @@ npm run dev                     # Start Next.js at localhost:3000
 ### 4.3 Environment Files
 
 - `.env.example` — Committed to git. Contains placeholder values and documentation for every variable
-- `.env.local` — NOT committed. Contains real local dev values
+- `.env` — NOT committed. Contains production/Supabase credentials (API keys, OAuth secrets). Loaded by Next.js but overridden by `.env.local` for local dev
+- `.env.local` — NOT committed. Contains local dev overrides: Docker PostgreSQL `DATABASE_URL`, local `NEXTAUTH_URL`, `STORAGE_PROVIDER=local`, `NEXT_PUBLIC_REALTIME_PROVIDER=ws`. This file MUST exist for local development and MUST override `.env` so that `npm run dev` connects to local Docker PostgreSQL, not production Supabase
+- `.env.supabase` — NOT committed. Contains `SUPABASE_ACCESS_TOKEN` for CLI operations only. NOT loaded by Next.js (not a standard Next.js env file name). Used only when running `npx supabase` commands
 - `.env.test` — NOT committed. Test-specific overrides (uses `callboard_test` database)
+- **Loading order:** Next.js loads `.env` first, then `.env.local` overrides. This means `.env` can safely contain production keys (for reference) as long as `.env.local` overrides `DATABASE_URL` and other connection values for local dev
 
 ## 5. Production Environment (Supabase + Vercel)
 
