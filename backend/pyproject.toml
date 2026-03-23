@@ -1,0 +1,21 @@
+[project]
+name = "digital-call-board-backend"
+version = "0.1.0"
+description = "Digital Call Board - Theater Production Management API"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: Unit tests (no database)",
+    "integration: Integration tests (requires database)",
+    "slow: Slow tests",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["tests/*"]

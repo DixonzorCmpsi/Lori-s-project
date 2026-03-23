@@ -39,3 +39,9 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+__pycache__/
+__pycache__/
+*.pyc
+.venv/
+*.db
+backend/.venv/
