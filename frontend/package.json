@@ -12,9 +12,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "autoprefixer": "^10.4.27",
+    "date-fns": "^4.1.0",
+    "postcss": "^8.5.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.0.0"
+    "react-router-dom": "^7.0.0",
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.0",

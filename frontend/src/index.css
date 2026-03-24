@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* Theater backstage dark theme */
+@theme {
+  --color-background: hsl(25, 15%, 7%);
+  --color-surface: hsl(25, 12%, 11%);
+  --color-surface-raised: hsl(25, 12%, 15%);
+  --color-board: hsl(30, 20%, 18%);
+  --color-board-paper: hsl(40, 30%, 92%);
+  --color-board-paper-text: hsl(25, 15%, 15%);
+  --color-border: hsl(25, 10%, 20%);
+  --color-foreground: hsl(35, 20%, 90%);
+  --color-muted: hsl(25, 10%, 55%);
+  --color-accent: hsl(38, 75%, 55%);
+  --color-accent-hover: hsl(38, 75%, 45%);
+  --color-destructive: hsl(0, 65%, 50%);
+  --color-success: hsl(142, 50%, 40%);
+  --color-warning: hsl(38, 90%, 55%);
+  --color-curtain: hsl(350, 50%, 25%);
+
+  --font-body: "Libre Franklin", system-ui, sans-serif;
+  --font-heading: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1 { font-family: var(--font-heading); font-size: 1.75rem; font-weight: 700; }
+h2 { font-family: var(--font-heading); font-size: 1.375rem; font-weight: 600; }
+h3 { font-family: var(--font-body); font-size: 1rem; font-weight: 600; }
+
+::selection {
+  background-color: hsl(38, 75%, 55%, 0.3);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
