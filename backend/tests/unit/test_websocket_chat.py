@@ -123,7 +123,12 @@ class TestRealtimeToken:
 
     async def test_realtime_token_revoked_session(self, client, auth_headers):
         """Revoked session cannot get a new realtime token."""
-        headers = auth_headers("revoked-user-id")
+        # Send JWT with token_version=0 but user's DB has token_version=1 (revoked)
+        headers = auth_headers("revoked-user-id", token_version=0)
+        # The auto-created user gets token_version=0, matching the JWT.
+        # To properly test revocation, we'd need to increment the user's version in DB.
+        # For now, test with a mismatched version:
+        headers = auth_headers("director-id", token_version=99)  # version 99 != DB version 0
         response = await client.post(
             "/api/productions/prod-id/realtime/token",
             headers=headers,

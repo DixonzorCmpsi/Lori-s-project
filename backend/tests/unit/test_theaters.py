@@ -15,7 +15,7 @@ class TestCreateTheater:
 
     async def test_create_theater_success(self, client, auth_headers):
         """Director creates a theater with valid fields."""
-        headers = auth_headers("director-id")
+        headers = auth_headers("new-director-1")
         response = await client.post("/api/theaters", json={
             "name": "Lincoln High School",
             "city": "Springfield",
@@ -73,7 +73,7 @@ class TestTheaterValidation:
 
     async def test_theater_name_exactly_200(self, client, auth_headers):
         """Theater name at exactly 200 chars is accepted."""
-        headers = auth_headers("director-id")
+        headers = auth_headers("new-director-2")
         response = await client.post("/api/theaters", json={
             "name": "A" * 200,
             "city": "Springfield",
@@ -146,7 +146,7 @@ class TestTheaterAuthorization:
     async def test_non_owner_cannot_delete_theater(self, client, auth_headers):
         """Only the theater owner can delete it."""
         other_headers = auth_headers("other-user-id")
-        response = await client.delete("/api/theaters/some-theater-id", headers=other_headers)
+        response = await client.delete("/api/theaters/theater-id", headers=other_headers)
         assert response.status_code == 403
 
     async def test_unauthenticated_cannot_create_theater(self, client):

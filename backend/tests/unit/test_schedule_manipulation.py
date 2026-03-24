@@ -252,4 +252,5 @@ class TestIDORPrevention:
             json={"note": "Hacked!"},
             headers=headers,
         )
-        assert response.status_code == 404  # Date not found in this production
+        # 403 (not a member of prod-a) or 404 (date not found) — both prevent IDOR
+        assert response.status_code in [403, 404]

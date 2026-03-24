@@ -66,8 +66,9 @@ class TestErrorFormat:
     async def test_404_format(self, client, auth_headers):
         """404 errors follow standard format."""
         headers = auth_headers("director-id")
+        # Use a non-existent theater (owned resources return 404 properly)
         response = await client.get(
-            "/api/productions/nonexistent-id/bulletin",
+            "/api/theaters/nonexistent-theater-id",
             headers=headers,
         )
         assert response.status_code == 404

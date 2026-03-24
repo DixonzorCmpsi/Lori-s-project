@@ -92,6 +92,100 @@ def create_app() -> FastAPI:
             },
         )
 
+    # --- Security headers middleware ---
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import Response as StarletteResponse
+
+    class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            response.headers["x-frame-options"] = "DENY"
+            response.headers["x-content-type-options"] = "nosniff"
+            response.headers["referrer-policy"] = "strict-origin-when-cross-origin"
+            response.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
+            response.headers["permissions-policy"] = "camera=(), microphone=(), geolocation=()"
+            response.headers["content-security-policy"] = (
+                "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' blob: data: https://lh3.googleusercontent.com; "
+                "connect-src 'self' wss: https://accounts.google.com https://oauth2.googleapis.com; "
+                "font-src 'self' data:; form-action 'self' https://accounts.google.com"
+            )
+            return response
+
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # --- CSRF origin checking middleware ---
+    CSRF_PROTECTED_PATHS = [
+        "/api/auth/register", "/api/auth/verify-email", "/api/auth/resend-verification",
+        "/api/auth/forgot-password", "/api/auth/reset-password",
+    ]
+
+    class CSRFMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+                path = request.scope.get("path", "")
+                if any(path.startswith(p) for p in CSRF_PROTECTED_PATHS):
+                    origin = request.headers.get("origin", "")
+                    if origin and origin not in (
+                        "http://localhost:5173", "http://localhost:3000",
+                        "http://127.0.0.1:5173", "http://127.0.0.1:3000",
+                        "http://test",  # httpx test client
+                    ):
+                        return JSONResponse(
+                            status_code=403,
+                            content={"error": "FORBIDDEN", "message": "Invalid origin"},
+                        )
+            return await call_next(request)
+
+    app.add_middleware(CSRFMiddleware)
+
+    # --- Rate limiting (in-memory for dev) ---
+    import time as time_module
+    from collections import defaultdict
+
+    _rate_limits: dict = defaultdict(list)  # ip -> list of timestamps
+
+    class RateLimitMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            path = request.scope.get("path", "")
+            if path == "/api/auth/login" and request.method == "POST":
+                client_ip = request.client.host if request.client else "unknown"
+                now = time_module.time()
+                # Clean old entries (older than 60 seconds)
+                _rate_limits[client_ip] = [t for t in _rate_limits[client_ip] if now - t < 60]
+                if len(_rate_limits[client_ip]) >= 5:
+                    return JSONResponse(
+                        status_code=429,
+                        content={"error": "RATE_LIMITED", "message": "Too many requests"},
+                    )
+                _rate_limits[client_ip].append(now)
+            return await call_next(request)
+
+    app.add_middleware(RateLimitMiddleware)
+
+    # --- Realtime token endpoint ---
+    from app.routers.auth import get_current_user
+    from fastapi import Depends
+
+    @app.post("/api/productions/{production_id}/realtime/token")
+    async def generate_realtime_token(
+        production_id: str,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Generate a short-lived JWT for Supabase Realtime."""
+        from jose import jwt as jose_jwt
+        from datetime import datetime, timedelta
+        from app.config import get_settings
+        settings = get_settings()
+        payload = {
+            "sub": current_user["id"],
+            "production_id": production_id,
+            "exp": datetime.utcnow() + timedelta(minutes=5),
+        }
+        token = jose_jwt.encode(payload, settings.nextauth_secret, algorithm="HS256")
+        return {"token": token}
+
     # Health check endpoint
     @app.get("/api/health")
     async def health_check():

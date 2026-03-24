@@ -98,6 +98,9 @@ def app_instance(tmp_path):
             mod = importlib.import_module(mod_name)
             if hasattr(mod, "async_session_maker"):
                 mod.async_session_maker = session_maker
+            # Clear chat rate limits for test isolation
+            if hasattr(mod, "_chat_rate_limits"):
+                mod._chat_rate_limits.clear()
         except ImportError:
             pass
 
@@ -232,6 +235,15 @@ def app_instance(tmp_path):
                 id=str(uuid.uuid4()), production_id=PRODUCTION_ID,
                 user_id=str_to_uuid("removable-user-id"), role="cast",
             ))
+
+            # Create a Google OAuth user with age_range=None (incomplete profile)
+            google_user = User(
+                id=str_to_uuid("google-user-id"), email="google@test.example.com",
+                name="Google User", google_id="google-sub-123",
+                password_hash=None,
+                age_range=None, email_verified=True, token_version=0,
+            )
+            session.add(google_user)
 
             # Create rehearsal dates for schedule/conflict tests
             # Named dates: date-1 through date-5 plus date-id, some-date-id
@@ -558,7 +570,7 @@ def app_instance(tmp_path):
 
 # All raw test IDs that need UUID conversion
 _RAW_IDS = [
-    "prod-id", "prod-a-id", "prod-b-id", "theater-id",
+    "prod-id", "prod-a-id", "prod-b-id", "theater-id", "cast-id", "staff-id",
     "date-1", "date-2", "date-3", "date-4", "date-5", "date-id",
     "some-date-id", "date-id-from-prod-b",
     "post-id", "post-1", "post-2", "director-post-id", "staff-post-id",
@@ -586,11 +598,18 @@ _ID_TO_UUID = {raw: str_to_uuid(raw) for raw in _RAW_IDS}
 
 def _rewrite_url(url: str) -> str:
     """Rewrite raw test IDs in URL paths to their UUID versions."""
+    # Split off query string before rewriting path
+    if "?" in url:
+        path, query = url.split("?", 1)
+    else:
+        path, query = url, None
+
     for raw, uid in _ID_TO_UUID.items():
-        url = url.replace(f"/{raw}/", f"/{uid}/")
-        if url.endswith(f"/{raw}"):
-            url = url[: -len(raw)] + uid
-    return url
+        path = path.replace(f"/{raw}/", f"/{uid}/")
+        if path.endswith(f"/{raw}"):
+            path = path[: -len(raw)] + uid
+
+    return f"{path}?{query}" if query else path
 
 
 def _rewrite_json(data):

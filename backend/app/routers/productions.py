@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import Production, ProductionMember, Theater
+from app.models import Production, ProductionMember, Theater, User
 from app.routers.auth import get_current_user
 from app.services.business_logic import validate_production_dates, FIELD_MAX_LENGTHS
 
@@ -29,7 +29,7 @@ class UpdateProductionRequest(BaseModel):
     name: Optional[str] = None
 
 
-@router.post("")
+@router.post("", status_code=201)
 async def create_production(
     body: CreateProductionRequest,
     current_user: dict = Depends(get_current_user),
@@ -52,7 +52,15 @@ async def create_production(
             detail={"error": "VALIDATION_ERROR", "message": "Invalid date format"},
         )
 
-    # Validate dates
+    # Validate dates are in the future
+    today = date.today()
+    if first_reh_date < today:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "VALIDATION_ERROR", "message": "Dates must be in the future"},
+        )
+
+    # Validate date ordering
     validation = validate_production_dates(first_reh_date, opening_date, closing_date)
     if not validation["valid"]:
         raise HTTPException(
@@ -161,7 +169,15 @@ async def list_productions(
     current_user: dict = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """List user's productions."""
+    # Check if user has completed profile (age_range set)
     async with async_session_maker() as session:
+        user_result = await session.execute(select(User).where(User.id == current_user["id"]))
+        user = user_result.scalar_one_or_none()
+        if user and user.age_range is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "FORBIDDEN", "message": "Please complete your profile first"},
+            )
         stmt = select(ProductionMember).where(
             ProductionMember.user_id == current_user["id"]
         )

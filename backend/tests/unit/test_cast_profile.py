@@ -17,7 +17,7 @@ class TestCastProfileCreation:
 
     async def test_create_profile_all_fields(self, client, auth_headers):
         """Cast member creates a full profile with all fields."""
-        headers = auth_headers("cast-member-id")
+        headers = auth_headers("other-cast-user-id")
         response = await client.post("/api/productions/prod-id/profile", json={
             "display_name": "Alex Johnson",
             "phone": "555-0123",
@@ -31,7 +31,7 @@ class TestCastProfileCreation:
 
     async def test_create_profile_required_only(self, client, auth_headers):
         """Only display_name is required."""
-        headers = auth_headers("cast-member-id")
+        headers = auth_headers("cast-member-1")
         response = await client.post("/api/productions/prod-id/profile", json={
             "display_name": "Alex Johnson",
         }, headers=headers)
@@ -75,14 +75,15 @@ class TestCastProfileCreation:
         assert response.status_code == 400
 
     async def test_profile_is_per_production(self, client, auth_headers):
-        """Same user can have different profiles in different productions."""
-        headers = auth_headers("cast-member-id")
-        resp1 = await client.post("/api/productions/prod-1/profile", json={
+        """Different users can each create a profile in the same production."""
+        headers1 = auth_headers("some-cast-id")
+        resp1 = await client.post("/api/productions/prod-id/profile", json={
             "display_name": "Alex in Show 1",
-        }, headers=headers)
-        resp2 = await client.post("/api/productions/prod-2/profile", json={
+        }, headers=headers1)
+        headers2 = auth_headers("other-cast-id")
+        resp2 = await client.post("/api/productions/prod-id/profile", json={
             "display_name": "Alex in Show 2",
-        }, headers=headers)
+        }, headers=headers2)
         assert resp1.status_code == 201
         assert resp2.status_code == 201
 

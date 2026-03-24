@@ -22,6 +22,11 @@ from app.services.business_logic import can_send_message, FIELD_MAX_LENGTHS
 
 router = APIRouter()
 
+# In-memory chat rate limits (reset when module is reimported or app is recreated)
+import time as _time_mod
+from collections import defaultdict as _defaultdict
+_chat_rate_limits: dict = _defaultdict(list)
+
 
 class SendMessageRequest(BaseModel):
     recipient_id: str
@@ -226,59 +231,54 @@ async def send_message(
                 detail={"error": "FORBIDDEN", "message": "Cannot message this user"},
             )
 
-        # Check rate limit (30 per minute)
-        now = datetime.utcnow()
-        window_start = now - timedelta(minutes=1)
-
-        stmt = select(ChatRateLimit).where(
-            ChatRateLimit.user_id == current_user["id"],
-            ChatRateLimit.window_start >= window_start,
-        )
-        result = await session.execute(stmt)
-        rate_limit = result.scalar_one_or_none()
-
-        if rate_limit and rate_limit.message_count >= 30:
+        # Check rate limit (30 per minute) — in-memory
+        uid = current_user["id"]
+        now = _time_mod.time()
+        _chat_rate_limits[uid] = [t for t in _chat_rate_limits[uid] if now - t < 60]
+        if len(_chat_rate_limits[uid]) >= 30:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={
-                    "error": "RATE_LIMITED",
-                    "message": "Rate limit exceeded. Try again later.",
-                },
+                detail={"error": "RATE_LIMITED", "message": "Rate limit exceeded. Try again later."},
             )
+        _chat_rate_limits[uid].append(now)
 
-        if rate_limit:
-            rate_limit.message_count += 1
-        else:
-            rl = ChatRateLimit(
-                id=str(uuid.uuid4()),
-                user_id=current_user["id"],
-                window_start=window_start,
-                message_count=1,
+        # Find or create conversation (deduplication)
+        # Look for existing conversation between these two users in this production
+        from sqlalchemy import and_
+        my_convos = select(ConversationParticipant.conversation_id).where(
+            ConversationParticipant.user_id == current_user["id"]
+        ).subquery()
+        their_convos = select(ConversationParticipant.conversation_id).where(
+            ConversationParticipant.user_id == recipient_id
+        ).subquery()
+        stmt = (
+            select(Conversation)
+            .where(
+                Conversation.production_id == production_id,
+                Conversation.id.in_(select(my_convos)),
+                Conversation.id.in_(select(their_convos)),
             )
-            session.add(rl)
-
-        # Find or create conversation
-        stmt = select(Conversation).where(Conversation.production_id == production_id)
+        )
         result = await session.execute(stmt)
+        conv = result.scalar_one_or_none()
 
-        # Simple conversation creation
-        conv = Conversation(
-            id=str(uuid.uuid4()),
-            production_id=production_id,
-        )
-        session.add(conv)
-
-        # Add participants
-        p1 = ConversationParticipant(
-            conversation_id=conv.id,
-            user_id=current_user["id"],
-        )
-        p2 = ConversationParticipant(
-            conversation_id=conv.id,
-            user_id=recipient_id,
-        )
-        session.add(p1)
-        session.add(p2)
+        if not conv:
+            conv = Conversation(
+                id=str(uuid.uuid4()),
+                production_id=production_id,
+            )
+            session.add(conv)
+            session.add(ConversationParticipant(
+                id=str(uuid.uuid4()),
+                conversation_id=conv.id,
+                user_id=current_user["id"],
+            ))
+            session.add(ConversationParticipant(
+                id=str(uuid.uuid4()),
+                conversation_id=conv.id,
+                user_id=recipient_id,
+            ))
+            await session.flush()
 
         # Create message
         message = Message(

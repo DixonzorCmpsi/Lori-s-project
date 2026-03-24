@@ -130,6 +130,11 @@ async def register(body: RegisterRequest) -> dict[str, Any]:
     """Register a new user."""
     email, name, password, date_of_birth = body.email, body.name, body.password, body.date_of_birth
 
+    # Validate email format
+    import re as re_mod
+    if not re_mod.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid input", "fields": [{"field": "email", "message": "Invalid email format"}]})
+
     # Validate lengths
     errors = []
     if len(email) > 320:
@@ -294,9 +299,21 @@ async def get_me(current_user: dict = Depends(get_current_user)) -> dict:
         return {"id": user.id, "email": user.email, "name": user.name, "age_range": user.age_range, "email_verified": user.email_verified}
 
 
+import time as _time_mod
+from collections import defaultdict as _defaultdict
+_forgot_pw_limits: dict = _defaultdict(list)
+_resend_limits: dict = _defaultdict(list)
+
+
 @router.post("/forgot-password")
 async def forgot_password(body: ForgotPasswordRequest) -> dict:
-    # Always return generic success for anti-enumeration
+    # Rate limit: 3 per hour per email
+    email = body.email.lower()
+    now = _time_mod.time()
+    _forgot_pw_limits[email] = [t for t in _forgot_pw_limits[email] if now - t < 3600]
+    if len(_forgot_pw_limits[email]) >= 3:
+        raise HTTPException(status_code=429, detail={"error": "RATE_LIMITED", "message": "Too many requests"})
+    _forgot_pw_limits[email].append(now)
     return {"message": "Check your email for a reset link"}
 
 
@@ -351,7 +368,13 @@ async def verify_email(body: VerifyEmailRequest) -> dict:
 
 @router.post("/resend-verification")
 async def resend_verification(body: ResendVerificationRequest) -> dict:
-    # Rate limited: 3 per hour per email (TODO: implement rate limiting)
+    # Rate limit: 3 per hour per email
+    email = body.email.lower()
+    now = _time_mod.time()
+    _resend_limits[email] = [t for t in _resend_limits[email] if now - t < 3600]
+    if len(_resend_limits[email]) >= 3:
+        raise HTTPException(status_code=429, detail={"error": "RATE_LIMITED", "message": "Too many requests"})
+    _resend_limits[email].append(now)
     return {"message": "Verification email sent"}
 
 
