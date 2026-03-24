@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { register } from '@/services/auth';
 import { ApiRequestError } from '@/services/api';
 import { validateEmail, validatePassword, validateName, validateDOB } from '@/utils/validation';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export function RegisterPage() {
   const [name, setName] = useState('');
@@ -56,6 +57,19 @@ export function RegisterPage() {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-6 text-center">Create Account</h2>
+
+      <div className="mb-4">
+        <GoogleSignInButton text="signup_with" />
+      </div>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-surface px-2 text-muted">or register with email</span>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Full Name" value={name} onChange={e => setName(e.target.value)} error={errors.name} required />

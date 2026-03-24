@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { ApiRequestError } from '@/services/api';
 
 export function LoginPage() {
@@ -13,7 +13,6 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +21,6 @@ export function LoginPage() {
 
     try {
       await login(email, password);
-      // Check for pending invite token
       const inviteToken = sessionStorage.getItem('pendingInviteToken');
       if (inviteToken) {
         sessionStorage.removeItem('pendingInviteToken');
@@ -57,6 +55,19 @@ export function LoginPage() {
         </div>
       )}
 
+      <div className="mb-4">
+        <GoogleSignInButton text="signin_with" />
+      </div>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-surface px-2 text-muted">or sign in with email</span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Email"
@@ -67,7 +78,6 @@ export function LoginPage() {
           required
           autoComplete="email"
         />
-
         <Input
           label="Password"
           type="password"
@@ -77,7 +87,6 @@ export function LoginPage() {
           required
           autoComplete="current-password"
         />
-
         <Button type="submit" isLoading={isLoading} className="w-full">
           Sign In
         </Button>
@@ -89,9 +98,7 @@ export function LoginPage() {
         </Link>
         <p className="text-sm text-muted">
           Don't have an account?{' '}
-          <Link to="/register" className="text-accent hover:underline">
-            Create one
-          </Link>
+          <Link to="/register" className="text-accent hover:underline">Create one</Link>
         </p>
       </div>
     </div>

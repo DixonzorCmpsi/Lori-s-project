@@ -233,44 +233,46 @@ async def login(body: LoginRequest) -> dict[str, Any]:
 
 @router.post("/google/callback")
 async def google_oauth_callback(body: GoogleOAuthCallbackRequest) -> dict[str, Any]:
-    """Handle Google OAuth callback."""
+    """Handle Google OAuth callback. Creates/links user and returns JWT."""
     async with async_session_maker() as session:
-        # Check if user exists by email
         result = await session.execute(select(User).where(User.email == body.email))
         existing = result.scalar_one_or_none()
 
         if existing:
             if existing.email_verified:
-                # Link Google account to existing verified user
                 existing.google_id = body.google_id
                 await session.commit()
-                return {"id": existing.id, "email": existing.email, "email_verified": True, "age_range": existing.age_range}
+                user = existing
             else:
-                # Don't auto-link to unverified account — create separate
                 user = User(
                     id=str(uuid.uuid4()),
                     email=f"google-{body.google_id}@oauth.internal",
                     name=body.name,
                     google_id=body.google_id,
                     email_verified=True,
-                    age_range=None,  # Needs post-OAuth age gate
+                    age_range=None,
                 )
                 session.add(user)
                 await session.commit()
-                return {"id": user.id, "email": body.email, "email_verified": True, "age_range": None}
+        else:
+            user = User(
+                id=str(uuid.uuid4()),
+                email=body.email,
+                name=body.name,
+                google_id=body.google_id,
+                email_verified=True,
+                age_range=None,
+            )
+            session.add(user)
+            await session.commit()
 
-        # New user via Google OAuth
-        user = User(
-            id=str(uuid.uuid4()),
-            email=body.email,
-            name=body.name,
-            google_id=body.google_id,
-            email_verified=True,
-            age_range=None,  # Needs post-OAuth age gate
-        )
-        session.add(user)
-        await session.commit()
-        return {"id": user.id, "email": user.email, "email_verified": True, "age_range": None}
+        token = create_access_token({"sub": user.id, "token_version": user.token_version})
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "age_range": user.age_range,
+            "email_verified": True,
+        }
 
 
 @router.post("/logout")
