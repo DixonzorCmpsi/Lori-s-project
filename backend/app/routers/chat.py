@@ -501,3 +501,179 @@ async def get_deleted_messages(
             }
             for m in messages
         ]
+
+
+# --- Group / Broadcast Messaging ---
+
+class BroadcastRequest(BaseModel):
+    body: str
+    target: str = "all"  # "all", "cast", "staff", or a scene_id
+
+
+@router.post("/{production_id}/broadcast", status_code=201)
+async def broadcast_message(
+    production_id: str,
+    body: BroadcastRequest,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Director/staff broadcasts a message to a group.
+    target: 'all' | 'cast' | 'staff' | '<scene_id>'
+    Creates individual conversations with each recipient."""
+    member = await check_production_member(production_id, current_user["id"])
+    if member.role not in ("director", "staff"):
+        raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Only director/staff can broadcast"})
+
+    if not body.body or not body.body.strip():
+        raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Message body required"})
+    if len(body.body) > 2000:
+        raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Message too long (max 2000)"})
+
+    async with async_session_maker() as session:
+        # Determine recipients
+        if body.target == "all":
+            stmt = select(ProductionMember).where(
+                ProductionMember.production_id == production_id,
+                ProductionMember.user_id != current_user["id"],
+            )
+        elif body.target == "cast":
+            stmt = select(ProductionMember).where(
+                ProductionMember.production_id == production_id,
+                ProductionMember.role == "cast",
+            )
+        elif body.target == "staff":
+            stmt = select(ProductionMember).where(
+                ProductionMember.production_id == production_id,
+                ProductionMember.role == "staff",
+            )
+        else:
+            # Scene-specific broadcast — get users assigned to this scene
+            from app.models import SceneRole
+            scene_roles = (await session.execute(
+                select(SceneRole).where(SceneRole.scene_id == body.target)
+            )).scalars().all()
+            scene_user_ids = [r.user_id for r in scene_roles]
+            if not scene_user_ids:
+                raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No cast in this scene"})
+            stmt = select(ProductionMember).where(
+                ProductionMember.production_id == production_id,
+                ProductionMember.user_id.in_(scene_user_ids),
+            )
+
+        recipients = (await session.execute(stmt)).scalars().all()
+        sent_count = 0
+
+        for recipient in recipients:
+            if recipient.user_id == current_user["id"]:
+                continue
+
+            # Find or create conversation
+            from sqlalchemy import exists
+            subq = select(ConversationParticipant.conversation_id).where(
+                ConversationParticipant.user_id == current_user["id"]
+            ).correlate(Conversation)
+            subq2 = select(ConversationParticipant.conversation_id).where(
+                ConversationParticipant.user_id == recipient.user_id
+            ).correlate(Conversation)
+
+            conv_result = await session.execute(
+                select(Conversation).where(
+                    Conversation.production_id == production_id,
+                    Conversation.id.in_(subq),
+                    Conversation.id.in_(subq2),
+                )
+            )
+            conv = conv_result.scalar_one_or_none()
+
+            if not conv:
+                conv = Conversation(id=str(uuid.uuid4()), production_id=production_id)
+                session.add(conv)
+                await session.flush()
+                session.add(ConversationParticipant(
+                    id=str(uuid.uuid4()), conversation_id=conv.id, user_id=current_user["id"]
+                ))
+                session.add(ConversationParticipant(
+                    id=str(uuid.uuid4()), conversation_id=conv.id, user_id=recipient.user_id
+                ))
+
+            msg = Message(
+                id=str(uuid.uuid4()),
+                conversation_id=conv.id,
+                sender_id=current_user["id"],
+                body=body.body,
+            )
+            session.add(msg)
+            sent_count += 1
+
+        await session.commit()
+
+    return {"sent_to": sent_count, "target": body.target}
+
+
+# --- Report Delay (one-way cast -> director) ---
+
+class ReportDelayRequest(BaseModel):
+    message: str = Field(max_length=500)
+    rehearsal_date_id: Optional[str] = None
+
+
+@router.post("/{production_id}/report-delay", status_code=201)
+async def report_delay(
+    production_id: str,
+    body: ReportDelayRequest,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Cast member sends a one-way delay notice to the director.
+    Creates a DM to the director with a formatted delay message."""
+    member = await check_production_member(production_id, current_user["id"])
+
+    async with async_session_maker() as session:
+        # Find the director
+        director_result = await session.execute(
+            select(ProductionMember).where(
+                ProductionMember.production_id == production_id,
+                ProductionMember.role == "director",
+            )
+        )
+        director = director_result.scalar_one_or_none()
+        if not director:
+            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No director found"})
+
+        # Find or create conversation with director
+        subq = select(ConversationParticipant.conversation_id).where(
+            ConversationParticipant.user_id == current_user["id"]
+        )
+        subq2 = select(ConversationParticipant.conversation_id).where(
+            ConversationParticipant.user_id == director.user_id
+        )
+        conv_result = await session.execute(
+            select(Conversation).where(
+                Conversation.production_id == production_id,
+                Conversation.id.in_(subq),
+                Conversation.id.in_(subq2),
+            )
+        )
+        conv = conv_result.scalar_one_or_none()
+
+        if not conv:
+            conv = Conversation(id=str(uuid.uuid4()), production_id=production_id)
+            session.add(conv)
+            await session.flush()
+            session.add(ConversationParticipant(
+                id=str(uuid.uuid4()), conversation_id=conv.id, user_id=current_user["id"]
+            ))
+            session.add(ConversationParticipant(
+                id=str(uuid.uuid4()), conversation_id=conv.id, user_id=director.user_id
+            ))
+
+        # Send formatted delay message
+        delay_text = f"[DELAY NOTICE] {body.message}"
+        msg = Message(
+            id=str(uuid.uuid4()),
+            conversation_id=conv.id,
+            sender_id=current_user["id"],
+            body=delay_text,
+        )
+        session.add(msg)
+        await session.commit()
+
+    return {"sent": True, "to": "director"}

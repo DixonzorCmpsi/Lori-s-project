@@ -136,6 +136,9 @@ class Production(Base):
     invite_tokens: Mapped[List["InviteToken"]] = relationship(
         "InviteToken", back_populates="production", cascade="all, delete-orphan"
     )
+    scenes: Mapped[List["Scene"]] = relationship(
+        "Scene", back_populates="production", cascade="all, delete-orphan"
+    )
 
 
 class ProductionMember(Base):
@@ -414,6 +417,86 @@ class InviteToken(Base):
     production: Mapped["Production"] = relationship(
         "Production", back_populates="invite_tokens"
     )
+
+
+class Scene(Base):
+    """A scene/act breakdown for the production (e.g. Act 1 Scene 2, pages 1-10)."""
+    __tablename__ = "scenes"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    production_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("productions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    production: Mapped["Production"] = relationship(
+        "Production", back_populates="scenes"
+    )
+    roles: Mapped[List["SceneRole"]] = relationship(
+        "SceneRole", back_populates="scene", cascade="all, delete-orphan"
+    )
+
+
+class SceneRole(Base):
+    """Links a cast member to a scene — which actors are needed for which scene."""
+    __tablename__ = "scene_roles"
+    __table_args__ = (
+        UniqueConstraint("scene_id", "user_id", name="uq_scene_role"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    scene_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("scenes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    character_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
+    scene: Mapped["Scene"] = relationship("Scene", back_populates="roles")
+
+
+class Attendance(Base):
+    """Rehearsal check-in record — logs when a cast member checks in."""
+    __tablename__ = "attendance"
+    __table_args__ = (
+        UniqueConstraint("rehearsal_date_id", "user_id", name="uq_attendance"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    production_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("productions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    rehearsal_date_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("rehearsal_dates.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    checked_in_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="present"
+    )  # present, late, absent, excused
+
+    production: Mapped["Production"] = relationship("Production")
+    rehearsal_date: Mapped["RehearsalDate"] = relationship("RehearsalDate")
 
 
 class PasswordResetToken(Base):

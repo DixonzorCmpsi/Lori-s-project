@@ -18,6 +18,8 @@ from app.routers import (
     cast_profile,
     chat,
     join,
+    scenes,
+    attendance,
 )
 
 
@@ -67,6 +69,8 @@ def create_app() -> FastAPI:
     )
     app.include_router(chat.router, prefix="/api/productions", tags=["chat"])
     app.include_router(join.router, prefix="/api", tags=["join"])
+    app.include_router(scenes.router, prefix="/api", tags=["scenes"])
+    app.include_router(attendance.router, prefix="/api", tags=["attendance"])
 
     # Custom exception handlers to match spec error format
     @app.exception_handler(HTTPException)
