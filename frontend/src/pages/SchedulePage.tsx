@@ -48,6 +48,44 @@ export function SchedulePage() {
   const [defaultTime, setDefaultTime] = useState({ start: '18:00', end: '21:00' });
   const [saving, setSaving] = useState(false);
 
+  // Weekly pattern — set what happens each day of the week
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+  const [weeklyPattern, setWeeklyPattern] = useState<Record<number, DayType>>({});
+
+  // Cycle weekly pattern for a day-of-week (0=Sun, 6=Sat)
+  function cycleWeekDay(dow: number) {
+    const current = weeklyPattern[dow] || '';
+    const idx = typesCycle.indexOf(current as DayType);
+    const next = typesCycle[(idx + 1) % typesCycle.length];
+    setWeeklyPattern(prev => {
+      const updated = { ...prev };
+      if (next === '') delete updated[dow];
+      else updated[dow] = next;
+      return updated;
+    });
+
+    // Auto-populate all matching days in the current month
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    setDayTypes(prev => {
+      const updated = { ...prev };
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, month, d);
+        if (date.getDay() === dow) {
+          const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          // Don't set dates in the past
+          if (key < todayStr) continue;
+          if (next === '') delete updated[key];
+          else updated[key] = next;
+        }
+      }
+      return updated;
+    });
+  }
+
   // Single date edit
   const [editId, setEditId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState('');
@@ -120,17 +158,17 @@ export function SchedulePage() {
     });
   }, [editMode, dayTypes, currentMonth]);
 
-  // Enter edit mode
   function startEditMode() {
     setEditMode(true);
     setDayTypes({});
+    setWeeklyPattern({});
     setSelectedDay(null);
   }
 
-  // Cancel edit mode
   function cancelEditMode() {
     setEditMode(false);
     setDayTypes({});
+    setWeeklyPattern({});
   }
 
   // Apply — create all the dates
@@ -208,22 +246,46 @@ export function SchedulePage() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs" style={{ color: 'rgba(255,220,100,0.7)' }}>
-                Click days to cycle: Rehearsal → Tech → Dress → Show → Blocked → Clear
+            {/* Weekly pattern — set the recurring weekly flow */}
+            <div>
+              <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,220,100,0.6)' }}>
+                Weekly Pattern — click to set each day
               </p>
-              <div className="flex gap-2">
-                <button onClick={cancelEditMode} className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"
-                  style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}>
-                  Cancel
-                </button>
-                <button onClick={applySchedule} disabled={saving || pendingCount === 0}
-                  className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer font-bold"
-                  style={{ color: 'hsl(25,20%,8%)', background: 'hsl(38,70%,50%)', opacity: (saving || pendingCount === 0) ? 0.5 : 1 }}>
-                  {saving ? 'Saving...' : `Apply ${pendingCount} date${pendingCount !== 1 ? 's' : ''}`}
-                </button>
+              <div className="grid grid-cols-7 gap-1">
+                {weekDays.map((day, dow) => {
+                  const pattern = weeklyPattern[dow];
+                  const config = pattern ? typeConfig[pattern] : null;
+                  return (
+                    <motion.button
+                      key={dow}
+                      onClick={() => cycleWeekDay(dow)}
+                      className="flex flex-col items-center gap-1 py-2 rounded-sm cursor-pointer"
+                      style={{
+                        background: config ? config.chalkBg : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${config ? 'rgba(255,220,100,0.12)' : 'rgba(255,255,255,0.04)'}`,
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>{day}</span>
+                      {config ? (
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-[2px]"
+                          style={{ background: config.noteBg, color: config.noteText }}>
+                          {config.label}
+                        </span>
+                      ) : (
+                        <span className="text-[8px]" style={{ color: 'rgba(255,255,255,0.2)' }}>off</span>
+                      )}
+                    </motion.button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Then override individual days below */}
+            <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Then click individual days on the calendar below to override or block specific dates
+            </p>
 
             {/* Default times */}
             <div className="flex items-center gap-3">
@@ -237,14 +299,27 @@ export function SchedulePage() {
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
             </div>
 
-            {/* Type legend in edit mode */}
-            <div className="flex gap-2 flex-wrap">
-              {Object.entries(typeConfig).map(([type, c]) => (
-                <div key={type} className="flex items-center gap-1">
-                  <div className="w-3 h-2 rounded-[1px]" style={{ background: c.noteBg }} />
-                  <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px' }}>{c.label}</span>
-                </div>
-              ))}
+            {/* Actions */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2 flex-wrap">
+                {Object.entries(typeConfig).map(([type, c]) => (
+                  <div key={type} className="flex items-center gap-1">
+                    <div className="w-3 h-2 rounded-[1px]" style={{ background: c.noteBg }} />
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px' }}>{c.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={cancelEditMode} className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"
+                  style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}>
+                  Cancel
+                </button>
+                <button onClick={applySchedule} disabled={saving || pendingCount === 0}
+                  className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer font-bold"
+                  style={{ color: 'hsl(25,20%,8%)', background: 'hsl(38,70%,50%)', opacity: (saving || pendingCount === 0) ? 0.5 : 1 }}>
+                  {saving ? 'Saving...' : `Apply ${pendingCount} date${pendingCount !== 1 ? 's' : ''}`}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
