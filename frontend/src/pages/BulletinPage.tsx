@@ -1,58 +1,38 @@
 import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useApi } from '@/hooks/useApi';
-import { useProduction } from '@/components/layout/ProductionLayout';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
 import { getPosts, createPost, updatePost, deletePost, pinPost } from '@/services/bulletin';
-import { getSchedule } from '@/services/schedule';
-import { formatRelativeTime, formatDate, formatTime } from '@/utils/format';
-import { SCHEDULE_COLORS, MAX_LENGTHS } from '@/utils/constants';
-import { Button } from '@/components/ui/Button';
+import { formatRelativeTime } from '@/utils/format';
+import { MAX_LENGTHS } from '@/utils/constants';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { Tabs } from '@/components/ui/Tabs';
-import { Badge } from '@/components/ui/Badge';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Dialog } from '@/components/ui/Dialog';
+import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import type { BulletinPost } from '@/types';
+import { motion } from 'framer-motion';
 
 function isStaff(role: string | null) {
   return role === 'director' || role === 'staff';
 }
 
-function renderMarkdown(md: string): string {
-  return md
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold mt-2">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-lg font-semibold mt-2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-2">$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-accent underline" target="_blank" rel="noopener">$1</a>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/\n/g, '<br/>');
-}
+const noteColorCycle: Array<'yellow' | 'pink' | 'blue' | 'white' | 'green'> = ['yellow', 'white', 'pink', 'blue', 'green'];
+const rotations = [-1.5, 0.8, -0.5, 1.2, -1, 0.6, -0.8, 1.5];
+
+const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
+const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.1 } } };
+const fadeIn = { hidden: { opacity: 0, scale: 0.95, y: 8 }, show: { opacity: 1, scale: 1, y: 0, transition: spring } };
 
 export function BulletinPage() {
+  usePageTitle('Bulletin Board');
   const { id } = useParams<{ id: string }>();
   const { userRole, members } = useProduction();
+  const { toast } = useToast();
   const canEdit = isStaff(userRole);
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground mb-6">Bulletin Board</h1>
-      <Tabs tabs={[
-        { id: 'posters', label: 'Posters', content: <PostersTab productionId={id!} canEdit={canEdit} members={members} /> },
-        { id: 'schedule', label: 'Schedule', content: <ScheduleTab productionId={id!} /> },
-      ]} />
-    </div>
-  );
-}
-
-function PostersTab({ productionId, canEdit, members }: { productionId: string; canEdit: boolean; members: { user_id: string; name?: string }[] }) {
-  const { toast } = useToast();
-  const { data: posts, isLoading, refetch } = useApi(() => getPosts(productionId), [productionId]);
+  const { data: posts, isLoading, refetch } = useApi(() => getPosts(id!), [id]);
   const [showForm, setShowForm] = useState(false);
   const [editPost, setEditPost] = useState<BulletinPost | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -69,21 +49,15 @@ function PostersTab({ productionId, canEdit, members }: { productionId: string; 
   }, [posts]);
 
   function authorName(authorId: string) {
-    return members.find(m => m.user_id === authorId)?.name || 'Unknown';
+    return members.find(m => m.user_id === authorId)?.name || 'Director';
   }
 
   function openEdit(post: BulletinPost) {
-    setEditPost(post);
-    setTitle(post.title);
-    setBody(post.body);
-    setShowForm(true);
+    setEditPost(post); setTitle(post.title); setBody(post.body); setShowForm(true);
   }
 
   function openNew() {
-    setEditPost(null);
-    setTitle('');
-    setBody('');
-    setShowForm(true);
+    setEditPost(null); setTitle(''); setBody(''); setShowForm(true);
   }
 
   async function handleSubmit() {
@@ -91,15 +65,11 @@ function PostersTab({ productionId, canEdit, members }: { productionId: string; 
     setBusy(true);
     try {
       if (editPost) {
-        await updatePost(productionId, editPost.id, { title, body });
-        toast('Post updated');
+        await updatePost(id!, editPost.id, { title, body }); toast('Post updated');
       } else {
-        await createPost(productionId, { title, body });
-        toast('Post created');
+        await createPost(id!, { title, body }); toast('Post created');
       }
-      setShowForm(false);
-      setEditPost(null);
-      refetch();
+      setShowForm(false); setEditPost(null); refetch();
     } catch { toast('Failed to save post', 'error'); }
     finally { setBusy(false); }
   }
@@ -107,93 +77,120 @@ function PostersTab({ productionId, canEdit, members }: { productionId: string; 
   async function handleDelete() {
     if (!deleteId) return;
     setBusy(true);
-    try { await deletePost(productionId, deleteId); toast('Post deleted'); setDeleteId(null); refetch(); }
+    try { await deletePost(id!, deleteId); toast('Post deleted'); setDeleteId(null); refetch(); }
     catch { toast('Failed to delete', 'error'); }
     finally { setBusy(false); }
   }
 
   async function handlePin(postId: string) {
     setBusy(true);
-    try { await pinPost(productionId, postId); toast('Pin toggled'); refetch(); }
+    try { await pinPost(id!, postId); toast('Pin toggled'); refetch(); }
     catch { toast('Failed to pin', 'error'); }
     finally { setBusy(false); }
   }
 
-  if (isLoading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
-
   return (
     <div>
-      {canEdit && !showForm && (
-        <div className="mb-4"><Button onClick={openNew}>New Post</Button></div>
-      )}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <ChalkText size="lg">Bulletin Board</ChalkText>
+        {canEdit && !showForm && (
+          <button onClick={openNew}
+            className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
+            style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
+            New Post
+          </button>
+        )}
+      </div>
 
+      {/* New/Edit form — appears as a white note */}
       {showForm && (
-        <div className="bg-surface-raised border border-border rounded-lg p-5 mb-6 space-y-3">
-          <h3 className="font-semibold text-foreground">{editPost ? 'Edit Post' : 'New Post'}</h3>
-          <Input label="Title" value={title} onChange={e => setTitle(e.target.value)} maxLength={MAX_LENGTHS.post_title} />
-          <Textarea label="Body (Markdown supported)" value={body} onChange={e => setBody(e.target.value)} maxLength={MAX_LENGTHS.post_body} />
-          <div className="flex gap-2">
-            <Button onClick={handleSubmit} isLoading={busy} disabled={!title.trim()}>
-              {editPost ? 'Save' : 'Post'}
-            </Button>
-            <Button variant="ghost" onClick={() => { setShowForm(false); setEditPost(null); }}>Cancel</Button>
-          </div>
+        <div className="mb-6">
+          <StickyNote color="white" rotate={0}>
+            <p className="text-[10px] uppercase tracking-widest font-bold mb-3 opacity-60">
+              {editPost ? 'Edit Post' : 'New Announcement'}
+            </p>
+            <div className="space-y-2">
+              <input value={title} onChange={e => setTitle(e.target.value)} maxLength={MAX_LENGTHS.post_title}
+                placeholder="Title" className="w-full px-2 py-1.5 rounded text-sm border outline-none"
+                style={{ borderColor: 'rgba(0,0,0,0.1)', background: 'rgba(0,0,0,0.02)' }} />
+              <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={MAX_LENGTHS.post_body}
+                placeholder="Write your announcement..." rows={4}
+                className="w-full px-2 py-1.5 rounded text-sm border outline-none resize-none"
+                style={{ borderColor: 'rgba(0,0,0,0.1)', background: 'rgba(0,0,0,0.02)' }} />
+              <div className="flex gap-2">
+                <button onClick={handleSubmit} disabled={busy || !title.trim()}
+                  className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"
+                  style={{ background: 'rgba(0,0,0,0.08)', opacity: busy ? 0.5 : 1 }}>
+                  {busy ? 'Saving...' : editPost ? 'Save' : 'Post'}
+                </button>
+                <button onClick={() => { setShowForm(false); setEditPost(null); }}
+                  className="text-[11px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer opacity-50">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </StickyNote>
         </div>
       )}
 
-      {sorted.length === 0 && <EmptyState title="No posts yet" description="The bulletin board is empty." />}
+      {/* Empty state */}
+      {!isLoading && sorted.length === 0 && !showForm && (
+        <div className="text-center py-12">
+          <ChalkText size="md">No announcements yet</ChalkText>
+          <p className="mt-2" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
+            {canEdit ? 'Post your first announcement above' : 'Check back for updates from your director'}
+          </p>
+        </div>
+      )}
 
-      <div className="space-y-4">
-        {sorted.map(post => (
-          <div key={post.id} className="bg-surface border border-border rounded-lg p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-foreground">{post.title}</h3>
-                {post.is_pinned && <Badge variant="warning">Pinned</Badge>}
-              </div>
-              {canEdit && (
-                <div className="flex gap-1 shrink-0">
-                  <Button size="sm" variant="ghost" onClick={() => handlePin(post.id)}>
-                    {post.is_pinned ? 'Unpin' : 'Pin'}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(post)}>Edit</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setDeleteId(post.id)}>Delete</Button>
-                </div>
+      {/* Posts as sticky notes */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 gap-5"
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+      >
+        {sorted.map((post, i) => (
+          <motion.div key={post.id} variants={fadeIn}>
+            <StickyNote
+              color={post.is_pinned ? 'yellow' : noteColorCycle[i % noteColorCycle.length]}
+              rotate={rotations[i % rotations.length]}
+            >
+              {/* Pinned badge */}
+              {post.is_pinned && (
+                <span className="text-[8px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded-sm mb-2 inline-block"
+                  style={{ background: 'rgba(0,0,0,0.06)' }}>
+                  Pinned
+                </span>
               )}
-            </div>
-            <div className="mt-2 text-foreground text-sm prose-sm" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.body) }} />
-            <div className="mt-3 text-xs text-muted">
-              {authorName(post.author_id)} &middot; {formatRelativeTime(post.created_at)}
-              {post.updated_at && post.updated_at !== post.created_at && ' (edited)'}
-            </div>
-          </div>
+
+              <h3 className="font-bold text-sm leading-tight mb-1">{post.title}</h3>
+              <p className="text-[11px] leading-relaxed opacity-70 line-clamp-4 whitespace-pre-line">{post.body}</p>
+
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[9px] opacity-40">
+                  {authorName(post.author_id)} · {formatRelativeTime(post.created_at)}
+                </span>
+
+                {canEdit && (
+                  <div className="flex gap-1">
+                    <button onClick={() => handlePin(post.id)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer">
+                      {post.is_pinned ? 'Unpin' : 'Pin'}
+                    </button>
+                    <button onClick={() => openEdit(post)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer">Edit</button>
+                    <button onClick={() => setDeleteId(post.id)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer" style={{ color: 'hsl(0,50%,45%)' }}>Del</button>
+                  </div>
+                )}
+              </div>
+            </StickyNote>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Post" confirmLabel="Delete" confirmVariant="destructive" onConfirm={handleDelete} isLoading={busy}>
         <p>Are you sure you want to delete this post?</p>
       </Dialog>
-    </div>
-  );
-}
-
-function ScheduleTab({ productionId }: { productionId: string }) {
-  const { data: dates, isLoading } = useApi(() => getSchedule(productionId), [productionId]);
-
-  if (isLoading) return <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>;
-  const sorted = (dates || []).filter(d => !d.is_deleted).sort((a, b) => a.date.localeCompare(b.date));
-  if (sorted.length === 0) return <EmptyState title="No schedule yet" />;
-  return (
-    <div className="space-y-2">
-      {sorted.map(d => (
-        <div key={d.id} className={`flex items-center gap-3 p-3 rounded-md bg-surface border border-border ${d.is_cancelled ? 'opacity-50' : ''}`}>
-          <span className={d.is_cancelled ? 'line-through text-muted' : 'text-foreground font-medium'}>{formatDate(d.date)}</span>
-          <span className="text-muted text-sm">{formatTime(d.start_time)} - {formatTime(d.end_time)}</span>
-          <Badge className={`${SCHEDULE_COLORS[d.type].bg} ${SCHEDULE_COLORS[d.type].text}`}>{SCHEDULE_COLORS[d.type].label}</Badge>
-          {d.is_cancelled && <Badge variant="destructive">Cancelled</Badge>}
-          {d.note && <span className="text-muted text-sm truncate">{d.note}</span>}
-        </div>
-      ))}
     </div>
   );
 }

@@ -4,6 +4,45 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Digital Call Board</title>
+    <meta name="description" content="Digital Call Board — manage rehearsal schedules, cast communication, and production logistics for theater companies." />
+    <link rel="canonical" href="https://digitalcallboard.com/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Digital Call Board" />
+    <meta property="og:description" content="Manage rehearsal schedules, cast communication, and production logistics for theater companies." />
+    <meta property="og:url" content="https://digitalcallboard.com/" />
+    <meta property="og:site_name" content="Digital Call Board" />
+    <meta property="og:image" content="https://digitalcallboard.com/og-image.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Digital Call Board" />
+    <meta name="twitter:description" content="Manage rehearsal schedules, cast communication, and production logistics for theater companies." />
+    <meta name="twitter:image" content="https://digitalcallboard.com/og-image.png" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Digital Call Board",
+      "description": "Manage rehearsal schedules, cast communication, and production logistics for theater companies.",
+      "url": "https://digitalcallboard.com",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,6 +53,11 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="padding: 2rem; text-align: center; font-family: system-ui, sans-serif;">
+        JavaScript is required to use Digital Call Board. Please enable JavaScript in your browser settings.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

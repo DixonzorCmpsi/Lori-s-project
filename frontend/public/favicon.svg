@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Theater curtain / call board icon -->
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#1a1a2e" stroke="#d4a053" stroke-width="1.5"/>
+  <!-- Curtain left -->
+  <path d="M6 6 Q6 20 10 24 L10 6 Z" fill="#8b2252" opacity="0.9"/>
+  <!-- Curtain right -->
+  <path d="M26 6 Q26 20 22 24 L22 6 Z" fill="#8b2252" opacity="0.9"/>
+  <!-- Stage / board -->
+  <rect x="11" y="8" width="10" height="14" rx="1" fill="#2a2a3e" stroke="#d4a053" stroke-width="0.8"/>
+  <!-- Board lines (call sheet) -->
+  <line x1="13" y1="11" x2="19" y2="11" stroke="#d4a053" stroke-width="0.6" opacity="0.7"/>
+  <line x1="13" y1="14" x2="19" y2="14" stroke="#d4a053" stroke-width="0.6" opacity="0.7"/>
+  <line x1="13" y1="17" x2="17" y2="17" stroke="#d4a053" stroke-width="0.6" opacity="0.7"/>
+  <!-- Pelmet -->
+  <path d="M4 6 Q16 10 28 6 L28 4 Q16 8 4 4 Z" fill="#6b1a3a"/>
+  <!-- Spotlight glow -->
+  <circle cx="16" cy="26" r="2" fill="#d4a053" opacity="0.3"/>
+  <circle cx="16" cy="26" r="1" fill="#d4a053" opacity="0.6"/>
+</svg>

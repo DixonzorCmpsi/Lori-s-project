@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient, ApiRequestError } from '@/services/api';
+import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 
 export function NewTheaterPage() {
   const [name, setName] = useState('');
@@ -19,10 +18,7 @@ export function NewTheaterPage() {
     setErrors({});
     setIsLoading(true);
     try {
-      await apiClient('/theaters', {
-        method: 'POST',
-        body: JSON.stringify({ name, city, state }),
-      });
+      await apiClient('/theaters', { method: 'POST', body: JSON.stringify({ name, city, state }) });
       toast('Theater created!', 'success');
       navigate('/production/new');
     } catch (err) {
@@ -34,23 +30,46 @@ export function NewTheaterPage() {
         } else if (err.status === 409) {
           toast('You already have a theater. Redirecting...', 'warning');
           navigate('/');
-        } else {
-          toast(err.message, 'error');
-        }
+        } else { toast(err.message, 'error'); }
       }
     } finally { setIsLoading(false); }
   };
 
+  const inputStyle = "w-full px-3 py-2 rounded text-sm border outline-none";
+  const inputCss = { borderColor: 'rgba(0,0,0,0.1)', background: 'rgba(0,0,0,0.02)' };
+
   return (
-    <div className="max-w-md">
-      <h1 className="mb-6">Add Your Theater</h1>
-      <p className="text-muted mb-6">Tell us about your venue.</p>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input label="Theater / School Name" value={name} onChange={e => setName(e.target.value)} error={errors.name} required maxLength={200} placeholder="Lincoln High School" />
-        <Input label="City" value={city} onChange={e => setCity(e.target.value)} error={errors.city} required maxLength={100} placeholder="Springfield" />
-        <Input label="State" value={state} onChange={e => setState(e.target.value)} error={errors.state} required maxLength={100} placeholder="Illinois" />
-        <Button type="submit" isLoading={isLoading} className="w-full">Create Theater</Button>
-      </form>
+    <div className="flex flex-col items-center pt-8">
+      <ChalkText size="lg" className="mb-6">Add Your Theater</ChalkText>
+
+      <StickyNote color="white" rotate={-0.5} className="w-full max-w-sm">
+        <p className="text-[10px] uppercase tracking-widest font-bold mb-3 opacity-60">Venue Details</p>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-[11px] font-medium mb-1 opacity-70">Theater / School Name</label>
+            <input value={name} onChange={e => setName(e.target.value)} required maxLength={200}
+              placeholder="Lincoln High School" className={inputStyle} style={inputCss} />
+            {errors.name && <p className="text-[10px] mt-1" style={{ color: 'hsl(0,60%,45%)' }}>{errors.name}</p>}
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium mb-1 opacity-70">City</label>
+            <input value={city} onChange={e => setCity(e.target.value)} required maxLength={100}
+              placeholder="Springfield" className={inputStyle} style={inputCss} />
+            {errors.city && <p className="text-[10px] mt-1" style={{ color: 'hsl(0,60%,45%)' }}>{errors.city}</p>}
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium mb-1 opacity-70">State</label>
+            <input value={state} onChange={e => setState(e.target.value)} required maxLength={100}
+              placeholder="Illinois" className={inputStyle} style={inputCss} />
+            {errors.state && <p className="text-[10px] mt-1" style={{ color: 'hsl(0,60%,45%)' }}>{errors.state}</p>}
+          </div>
+          <button type="submit" disabled={isLoading}
+            className="w-full py-2 rounded text-sm font-bold uppercase tracking-wider cursor-pointer"
+            style={{ background: 'rgba(0,0,0,0.08)', opacity: isLoading ? 0.5 : 1 }}>
+            {isLoading ? 'Creating...' : 'Create Theater'}
+          </button>
+        </form>
+      </StickyNote>
     </div>
   );
 }

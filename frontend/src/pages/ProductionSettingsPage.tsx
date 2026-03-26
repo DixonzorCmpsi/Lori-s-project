@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useProduction } from '@/components/layout/ProductionLayout';
+import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/services/api';
 import { formatDate } from '@/utils/format';

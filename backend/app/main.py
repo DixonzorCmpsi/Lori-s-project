@@ -1,9 +1,11 @@
 """FastAPI application for Digital Call Board."""
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app.database import init_db
 from app.routers import (
     auth,
     theaters,
@@ -19,15 +21,18 @@ from app.routers import (
 )
 
 
-def create_app() -> FastAPI:
-    """Create and configure the FastAPI application.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create database tables on startup."""
+    await init_db()
+    yield
 
-    This function MUST be exported - tests import it:
-        from app.main import create_app
-        app = create_app()
-    """
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Digital Call Board API",
+        lifespan=lifespan,
         description="Theater Production Management API",
         version="1.0.0",
     )

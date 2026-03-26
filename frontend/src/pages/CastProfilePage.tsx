@@ -7,7 +7,7 @@ import { MAX_LENGTHS } from '@/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-interface ProfileForm {
+interface ProfileForm extends Record<string, unknown> {
   display_name: string;
   phone: string;
   role_character: string;

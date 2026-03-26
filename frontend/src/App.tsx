@@ -1,8 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { ProductionLayout } from '@/components/layout/ProductionLayout';
+import { BackstageLayout } from '@/components/theater/BackstageLayout';
 
 // Auth pages
 import { LoginPage } from '@/pages/LoginPage';
@@ -28,32 +27,35 @@ import { ChatConversationPage } from '@/pages/ChatConversationPage';
 import { ConflictsPage } from '@/pages/ConflictsPage';
 import { CastProfilePage } from '@/pages/CastProfilePage';
 import { ProductionSettingsPage } from '@/pages/ProductionSettingsPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
 export function App() {
   return (
     <Routes>
-      {/* Public auth routes */}
+      {/* Theater experience — login/register get full-screen theater with curtains closed */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Other public auth routes */}
       <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/join" element={<JoinPage />} />
       </Route>
 
-      {/* Protected routes */}
+      {/* Protected routes — all use the backstage theater layout with curtains open */}
       <Route element={<ProtectedRoute />}>
-        {/* Dashboard layout */}
-        <Route element={<DashboardLayout />}>
+        {/* Dashboard (no production selected) */}
+        <Route element={<BackstageLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/theater/new" element={<NewTheaterPage />} />
           <Route path="/production/new" element={<NewProductionPage />} />
         </Route>
 
-        {/* Production layout */}
-        <Route path="/production/:id" element={<ProductionLayout />}>
+        {/* Production view (production selected — panels show members) */}
+        <Route path="/production/:id" element={<BackstageLayout />}>
           <Route index element={<ProductionDashboardPage />} />
           <Route path="schedule" element={<SchedulePage />} />
           <Route path="bulletin" element={<BulletinPage />} />
@@ -65,6 +67,9 @@ export function App() {
           <Route path="settings" element={<ProductionSettingsPage />} />
         </Route>
       </Route>
+
+      {/* 404 catch-all */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

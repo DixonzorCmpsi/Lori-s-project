@@ -19,22 +19,33 @@ class Base(DeclarativeBase):
 
 settings = get_settings()
 
-is_sqlite = settings.database_url.startswith("sqlite")
+# Convert URL to async driver
+_raw_url = settings.database_url
+if _raw_url.startswith("sqlite"):
+    _db_url = _raw_url
+    _is_sqlite = True
+elif _raw_url.startswith("postgresql+asyncpg://"):
+    _db_url = _raw_url
+    _is_sqlite = False
+elif _raw_url.startswith("postgresql://"):
+    _db_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    _is_sqlite = False
+else:
+    _db_url = _raw_url
+    _is_sqlite = False
 
 engine: AsyncEngine = create_async_engine(
-    settings.database_url,
+    _db_url,
     echo=settings.debug,
     **(
         dict(
             pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20,
+            pool_size=5,
+            max_overflow=10,
         )
-        if not is_sqlite
+        if not _is_sqlite
         else dict(
-            connect_args={"check_same_thread": False}
-            if "memory" in settings.database_url
-            else {},
+            connect_args={"check_same_thread": False},
         )
     ),
 )

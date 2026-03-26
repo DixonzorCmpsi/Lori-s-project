@@ -1,11 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { apiClient } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/Toast';
 
-// Google's client ID — loaded from env or hardcoded for now
-const GOOGLE_CLIENT_ID = '690356966597-jj0c5likb5ssd647r58kq0nnsjd06vtt.apps.googleusercontent.com';
+// Google's client ID — loaded from env
 
 declare global {
   interface Window {
@@ -14,6 +12,7 @@ declare global {
         id: {
           initialize: (config: any) => void;
           renderButton: (element: HTMLElement, config: any) => void;
+          prompt: (callback?: (notification: any) => void) => void;
         };
       };
     };
@@ -42,11 +41,11 @@ export function GoogleSignInButton({ text = 'signin_with' }: Props) {
   const handleCredentialResponse = useCallback(async (response: GoogleCredentialResponse) => {
     try {
       const payload = decodeJwtPayload(response.credential);
-      const result = await apiClient<{
-        access_token: string;
-        age_range: string | null;
-      }>('/auth/google/callback', {
+
+      // Call backend directly with fetch (not apiClient) to avoid stale token issues
+      const res = await fetch('/api/auth/google/callback', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           google_id: payload.sub,
           email: payload.email,
@@ -54,43 +53,73 @@ export function GoogleSignInButton({ text = 'signin_with' }: Props) {
         }),
       });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Google sign-in failed' }));
+        toast(err.message || 'Google sign-in failed', 'error');
+        return;
+      }
+
+      const result = await res.json();
       setToken(result.access_token);
 
-      // Fetch full user profile
-      const me = await apiClient<any>('/auth/me');
-      setUser(me);
+      // Small delay to ensure localStorage is written before next API call
+      await new Promise(r => setTimeout(r, 100));
 
-      // If age_range is null, user needs to complete profile
-      if (!result.age_range) {
-        navigate('/complete-profile');
+      const meRes = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${result.access_token}` },
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        setUser(me);
+      }
+
+      const inviteToken = sessionStorage.getItem('pendingInviteToken');
+      if (inviteToken) {
+        sessionStorage.removeItem('pendingInviteToken');
+        navigate(`/join?token=${inviteToken}`);
       } else {
-        const inviteToken = sessionStorage.getItem('pendingInviteToken');
-        if (inviteToken) {
-          sessionStorage.removeItem('pendingInviteToken');
-          navigate(`/join?token=${inviteToken}`);
-        } else {
-          navigate('/');
-        }
+        navigate('/');
       }
     } catch (err: any) {
+      console.error('Google sign-in error:', err);
       toast(err.message || 'Google sign-in failed', 'error');
     }
   }, [setToken, setUser, navigate, toast]);
 
   useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error('Google Client ID is missing in environment variables.');
+      return;
+    }
+    
     const interval = setInterval(() => {
       if (window.google && buttonRef.current) {
         clearInterval(interval);
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse,
-        });
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          theme: 'filled_black',
-          size: 'large',
-          width: '100%',
-          text,
-        });
+        
+        try {
+          // Initialize for the current session
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleCredentialResponse,
+            auto_select: true,
+          });
+
+          // Also show One Tap prompt for returning users
+          window.google.accounts.id.prompt?.();
+          
+          // Render the button
+          window.google.accounts.id.renderButton(buttonRef.current, {
+            theme: 'filled_black',
+            size: 'large',
+            width: 320,
+            text,
+            shape: 'rectangular',
+            logo_alignment: 'left',
+          });
+        } catch (err) {
+          console.warn('Google GSI initialization warning:', err);
+        }
       }
     }, 100);
 

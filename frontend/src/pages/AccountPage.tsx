@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/services/api';
 import { deleteAccount } from '@/services/auth';
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
 
 export function AccountPage() {
+  usePageTitle('Account');
   const { user, logout, setUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();

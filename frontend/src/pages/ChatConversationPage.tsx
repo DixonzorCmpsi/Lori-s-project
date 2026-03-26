@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
-import { useProduction } from '@/components/layout/ProductionLayout';
+import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
 import { getMessages, sendMessage, markRead, deleteMessage } from '@/services/chat';
 import { formatRelativeTime } from '@/utils/format';
