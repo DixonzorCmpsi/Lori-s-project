@@ -1,23 +1,23 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
-/* Professional Backstage Dark Theme (Taste-Skill Calibrated) */
+/* Cinematic Backstage Dark Theme — Midnight Charcoal + Brushed Gold */
 @theme {
-  --color-background: hsl(240, 10%, 4%);
-  --color-surface: hsl(240, 10%, 7%);
-  --color-surface-raised: hsl(240, 10%, 12%);
-  --color-board: hsl(240, 8%, 15%);
+  --color-background: hsl(350, 6%, 4%);          /* Midnight charcoal with burgundy hint */
+  --color-surface: hsl(350, 5%, 7%);
+  --color-surface-raised: hsl(350, 4%, 12%);
+  --color-board: hsl(350, 3%, 15%);
   --color-board-paper: hsl(35, 30%, 94%);
   --color-board-paper-text: hsl(240, 20%, 12%);
-  --color-border: hsl(240, 6%, 18%);
+  --color-border: hsl(350, 4%, 18%);
   --color-foreground: hsl(0, 0%, 94%);
-  --color-muted: hsl(240, 4%, 55%);
-  --color-accent: hsl(42, 85%, 55%); /* Deep Golden Amber */
-  --color-accent-hover: hsl(42, 85%, 45%);
+  --color-muted: hsl(25, 6%, 52%);
+  --color-accent: hsl(43, 74%, 49%);              /* Brushed Gold #D4AF37 */
+  --color-accent-hover: hsl(43, 74%, 42%);
   --color-destructive: hsl(0, 84%, 60%);
   --color-success: hsl(150, 80%, 35%);
   --color-warning: hsl(45, 90%, 50%);
-  --color-curtain: hsl(0, 60%, 15%);
+  --color-curtain: hsl(350, 50%, 14%);            /* Deep Stage Burgundy */
 
   --font-body: "Outfit", system-ui, sans-serif;
   --font-heading: "Playfair Display", serif;

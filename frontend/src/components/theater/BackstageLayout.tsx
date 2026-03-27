@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useApi } from '@/hooks/useApi';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { apiClient } from '@/services/api';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard } from './Chalkboard';
@@ -10,6 +12,8 @@ import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
 
 const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
+
+// ── Production context ──────────────────────────────────────────────
 
 interface ProductionContextType {
   production: Production | null;
@@ -26,28 +30,43 @@ export function useProduction() {
   return useContext(ProductionContext);
 }
 
+// ── Flight-case panel style ─────────────────────────────────────────
+
+const flightCaseBase = {
+  background: `linear-gradient(180deg,
+    hsl(220, 6%, 11%) 0%,
+    hsl(220, 5%, 8%) 50%,
+    hsl(220, 4%, 6%) 100%)`,
+  backdropFilter: 'blur(16px)',
+};
+
+// ── Main layout ─────────────────────────────────────────────────────
+
 export function BackstageLayout() {
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
+  const isDesktop = bp === 'desktop';
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const noop = () => Promise.resolve(null as any);
   const { data: production, refetch } = useApi<Production>(
-    id ? () => apiClient(`/productions/${id}`) : noop, [id]
+    id ? () => apiClient(`/productions/${id}`) : noop, [id],
   );
-
   const { data: members } = useApi<Member[]>(
-    id ? () => apiClient(`/productions/${id}/members`) : noop, [id]
+    id ? () => apiClient(`/productions/${id}/members`) : noop, [id],
   );
 
   const currentUser = members?.find(m => m.user_id === user?.id);
   const userRole = currentUser?.role || null;
   const isDirectorOrStaff = userRole === 'director' || userRole === 'staff';
-
   const basePath = id ? `/production/${id}` : '';
 
-  // Director/Staff nav items
+  // Navigation config
   const directorNav = [
     { icon: '◈', label: 'Dashboard', path: basePath || '/' },
     { icon: '◷', label: 'Schedule', path: `${basePath}/schedule` },
@@ -56,75 +75,115 @@ export function BackstageLayout() {
     { icon: '◆', label: 'Chat', path: `${basePath}/chat` },
     { icon: '◎', label: 'Settings', path: `${basePath}/settings` },
   ];
-
-  // Cast nav — simplified
   const castNav = [
     { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin` },
     { icon: '◷', label: 'Schedule', path: `${basePath}/schedule` },
     { icon: '◆', label: 'Chat', path: `${basePath}/chat` },
   ];
-
   const navItems = isDirectorOrStaff ? directorNav : (id ? castNav : [
     { icon: '◈', label: 'Dashboard', path: '/' },
   ]);
 
-  const panelStyle = {
-    background: 'rgba(12, 10, 9, 0.75)',
-    backdropFilter: 'blur(20px)',
-    borderRight: '1px solid rgba(255, 255, 255, 0.06)',
-  };
+  function isActive(path: string) {
+    return location.pathname === path ||
+      (path !== '/' && path !== basePath && location.pathname.startsWith(path));
+  }
 
-  // Left Panel — navigation controls
+  // ── Left Panel — Flight Case Nav ──────────────────────────────────
+
   const leftPanel = (
-    <div className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
-      style={panelStyle}>
+    <div
+      className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
+      style={{ ...flightCaseBase, borderRight: '1px solid rgba(255,255,255,0.05)' }}
+    >
+      {/* Grip tape texture overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        style={{
+          backgroundImage: `repeating-linear-gradient(45deg,
+            transparent, transparent 2px,
+            rgba(255,255,255,0.12) 2px, rgba(255,255,255,0.12) 3px,
+            transparent 3px, transparent 6px)`,
+        }}
+      />
 
-      {/* Production name */}
+      {/* Recessed wing shadow — stage depth */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          boxShadow: 'inset -8px 0 20px rgba(0,0,0,0.35), inset 0 8px 16px rgba(0,0,0,0.2)',
+        }}
+      />
+
+      {/* Corner rivets */}
+      <Rivet className="absolute top-3 left-3" />
+      <Rivet className="absolute top-3 right-3" />
+      <Rivet className="absolute bottom-3 left-3" />
+      <Rivet className="absolute bottom-3 right-3" />
+
+      {/* Production name plate */}
       {production && (
         <motion.div
-          className="mb-6 px-2"
+          className="mb-6 px-2 relative z-10"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ ...spring, delay: 0.2 }}
         >
-          <p className="text-[10px] uppercase tracking-[0.2em] mb-1" style={{ color: 'hsl(38, 40%, 45%)' }}>
+          <p
+            className="text-[9px] uppercase tracking-[0.25em] mb-1"
+            style={{ color: 'hsl(43, 45%, 42%)' }}
+          >
             Production
           </p>
-          <h3 className="text-sm font-semibold truncate" style={{
-            fontFamily: '"Playfair Display", serif',
-            color: 'hsl(35, 20%, 85%)',
-          }}>
+          <h3
+            className="text-sm font-semibold truncate"
+            style={{ fontFamily: '"Playfair Display", serif', color: 'hsl(35, 20%, 85%)' }}
+          >
             {production.name}
           </h3>
         </motion.div>
       )}
 
-      {/* Nav buttons */}
-      <nav className="flex flex-col gap-1 flex-1">
+      {/* Nav buttons with spotlight glow on active */}
+      <nav className="flex flex-col gap-0.5 flex-1 relative z-10">
         {navItems.map((item, i) => {
-          const isActive = location.pathname === item.path ||
-            (item.path !== '/' && item.path !== basePath && location.pathname.startsWith(item.path));
+          const active = isActive(item.path);
           return (
             <motion.button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all duration-200 cursor-pointer group"
+              className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left cursor-pointer group"
               style={{
-                background: isActive ? 'rgba(255, 180, 80, 0.08)' : 'transparent',
-                color: isActive ? 'hsl(38, 70%, 60%)' : 'hsl(25, 10%, 50%)',
+                background: active
+                  ? 'radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.14) 0%, rgba(255,180,80,0.04) 70%, transparent 100%)'
+                  : 'transparent',
+                color: active ? 'hsl(43, 74%, 58%)' : 'hsl(25, 8%, 48%)',
+                boxShadow: active ? '0 0 20px rgba(212,175,55,0.06), inset 0 0 12px rgba(212,175,55,0.04)' : 'none',
               }}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ ...spring, delay: 0.3 + i * 0.05 }}
-              whileHover={{ x: 2, background: 'rgba(255, 180, 80, 0.05)' }}
+              whileHover={{ x: 2, background: 'rgba(255,180,80,0.06)' }}
               whileTap={{ scale: 0.97 }}
             >
+              {/* Spotlight glow behind active item */}
+              {active && (
+                <motion.div
+                  className="absolute inset-0 rounded-lg pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at 10% 50%, rgba(212,175,55,0.08) 0%, transparent 70%)',
+                  }}
+                  layoutId="nav-glow"
+                  transition={spring}
+                />
+              )}
               <span className="text-xs opacity-60">{item.icon}</span>
               <span className="text-xs font-medium tracking-wide">{item.label}</span>
-              {isActive && (
+              {/* Gold indicator bar */}
+              {active && (
                 <motion.div
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-full"
-                  style={{ background: 'hsl(38, 70%, 55%)' }}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 rounded-full"
+                  style={{ background: 'hsl(43, 74%, 49%)' }}
                   layoutId="nav-indicator"
                   transition={spring}
                 />
@@ -134,14 +193,26 @@ export function BackstageLayout() {
         })}
       </nav>
 
-      {/* Bottom section */}
-      <div className="mt-auto pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+      {/* Bottom actions */}
+      <div className="mt-auto pt-3 border-t relative z-10" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+        {/* Drawer toggle for tablet — show Cast & Crew drawer */}
+        {!isDesktop && id && (
+          <motion.button
+            onClick={() => setDrawerOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors mb-1"
+            style={{ color: 'hsl(43, 55%, 52%)' }}
+            whileHover={{ background: 'rgba(255,180,80,0.06)' }}
+          >
+            <span className="text-xs opacity-60">◉</span>
+            <span className="font-medium">Cast & Crew</span>
+          </motion.button>
+        )}
         {!id && (
           <motion.button
             onClick={() => navigate('/production/new')}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors"
-            style={{ color: 'hsl(38, 60%, 55%)' }}
-            whileHover={{ background: 'rgba(255, 180, 80, 0.06)' }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+            style={{ color: 'hsl(43, 60%, 52%)' }}
+            whileHover={{ background: 'rgba(255,180,80,0.06)' }}
           >
             <span>+</span>
             <span className="font-medium">New Production</span>
@@ -149,18 +220,18 @@ export function BackstageLayout() {
         )}
         <motion.button
           onClick={() => navigate('/account')}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors"
-          style={{ color: 'hsl(25, 10%, 45%)' }}
-          whileHover={{ background: 'rgba(255, 255, 255, 0.03)' }}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+          style={{ color: 'hsl(25, 8%, 44%)' }}
+          whileHover={{ background: 'rgba(255,255,255,0.03)' }}
         >
           <span className="text-xs opacity-60">◇</span>
           <span className="truncate">{user?.name || 'Account'}</span>
         </motion.button>
         <motion.button
           onClick={logout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors"
-          style={{ color: 'hsl(0, 40%, 55%)' }}
-          whileHover={{ background: 'rgba(220, 50, 50, 0.06)' }}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+          style={{ color: 'hsl(0, 40%, 52%)' }}
+          whileHover={{ background: 'rgba(220,50,50,0.06)' }}
         >
           <span className="text-xs opacity-60">⏻</span>
           <span>Sign Out</span>
@@ -169,56 +240,111 @@ export function BackstageLayout() {
     </div>
   );
 
-  // Right Panel — cast/member list
-  const rightPanel = (
-    <div className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
-      style={{ ...panelStyle, borderRight: 'none', borderLeft: '1px solid rgba(255, 255, 255, 0.06)' }}>
+  // ── Right Panel — Cast & Crew (desktop column / tablet+mobile drawer) ──
 
+  const castPanel = (
+    <div
+      className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
+      style={{
+        ...flightCaseBase,
+        borderLeft: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      {/* Grip tape texture */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        style={{
+          backgroundImage: `repeating-linear-gradient(-45deg,
+            transparent, transparent 2px,
+            rgba(255,255,255,0.12) 2px, rgba(255,255,255,0.12) 3px,
+            transparent 3px, transparent 6px)`,
+        }}
+      />
+
+      {/* Recessed wing shadow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          boxShadow: 'inset 8px 0 20px rgba(0,0,0,0.35), inset 0 8px 16px rgba(0,0,0,0.2)',
+        }}
+      />
+
+      {/* Corner rivets */}
+      <Rivet className="absolute top-3 left-3" />
+      <Rivet className="absolute top-3 right-3" />
+
+      {/* Section header with on-air indicator */}
       <motion.div
-        className="mb-4 px-2"
+        className="mb-4 px-2 flex items-center gap-2 relative z-10"
         initial={{ opacity: 0, x: 10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ ...spring, delay: 0.3 }}
       >
-        <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: 'hsl(38, 40%, 45%)' }}>
+        <p
+          className="text-[9px] uppercase tracking-[0.25em]"
+          style={{ color: 'hsl(43, 45%, 42%)' }}
+        >
           {id ? 'Cast & Crew' : 'Quick Actions'}
         </p>
+        {/* On-Air indicator — glows red when director is present */}
+        {id && isDirectorOrStaff && (
+          <OnAirLight />
+        )}
+        {/* Drawer close button (non-desktop) */}
+        {!isDesktop && (
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="ml-auto text-sm cursor-pointer"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+          >
+            ✕
+          </button>
+        )}
       </motion.div>
 
+      {/* Member list */}
       {id && members ? (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5 relative z-10">
           {members.map((member, i) => (
             <motion.div
               key={member.id}
-              className="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors group cursor-default"
-              style={{ background: 'transparent' }}
+              className="flex items-center gap-2.5 px-2 py-2 rounded-lg group cursor-default"
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ ...spring, delay: 0.4 + i * 0.03 }}
-              whileHover={{ background: 'rgba(255, 255, 255, 0.03)' }}
+              whileHover={{ background: 'rgba(255,255,255,0.03)' }}
             >
               {/* Avatar */}
-              <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
+              <div
+                className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
                 style={{
-                  background: member.role === 'director'
-                    ? 'linear-gradient(135deg, hsl(38, 60%, 35%), hsl(38, 50%, 25%))'
-                    : member.role === 'staff'
-                    ? 'linear-gradient(135deg, hsl(200, 40%, 30%), hsl(200, 35%, 22%))'
-                    : 'linear-gradient(135deg, hsl(25, 20%, 20%), hsl(25, 15%, 15%))',
-                  color: member.role === 'director' ? 'hsl(38, 70%, 70%)' : 'hsl(25, 10%, 60%)',
-                }}>
+                  background:
+                    member.role === 'director'
+                      ? 'linear-gradient(135deg, hsl(43,60%,35%), hsl(43,50%,25%))'
+                      : member.role === 'staff'
+                      ? 'linear-gradient(135deg, hsl(200,40%,30%), hsl(200,35%,22%))'
+                      : 'linear-gradient(135deg, hsl(25,20%,20%), hsl(25,15%,15%))',
+                  color:
+                    member.role === 'director' ? 'hsl(43,70%,70%)' : 'hsl(25,10%,60%)',
+                }}
+              >
                 {(member.name || member.user_id).charAt(0).toUpperCase()}
               </div>
-
               <div className="flex-1 min-w-0">
-                <p className="text-xs truncate" style={{ color: 'hsl(35, 15%, 75%)' }}>
-                  {member.name || `Member`}
+                <p className="text-xs truncate" style={{ color: 'hsl(35,15%,75%)' }}>
+                  {member.name || 'Member'}
                 </p>
-                <p className="text-[10px] capitalize" style={{
-                  color: member.role === 'director' ? 'hsl(38, 60%, 55%)' :
-                         member.role === 'staff' ? 'hsl(200, 40%, 55%)' :
-                         'hsl(25, 10%, 42%)',
-                }}>
+                <p
+                  className="text-[10px] capitalize"
+                  style={{
+                    color:
+                      member.role === 'director'
+                        ? 'hsl(43,60%,52%)'
+                        : member.role === 'staff'
+                        ? 'hsl(200,40%,52%)'
+                        : 'hsl(25,8%,42%)',
+                  }}
+                >
                   {member.role}
                 </p>
               </div>
@@ -226,13 +352,13 @@ export function BackstageLayout() {
           ))}
         </div>
       ) : !id ? (
-        <div className="flex flex-col gap-2 px-2">
+        <div className="flex flex-col gap-2 px-2 relative z-10">
           {['Add Theater', 'New Production'].map((action, i) => (
             <motion.button
               key={action}
-              className="text-xs text-left px-3 py-2 rounded-lg cursor-pointer transition-colors"
-              style={{ color: 'hsl(25, 10%, 50%)' }}
-              whileHover={{ background: 'rgba(255, 180, 80, 0.06)', color: 'hsl(38, 60%, 60%)' }}
+              className="text-xs text-left px-3 py-2 rounded-lg cursor-pointer"
+              style={{ color: 'hsl(25,8%,48%)' }}
+              whileHover={{ background: 'rgba(255,180,80,0.06)', color: 'hsl(43,60%,58%)' }}
               onClick={() => navigate(i === 0 ? '/theater/new' : '/production/new')}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -243,7 +369,7 @@ export function BackstageLayout() {
           ))}
         </div>
       ) : (
-        <div className="px-2">
+        <div className="px-2 relative z-10">
           <Skeleton className="h-6 w-full mb-2" />
           <Skeleton className="h-6 w-3/4 mb-2" />
           <Skeleton className="h-6 w-5/6" />
@@ -252,41 +378,157 @@ export function BackstageLayout() {
     </div>
   );
 
-  // Top bar — glass style matching login
+  // ── Top Bar — Stage Manager's strip ───────────────────────────────
+
   const topBar = (
-    <div className="flex items-center justify-between px-5 py-2.5 relative"
+    <div
+      className="flex items-center justify-between px-5 py-2.5 relative"
       style={{
-        background: 'rgba(12, 10, 9, 0.75)',
+        background: 'rgba(10, 8, 8, 0.8)',
         backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-      }}>
-      <h2 className="text-xs font-medium tracking-wide" style={{ color: 'hsl(38, 50%, 55%)', fontFamily: '"Playfair Display", serif' }}>
+        borderBottom: '1px solid rgba(212,175,55,0.08)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+      }}
+    >
+      <h2
+        className="text-xs font-medium tracking-wide"
+        style={{ color: 'hsl(43, 55%, 52%)', fontFamily: '"Playfair Display", serif' }}
+      >
         Digital Call Board
       </h2>
-      <p className="text-[10px] tracking-widest uppercase" style={{ color: 'hsl(25, 10%, 38%)' }}>
-        {production?.name || 'Backstage'}
-      </p>
+      <div className="flex items-center gap-3">
+        {/* Tablet/mobile drawer toggle */}
+        {!isDesktop && id && (
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="text-[10px] uppercase tracking-widest cursor-pointer px-2 py-1 rounded"
+            style={{ color: 'hsl(43,50%,48%)', background: 'rgba(212,175,55,0.06)' }}
+          >
+            Cast
+          </button>
+        )}
+        <p
+          className="text-[10px] tracking-widest uppercase"
+          style={{ color: 'hsl(25, 8%, 36%)' }}
+        >
+          {production?.name || 'Backstage'}
+        </p>
+      </div>
     </div>
   );
+
+  // ── Mobile Bottom Nav ─────────────────────────────────────────────
+
+  const mobileBottomNav = (
+    <div
+      className="flex items-stretch"
+      style={{
+        background: 'linear-gradient(180deg, hsl(220,6%,10%) 0%, hsl(220,5%,7%) 100%)',
+        borderTop: '1px solid rgba(212,175,55,0.08)',
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {navItems.slice(0, 5).map((item) => {
+        const active = isActive(item.path);
+        return (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className="flex-1 flex flex-col items-center gap-1 py-2.5 cursor-pointer relative"
+            style={{
+              color: active ? 'hsl(43,74%,55%)' : 'hsl(25,8%,40%)',
+            }}
+          >
+            {/* Spotlight glow above active tab */}
+            {active && (
+              <motion.div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[2px] rounded-full"
+                style={{ background: 'hsl(43,74%,49%)' }}
+                layoutId="mobile-nav-indicator"
+                transition={spring}
+              />
+            )}
+            <span className="text-sm">{item.icon}</span>
+            <span className="text-[9px] tracking-wider uppercase font-medium">{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────
 
   return (
     <ProductionContext.Provider value={{ production, members: members || [], userRole, refetch }}>
       <TheaterLayout
         curtainsOpen={true}
         leftPanel={leftPanel}
-        rightPanel={rightPanel}
+        rightPanel={isDesktop ? castPanel : undefined}
         topBar={topBar}
+        mobileNav={isMobile ? mobileBottomNav : undefined}
+        drawerOpen={drawerOpen}
+        drawerContent={castPanel}
+        onDrawerClose={() => setDrawerOpen(false)}
       >
         {/* Center stage — chalkboard nailed to the middle */}
-        <div className="w-full h-full pt-20 pb-36 px-6 flex items-start justify-center overflow-y-auto">
+        <div
+          className="w-full h-full pt-20 px-4 flex items-start justify-center overflow-y-auto"
+          style={{ paddingBottom: isMobile ? '100px' : '144px' }}
+        >
           <Chalkboard className="w-full max-w-4xl mt-2">
-            <div className="p-6 min-h-[400px]">
+            <div className="p-4 sm:p-6 min-h-[400px]">
               <Outlet />
             </div>
           </Chalkboard>
         </div>
       </TheaterLayout>
     </ProductionContext.Provider>
+  );
+}
+
+// ── Subcomponents ───────────────────────────────────────────────────
+
+/** Flight case rivet */
+function Rivet({ className = '' }: { className?: string }) {
+  return (
+    <div className={`w-2.5 h-2.5 rounded-full z-10 ${className}`}>
+      <div
+        className="w-full h-full rounded-full"
+        style={{
+          background: 'radial-gradient(circle at 35% 35%, hsl(220,5%,30%), hsl(220,4%,16%))',
+          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4)',
+        }}
+      />
+    </div>
+  );
+}
+
+/** On-Air / Backstage indicator light */
+function OnAirLight() {
+  return (
+    <motion.div
+      className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+      style={{
+        background: 'rgba(220, 40, 40, 0.08)',
+        border: '1px solid rgba(220, 40, 40, 0.15)',
+      }}
+    >
+      <motion.div
+        className="w-1.5 h-1.5 rounded-full"
+        style={{ background: 'hsl(0, 70%, 50%)' }}
+        animate={{
+          boxShadow: [
+            '0 0 3px rgba(220,40,40,0.4)',
+            '0 0 8px rgba(220,40,40,0.7)',
+            '0 0 3px rgba(220,40,40,0.4)',
+          ],
+        }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <span style={{ color: 'hsl(0, 55%, 55%)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+        Backstage
+      </span>
+    </motion.div>
   );
 }

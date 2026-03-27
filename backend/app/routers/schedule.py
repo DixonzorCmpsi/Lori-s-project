@@ -195,7 +195,7 @@ async def add_rehearsal_date(
     end_time = body.end_time
     date_type = body.type
 
-    if date_type not in ("regular", "tech", "dress", "performance"):
+    if date_type not in ("regular", "tech", "dress", "performance", "blocked"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "VALIDATION_ERROR", "message": "Invalid type"},

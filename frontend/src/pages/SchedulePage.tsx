@@ -5,12 +5,22 @@ import { useApi } from '@/hooks/useApi';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
-import { getSchedule, generateSchedule, updateDate, cancelDate, deleteDate, addDate, type ScheduleWizardInput } from '@/services/schedule';
+import { getSchedule, updateDate, cancelDate, deleteDate, addDate } from '@/services/schedule';
 import { formatTime } from '@/utils/format';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText } from '@/components/theater/Chalkboard';
+import { GafferTape } from '@/components/theater/GafferTape';
 import type { RehearsalDate } from '@/types';
+
+// Map rehearsal types to gaffer tape colors (must match sticky note colors)
+const tapeColorMap: Record<string, 'yellow' | 'blue' | 'purple' | 'pink' | 'white'> = {
+  regular: 'yellow',
+  tech: 'blue',
+  dress: 'purple',
+  performance: 'pink',
+  blocked: 'white',
+};
 
 function isStaffRole(role: string | null) {
   return role === 'director' || role === 'staff';
@@ -34,9 +44,9 @@ const spring = { type: 'spring' as const, stiffness: 120, damping: 18 };
 export function SchedulePage() {
   usePageTitle('Schedule');
   const { id } = useParams<{ id: string }>();
-  const { userRole } = useProduction();
+  const { userRole, production } = useProduction();
   const { toast } = useToast();
-  const { data: dates, isLoading, refetch } = useApi(() => getSchedule(id!), [id]);
+  const { data: dates, refetch } = useApi(() => getSchedule(id!), [id]);
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -52,37 +62,48 @@ export function SchedulePage() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
   const [weeklyPattern, setWeeklyPattern] = useState<Record<number, DayType>>({});
 
+  // Helper: fill dayTypes for a given month from a weekly pattern
+  function fillMonthFromPattern(year: number, month: number, pattern: Record<number, DayType>, base: Record<string, DayType> = {}): Record<string, DayType> {
+    const updated = { ...base };
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const pType = pattern[date.getDay()];
+      // Pattern fills in gaps; existing per-day overrides are preserved
+      if (pType && !updated[key]) {
+        updated[key] = pType;
+      }
+    }
+    return updated;
+  }
+
   // Cycle weekly pattern for a day-of-week (0=Sun, 6=Sat)
   function cycleWeekDay(dow: number) {
     const current = weeklyPattern[dow] || '';
     const idx = typesCycle.indexOf(current as DayType);
     const next = typesCycle[(idx + 1) % typesCycle.length];
-    setWeeklyPattern(prev => {
-      const updated = { ...prev };
-      if (next === '') delete updated[dow];
-      else updated[dow] = next;
-      return updated;
-    });
+    const newPattern = { ...weeklyPattern };
+    if (next === '') delete newPattern[dow];
+    else newPattern[dow] = next;
+    setWeeklyPattern(newPattern);
 
-    // Auto-populate all matching days in the current month
+    // Re-fill the current month from the updated pattern
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayStr = new Date().toISOString().split('T')[0];
-
     setDayTypes(prev => {
-      const updated = { ...prev };
+      // First clear all days matching this dow (remove old pattern for this day-of-week)
+      const cleared = { ...prev };
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(year, month, d);
         if (date.getDay() === dow) {
           const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          // Don't set dates in the past
-          if (key < todayStr) continue;
-          if (next === '') delete updated[key];
-          else updated[key] = next;
+          delete cleared[key];
         }
       }
-      return updated;
+      // Then fill from the full updated pattern (all days, not just this one dow)
+      return fillMonthFromPattern(year, month, newPattern, cleared);
     });
   }
 
@@ -129,8 +150,47 @@ export function SchedulePage() {
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === currentMonth.getFullYear() && today.getMonth() === currentMonth.getMonth();
 
-  function prevMonth() { setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDay(null); }
-  function nextMonth() { setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDay(null); }
+  function prevMonth() {
+    setCurrentMonth(d => {
+      const next = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+      if (editMode && Object.keys(weeklyPattern).length > 0) {
+        // Load existing saved dates for this month, then fill from pattern
+        const base: Record<string, DayType> = {};
+        if (dates) {
+          for (const dt of dates) {
+            if (dt.is_deleted || dt.is_cancelled) continue;
+            const dd = new Date(dt.date + 'T00:00:00');
+            if (dd.getFullYear() === next.getFullYear() && dd.getMonth() === next.getMonth()) {
+              base[dt.date] = dt.type as DayType;
+            }
+          }
+        }
+        setDayTypes(fillMonthFromPattern(next.getFullYear(), next.getMonth(), weeklyPattern, base));
+      }
+      return next;
+    });
+    setSelectedDay(null);
+  }
+  function nextMonth() {
+    setCurrentMonth(d => {
+      const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      if (editMode && Object.keys(weeklyPattern).length > 0) {
+        const base: Record<string, DayType> = {};
+        if (dates) {
+          for (const dt of dates) {
+            if (dt.is_deleted || dt.is_cancelled) continue;
+            const dd = new Date(dt.date + 'T00:00:00');
+            if (dd.getFullYear() === next.getFullYear() && dd.getMonth() === next.getMonth()) {
+              base[dt.date] = dt.type as DayType;
+            }
+          }
+        }
+        setDayTypes(fillMonthFromPattern(next.getFullYear(), next.getMonth(), weeklyPattern, base));
+      }
+      return next;
+    });
+    setSelectedDay(null);
+  }
 
   // Get date string for a calendar day
   function dateStr(day: number) {
@@ -160,9 +220,52 @@ export function SchedulePage() {
 
   function startEditMode() {
     setEditMode(true);
-    setDayTypes({});
-    setWeeklyPattern({});
     setSelectedDay(null);
+
+    // Load existing saved dates as per-day overrides
+    const existing: Record<string, DayType> = {};
+    if (dates) {
+      for (const d of dates) {
+        if (d.is_deleted || d.is_cancelled) continue;
+        existing[d.date] = d.type as DayType;
+      }
+    }
+
+    // Reconstruct weekly pattern from ALL existing dates (not just current month)
+    const dowCounts: Record<number, Record<string, number>> = {};
+    if (dates) {
+      for (const d of dates) {
+        if (d.is_deleted || d.is_cancelled) continue;
+        const dt = new Date(d.date + 'T00:00:00');
+        const dow = dt.getDay();
+        dowCounts[dow] ??= {};
+        dowCounts[dow][d.type] = (dowCounts[dow][d.type] || 0) + 1;
+      }
+    }
+    const reconstructed: Record<number, DayType> = {};
+    for (const [dow, counts] of Object.entries(dowCounts)) {
+      let best = '';
+      let bestCount = 0;
+      for (const [type, count] of Object.entries(counts)) {
+        if (count > bestCount) { best = type; bestCount = count; }
+      }
+      if (best) reconstructed[Number(dow)] = best as DayType;
+    }
+    setWeeklyPattern(reconstructed);
+
+    // Apply pattern to current month — fills all matching days visually
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const populated = fillMonthFromPattern(year, month, reconstructed, existing);
+    setDayTypes(populated);
+
+    // Reconstruct default times from first existing date
+    if (dates) {
+      const first = dates.find(d => !d.is_deleted && !d.is_cancelled);
+      if (first) {
+        setDefaultTime({ start: first.start_time, end: first.end_time });
+      }
+    }
   }
 
   function cancelEditMode() {
@@ -171,38 +274,155 @@ export function SchedulePage() {
     setWeeklyPattern({});
   }
 
-  // Apply — create all the dates
+  // Build a lookup of existing dates by date string
+  const existingByDate = useMemo(() => {
+    const map: Record<string, RehearsalDate> = {};
+    if (!dates) return map;
+    for (const d of dates) {
+      if (d.is_deleted) continue;
+      // Keep the non-cancelled version if there is one
+      if (!map[d.date] || (map[d.date].is_cancelled && !d.is_cancelled)) {
+        map[d.date] = d;
+      }
+    }
+    return map;
+  }, [dates]);
+
+  // All types the backend accepts (including blocked)
+  const validBackendTypes = new Set(['regular', 'tech', 'dress', 'performance', 'blocked']);
+
+  // Expand the weekly pattern across the production date range
+  function expandPatternToFullRange(pattern: Record<number, DayType>): Record<string, DayType> {
+    const expanded: Record<string, DayType> = {};
+    if (Object.keys(pattern).length === 0) return expanded;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    // Start from today or first_rehearsal (whichever is later)
+    const startStr = production?.first_rehearsal && production.first_rehearsal > todayStr
+      ? production.first_rehearsal : todayStr;
+    // End at closing_night, or 6 months from now — whichever is LATER
+    const fallbackEnd = new Date();
+    fallbackEnd.setMonth(fallbackEnd.getMonth() + 6);
+    const fallbackStr = fallbackEnd.toISOString().split('T')[0];
+    const closingStr = production?.closing_night || '';
+    const endStr = closingStr > fallbackStr ? closingStr : fallbackStr;
+
+    const start = new Date(startStr + 'T00:00:00');
+    const end = new Date(endStr + 'T00:00:00');
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay();
+      const pType = pattern[dow];
+      if (!pType) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      expanded[key] = pType;
+    }
+    return expanded;
+  }
+
+  // Apply — save the weekly pattern across the full production + any per-day overrides
   async function applySchedule() {
     if (!id) return;
     setSaving(true);
     try {
-      const entries = Object.entries(dayTypes).filter(([_, t]) => t && t !== 'blocked');
-      let created = 0;
-      for (const [date, type] of entries) {
-        try {
-          await addDate(id, {
-            date,
-            start_time: defaultTime.start,
-            end_time: defaultTime.end,
-            type: type as string,
+      let added = 0, updated = 0, removed = 0, failed = 0;
+
+      // Merge: weekly pattern expanded across ALL months + per-day overrides
+      const patternDates = expandPatternToFullRange(weeklyPattern);
+      const allDayTypes = { ...patternDates, ...dayTypes };
+
+      const keptDates = new Set<string>();
+      const ops: (() => Promise<void>)[] = [];
+
+      // 1. Build operations for add/update
+      for (const [date, type] of Object.entries(allDayTypes)) {
+        if (!type || !validBackendTypes.has(type)) continue;
+        keptDates.add(date);
+        const existing = existingByDate[date];
+        if (existing && !existing.is_cancelled) {
+          if (existing.type !== type) {
+            ops.push(async () => {
+              try {
+                await deleteDate(id, existing.id, true);
+                await addDate(id, { date, start_time: defaultTime.start, end_time: defaultTime.end, type });
+                updated++;
+              } catch { failed++; }
+            });
+          } else if (existing.start_time !== defaultTime.start || existing.end_time !== defaultTime.end) {
+            ops.push(async () => {
+              try {
+                await updateDate(id, existing.id, { start_time: defaultTime.start, end_time: defaultTime.end });
+                updated++;
+              } catch { failed++; }
+            });
+          }
+        } else {
+          ops.push(async () => {
+            try {
+              await addDate(id, { date, start_time: defaultTime.start, end_time: defaultTime.end, type });
+              added++;
+            } catch { failed++; }
           });
-          created++;
-        } catch {
-          // Skip dates that already exist
         }
       }
-      toast(`${created} date${created !== 1 ? 's' : ''} added`);
+
+      // 2. Build operations for deletes
+      for (const [, existing] of Object.entries(existingByDate)) {
+        if (existing.is_cancelled || keptDates.has(existing.date)) continue;
+        ops.push(async () => {
+          try { await deleteDate(id, existing.id, true); removed++; } catch { failed++; }
+        });
+      }
+
+      // Execute in parallel batches of 10 for speed
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < ops.length; i += BATCH_SIZE) {
+        await Promise.all(ops.slice(i, i + BATCH_SIZE).map(op => op()));
+      }
+
+      const parts = [];
+      if (added) parts.push(`${added} added`);
+      if (updated) parts.push(`${updated} updated`);
+      if (removed) parts.push(`${removed} removed`);
+      if (failed) parts.push(`${failed} failed`);
+      toast(
+        parts.length ? parts.join(', ') : 'No changes',
+        failed > 0 ? 'error' : undefined,
+      );
+
       setEditMode(false);
       setDayTypes({});
+      setWeeklyPattern({});
       refetch();
-    } catch { toast('Failed to save', 'error'); }
+    } catch { toast('Failed to save schedule', 'error'); }
     finally { setSaving(false); }
   }
 
-  // Count of pending changes
-  const pendingCount = Object.values(dayTypes).filter(t => t && t !== 'blocked').length;
-  const blockedCount = Object.values(dayTypes).filter(t => t === 'blocked').length;
+  // Count pending changes — includes the full-range weekly pattern expansion
+  const changes = useMemo(() => {
+    let newDates = 0, modified = 0, removals = 0;
+    const keptDates = new Set<string>();
 
+    // Merge pattern across all months + per-day overrides
+    const patternDates = expandPatternToFullRange(weeklyPattern);
+    const allDayTypes = { ...patternDates, ...dayTypes };
+
+    for (const [date, type] of Object.entries(allDayTypes)) {
+      if (!type || !validBackendTypes.has(type)) continue;
+      keptDates.add(date);
+      const existing = existingByDate[date];
+      if (!existing || existing.is_cancelled) newDates++;
+      else if (existing.type !== type || existing.start_time !== defaultTime.start || existing.end_time !== defaultTime.end) modified++;
+    }
+
+    // Dates that existed but won't be kept
+    for (const [date, existing] of Object.entries(existingByDate)) {
+      if (existing.is_cancelled || keptDates.has(date)) continue;
+      removals++;
+    }
+
+    return { newDates, modified, removals, total: newDates + modified + removals };
+  }, [dayTypes, weeklyPattern, existingByDate, defaultTime, production]);
   // Handlers for existing date edits
   async function handleEditSave() {
     if (!editId || !id) return; setBusy(true);
@@ -314,10 +534,10 @@ export function SchedulePage() {
                   style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}>
                   Cancel
                 </button>
-                <button onClick={applySchedule} disabled={saving || pendingCount === 0}
+                <button onClick={applySchedule} disabled={saving || changes.total === 0}
                   className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer font-bold"
-                  style={{ color: 'hsl(25,20%,8%)', background: 'hsl(38,70%,50%)', opacity: (saving || pendingCount === 0) ? 0.5 : 1 }}>
-                  {saving ? 'Saving...' : `Apply ${pendingCount} date${pendingCount !== 1 ? 's' : ''}`}
+                  style={{ color: 'hsl(25,20%,8%)', background: 'hsl(38,70%,50%)', opacity: (saving || changes.total === 0) ? 0.5 : 1 }}>
+                  {saving ? 'Saving...' : changes.total === 0 ? 'No changes' : `Apply ${changes.total} change${changes.total !== 1 ? 's' : ''}`}
                 </button>
               </div>
             </div>
@@ -361,6 +581,7 @@ export function SchedulePage() {
           const displayType = editMode && editType ? editType : (topEvent && !topEvent.is_cancelled ? topEvent.type : null);
           const config = displayType ? typeConfig[displayType] : null;
           const isCancelled = hasEvent && events.every(e => e.is_cancelled);
+          const isBlocked = displayType === 'blocked';
 
           return (
             <motion.button
@@ -369,9 +590,11 @@ export function SchedulePage() {
               className="relative flex flex-col items-center rounded-sm cursor-pointer min-h-[80px] p-1"
               style={{
                 background: isSelected ? 'rgba(255,255,255,0.06)'
+                  : isBlocked ? (typeConfig.blocked?.chalkBg || 'rgba(255,80,80,0.06)')
                   : editMode && editType ? (typeConfig[editType]?.chalkBg || 'transparent')
                   : 'transparent',
-                outline: editMode && editType ? `1px dashed ${editType === 'blocked' ? 'rgba(255,80,80,0.2)' : 'rgba(255,220,100,0.15)'}` : 'none',
+                outline: isBlocked ? '1px dashed rgba(255,80,80,0.2)'
+                  : editMode && editType ? `1px dashed rgba(255,220,100,0.15)` : 'none',
               }}
               whileHover={editMode ? { scale: 1.05 } : {}}
               whileTap={editMode ? { scale: 0.95 } : {}}
@@ -380,13 +603,13 @@ export function SchedulePage() {
               {/* Day number */}
               <span style={{
                 color: isCancelled ? 'rgba(255,100,100,0.4)'
-                  : editType === 'blocked' ? 'rgba(255,100,100,0.5)'
+                  : isBlocked ? 'rgba(255,100,100,0.5)'
                   : isToday ? 'rgba(255,220,100,0.9)'
                   : displayType ? 'rgba(255,255,255,0.75)'
                   : 'rgba(255,255,255,0.4)',
                 fontSize: '12px',
                 fontWeight: isToday ? 600 : 300,
-                textDecoration: (isCancelled || editType === 'blocked') ? 'line-through' : 'none',
+                textDecoration: (isCancelled || isBlocked) ? 'line-through' : 'none',
               }}>
                 {day}
               </span>
@@ -413,8 +636,8 @@ export function SchedulePage() {
                 </motion.div>
               )}
 
-              {/* Blocked X marker */}
-              {editType === 'blocked' && (
+              {/* Blocked X marker — visible in both edit and view mode */}
+              {isBlocked && (
                 <div className="mt-2 text-sm font-bold" style={{ color: 'rgba(255,100,100,0.4)' }}>X</div>
               )}
 
@@ -433,14 +656,17 @@ export function SchedulePage() {
         })}
       </div>
 
-      {/* Legend (view mode) */}
+      {/* Legend (view mode) — gaffer tape strips */}
       {!editMode && (
-        <div className="flex gap-4 justify-center mt-5 flex-wrap">
+        <div className="flex gap-3 justify-center mt-5 flex-wrap">
           {Object.entries(typeConfig).filter(([k]) => k !== 'blocked').map(([type, c]) => (
-            <div key={type} className="flex items-center gap-1.5">
-              <div className="w-3 h-2 rounded-[1px]" style={{ background: c.noteBg }} />
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px' }}>{c.label}</span>
-            </div>
+            <GafferTape
+              key={type}
+              color={tapeColorMap[type] || 'yellow'}
+              rotate={(type.charCodeAt(0) % 3 - 1) * 0.5}
+            >
+              {c.label}
+            </GafferTape>
           ))}
         </div>
       )}

@@ -81,6 +81,7 @@ async def list_members(
                     "role": member.role,
                     "joined_at": member.joined_at.isoformat(),
                     "conflicts": has_conflicts,
+                    "conflicts_submitted": has_conflicts == "Submitted",
                 }
             )
 
