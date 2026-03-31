@@ -1,8 +1,6 @@
 """Test configuration and fixtures for Digital Call Board backend."""
 
 import os
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-
 import uuid
 import hashlib
 import asyncio
@@ -14,14 +12,13 @@ import pytest_asyncio
 from fastapi import Request, HTTPException, status
 from httpx import ASGITransport, AsyncClient
 from jose import jwt, JWTError
-from sqlalchemy import select
+from sqlalchemy import select, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
 TEST_SECRET = "test-secret-for-testing-purposes-only"
 
 # ---------------------------------------------------------------------------
-# Well-known test IDs — deterministic UUIDs from string names
+# Well-known test IDs --- deterministic UUIDs from string names
 # ---------------------------------------------------------------------------
 
 def str_to_uuid(s: str) -> str:
@@ -65,15 +62,45 @@ NON_MEMBERS = {"outsider-id", "non-member-id", "other-user-id", "prod-a-member",
 
 
 # ---------------------------------------------------------------------------
-# App instance fixture — creates isolated DB per test with seed data
+# Shared engine & session maker (one connection for all tests, uses Supabase)
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="function")
-def app_instance(tmp_path):
-    """Create test app with isolated DB, seeded with a theater + production + members."""
-    db_path = tmp_path / "test.db"
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    engine = create_async_engine(db_url, connect_args={"check_same_thread": False})
+from dotenv import load_dotenv as _load_dotenv
+_load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+
+_raw_url = os.environ.get("DATABASE_URL", "")
+if _raw_url.startswith("postgresql://"):
+    _db_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif _raw_url.startswith("postgresql+asyncpg://"):
+    _db_url = _raw_url
+else:
+    raise RuntimeError(f"Tests require a PostgreSQL DATABASE_URL, got: {_raw_url!r}")
+
+
+# ---------------------------------------------------------------------------
+# Re-seed production data after the entire test session
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session", autouse=True)
+def reseed_after_tests():
+    """Re-seed production data after all tests complete."""
+    yield
+    # After all tests, re-seed the database
+    import subprocess, sys
+    subprocess.run(
+        [sys.executable, "seed_data.py"],
+        cwd=os.path.dirname(__file__) + "/..",
+        capture_output=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# App instance fixture --- uses real PostgreSQL with per-test cleanup
+# ---------------------------------------------------------------------------
+
+async def _create_app_instance():
+    """Core setup: create test app with clean DB."""
+    engine = create_async_engine(_db_url, pool_pre_ping=True, pool_size=5, max_overflow=10)
     session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     # Patch all modules that use the DB engine/session
@@ -84,7 +111,7 @@ def app_instance(tmp_path):
     import app.routers.auth as auth_mod
     auth_mod.async_session_maker = session_maker
     from app.config import Settings
-    auth_mod.settings = Settings(database_url=db_url, nextauth_secret=TEST_SECRET)
+    auth_mod.settings = Settings(database_url=_db_url, nextauth_secret=TEST_SECRET)
 
     # Patch all routers that import async_session_maker directly
     for mod_name in [
@@ -98,7 +125,6 @@ def app_instance(tmp_path):
             mod = importlib.import_module(mod_name)
             if hasattr(mod, "async_session_maker"):
                 mod.async_session_maker = session_maker
-            # Clear chat rate limits for test isolation
             if hasattr(mod, "_chat_rate_limits"):
                 mod._chat_rate_limits.clear()
         except ImportError:
@@ -107,10 +133,22 @@ def app_instance(tmp_path):
     from app.database import Base
     from app.models import User, Theater, Production, ProductionMember, RehearsalDate
 
-    # Create tables and seed data
+    # Create tables (idempotent) and seed data
     async def setup_db():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+        # Clean all tables before seeding using TRUNCATE CASCADE
+        async with engine.begin() as conn:
+            from sqlalchemy import text
+            await conn.execute(text(
+                "TRUNCATE TABLE messages, conversation_participants, conversations, "
+                "cast_conflicts, conflict_submissions, attendance, "
+                "scene_roles, scenes, cast_profiles, invite_tokens, "
+                "bulletin_posts, rehearsal_dates, production_members, productions, "
+                "theaters, chat_rate_limits, password_reset_tokens, "
+                "email_verification_tokens, users CASCADE"
+            ))
 
         async with session_maker() as session:
             # Create director user
@@ -246,7 +284,6 @@ def app_instance(tmp_path):
             session.add(google_user)
 
             # Create rehearsal dates for schedule/conflict tests
-            # Named dates: date-1 through date-5 plus date-id, some-date-id
             date_names = ["date-1", "date-2", "date-3", "date-4", "date-5",
                           "date-id", "some-date-id"]
             for i, name in enumerate(date_names):
@@ -260,7 +297,7 @@ def app_instance(tmp_path):
                 )
                 session.add(rd)
 
-            # Create a bulletin post for edit/delete/pin tests
+            # Create bulletin posts
             from app.models import BulletinPost
             post = BulletinPost(
                 id=str_to_uuid("post-id"),
@@ -272,7 +309,6 @@ def app_instance(tmp_path):
             )
             session.add(post)
 
-            # Staff-authored post
             staff_post = BulletinPost(
                 id=str_to_uuid("staff-post-id"),
                 production_id=PRODUCTION_ID,
@@ -283,7 +319,6 @@ def app_instance(tmp_path):
             )
             session.add(staff_post)
 
-            # Additional posts for pin tests
             post1 = BulletinPost(
                 id=str_to_uuid("post-1"),
                 production_id=PRODUCTION_ID,
@@ -304,7 +339,6 @@ def app_instance(tmp_path):
             )
             session.add(post2)
 
-            # own-post-id for staff delete tests
             own_post = BulletinPost(
                 id=str_to_uuid("own-post-id"),
                 production_id=PRODUCTION_ID,
@@ -315,7 +349,6 @@ def app_instance(tmp_path):
             )
             session.add(own_post)
 
-            # any-post-id for delete tests
             any_post = BulletinPost(
                 id=str_to_uuid("any-post-id"),
                 production_id=PRODUCTION_ID,
@@ -326,7 +359,6 @@ def app_instance(tmp_path):
             )
             session.add(any_post)
 
-            # Director-authored post (for staff can't edit/delete tests)
             dir_post = BulletinPost(
                 id=str_to_uuid("director-post-id"),
                 production_id=PRODUCTION_ID,
@@ -350,7 +382,6 @@ def app_instance(tmp_path):
             session.add(ConversationParticipant(
                 id=str(uuid.uuid4()), conversation_id=str_to_uuid("conv-id"), user_id=CAST_USER_ID,
             ))
-            # Seed some messages
             msg1 = Message(
                 id=str_to_uuid("message-id"),
                 conversation_id=str_to_uuid("conv-id"),
@@ -369,7 +400,6 @@ def app_instance(tmp_path):
                 is_deleted=False,
             )
             session.add(msg2)
-            # Old message (for 5-min delete window test)
             old_msg = Message(
                 id=str_to_uuid("old-message-id"),
                 conversation_id=str_to_uuid("conv-id"),
@@ -413,7 +443,6 @@ def app_instance(tmp_path):
             )
             session.add(invite2)
 
-            # Expired token
             expired_invite = InviteToken(
                 id=str(uuid.uuid4()),
                 production_id=PRODUCTION_ID,
@@ -424,7 +453,6 @@ def app_instance(tmp_path):
             )
             session.add(expired_invite)
 
-            # Maxed out token
             maxed_invite = InviteToken(
                 id=str(uuid.uuid4()),
                 production_id=PRODUCTION_ID,
@@ -435,7 +463,6 @@ def app_instance(tmp_path):
             )
             session.add(maxed_invite)
 
-            # Production A invite token (for data isolation tests)
             prod_a_invite = InviteToken(
                 id=str(uuid.uuid4()),
                 production_id=PRODUCTION_ID,
@@ -448,15 +475,13 @@ def app_instance(tmp_path):
 
             await session.commit()
 
-    asyncio.get_event_loop().run_until_complete(setup_db())
+    await setup_db()
 
     # Create app
     from app.main import create_app
     app = create_app()
 
     # URL rewriting: wrap the app so raw test IDs in URLs get mapped to UUIDs
-    # Tests use paths like /api/productions/prod-id/bulletin
-    # but DB has UUID version of "prod-id"
     ID_MAP = {}
     for raw_id in [
         "prod-id", "prod-a-id", "prod-b-id", "theater-id",
@@ -475,7 +500,7 @@ def app_instance(tmp_path):
     ]:
         ID_MAP[raw_id] = str_to_uuid(raw_id)
 
-    # Override get_db (must happen BEFORE wrapping the app)
+    # Override get_db
     async def override_get_db():
         async with session_maker() as session:
             try:
@@ -487,7 +512,7 @@ def app_instance(tmp_path):
 
     app.dependency_overrides[db_mod.get_db] = override_get_db
 
-    # Override get_current_user — auto-creates unknown users, returns role info
+    # Override get_current_user
     async def test_get_current_user(request: Request):
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
@@ -519,7 +544,6 @@ def app_instance(tmp_path):
             user = result.scalar_one_or_none()
 
             if not user:
-                # Auto-create user for unknown IDs
                 user = User(
                     id=db_user_id,
                     email=f"{original_user_id}@test.example.com",
@@ -531,7 +555,6 @@ def app_instance(tmp_path):
                 )
                 session.add(user)
 
-                # Auto-create production membership if user is in ROLE_MAP
                 role = ROLE_MAP.get(original_user_id)
                 if role and original_user_id not in NON_MEMBERS:
                     session.add(ProductionMember(
@@ -561,14 +584,29 @@ def app_instance(tmp_path):
     from app.routers.auth import get_current_user
     app.dependency_overrides[get_current_user] = test_get_current_user
 
-    return app
+    return app, engine
+
+
+@pytest_asyncio.fixture(scope="function")
+async def app_instance():
+    """Per-test app instance with fresh DB."""
+    app, engine = await _create_app_instance()
+    yield app
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="class")
+async def class_app_instance():
+    """Shared app instance for flow test classes (state persists across test methods)."""
+    app, engine = await _create_app_instance()
+    yield app
+    await engine.dispose()
 
 
 # ---------------------------------------------------------------------------
 # Client fixture
 # ---------------------------------------------------------------------------
 
-# All raw test IDs that need UUID conversion
 _RAW_IDS = [
     "prod-id", "prod-a-id", "prod-b-id", "theater-id", "cast-id", "staff-id",
     "date-1", "date-2", "date-3", "date-4", "date-5", "date-id",
@@ -598,7 +636,6 @@ _ID_TO_UUID = {raw: str_to_uuid(raw) for raw in _RAW_IDS}
 
 def _rewrite_url(url: str) -> str:
     """Rewrite raw test IDs in URL paths to their UUID versions."""
-    # Split off query string before rewriting path
     if "?" in url:
         path, query = url.split("?", 1)
     else:
@@ -623,7 +660,6 @@ def _rewrite_json(data):
     return data
 
 
-# Reverse map: UUID -> raw test ID (for response body normalization)
 _UUID_TO_ID = {uid: raw for raw, uid in _ID_TO_UUID.items()}
 
 
@@ -647,7 +683,6 @@ class RewritingClient(AsyncClient):
         if "json" in kwargs and kwargs["json"] is not None:
             kwargs["json"] = _rewrite_json(kwargs["json"])
         response = await super().request(method, url, **kwargs)
-        # Patch the response's .json() to unrewrite UUIDs back to raw IDs
         original_json = response.json
 
         def patched_json(**kw):
@@ -660,8 +695,16 @@ class RewritingClient(AsyncClient):
 
 @pytest_asyncio.fixture
 async def client(app_instance) -> AsyncGenerator[AsyncClient, None]:
-    """Async HTTP test client with URL rewriting."""
+    """Async HTTP test client with URL rewriting (per-test isolation)."""
     transport = ASGITransport(app=app_instance)
+    async with RewritingClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest_asyncio.fixture(scope="class")
+async def class_client(class_app_instance) -> AsyncGenerator[AsyncClient, None]:
+    """Shared client for flow test classes (state persists across test methods)."""
+    transport = ASGITransport(app=class_app_instance)
     async with RewritingClient(transport=transport, base_url="http://test") as ac:
         yield ac
 

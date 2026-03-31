@@ -2,22 +2,36 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
+import { useApi } from '@/hooks/useApi';
 import { apiClient } from '@/services/api';
+import { getMembers, promoteMember, demoteMember } from '@/services/members';
 import { formatDate } from '@/utils/format';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
+import { ROLES } from '@/utils/constants';
+import type { Member } from '@/types';
 
 export function ProductionSettingsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { production } = useProduction();
+  const { production, userRole } = useProduction();
   const { toast } = useToast();
+  const isDirector = userRole === ROLES.DIRECTOR;
 
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [roleAction, setRoleAction] = useState<{ type: 'promote' | 'demote'; member: Member } | null>(null);
+
+  const { data: members, refetch: refetchMembers } = useApi(
+    () => (isDirector && id ? getMembers(id) : Promise.resolve([])),
+    [id, isDirector],
+  );
 
   const isArchived = production?.is_archived ?? false;
+
+  const staffMembers = (members || []).filter(m => m.role === 'staff');
+  const castMembers = (members || []).filter(m => m.role === 'cast');
 
   async function handleArchive() {
     if (!id) return;
@@ -63,6 +77,26 @@ export function ProductionSettingsPage() {
     }
   }
 
+  async function handleRoleChange() {
+    if (!roleAction || !id) return;
+    setBusy(true);
+    try {
+      if (roleAction.type === 'promote') {
+        await promoteMember(id, roleAction.member.user_id);
+        toast(`${roleAction.member.name || 'Member'} promoted to staff`);
+      } else {
+        await demoteMember(id, roleAction.member.user_id);
+        toast(`${roleAction.member.name || 'Member'} demoted to cast`);
+      }
+      setRoleAction(null);
+      refetchMembers();
+    } catch (err: any) {
+      toast(err.message || 'Failed to change role', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="max-w-lg">
       <h1 className="text-2xl font-bold text-foreground mb-6">Production Settings</h1>
@@ -92,6 +126,80 @@ export function ProductionSettingsPage() {
           </div>
         </dl>
       </section>
+
+      {/* Member Role Management — director only */}
+      {isDirector && (
+        <section className="bg-surface-raised border border-border rounded-lg p-5 mb-6 space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Member Roles</h2>
+          <p className="text-xs text-muted">Promote cast to staff or demote staff back to cast.</p>
+
+          {/* Staff members */}
+          {staffMembers.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Staff</h3>
+              <div className="space-y-2">
+                {staffMembers.map(m => (
+                  <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-md"
+                    style={{ background: 'rgba(100,180,255,0.06)', border: '1px solid rgba(100,180,255,0.1)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+                        style={{ background: 'rgba(100,180,255,0.15)', color: 'hsl(210,60%,60%)' }}>
+                        {(m.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm text-foreground">{m.name || m.email || 'Member'}</p>
+                        <p className="text-[10px] text-muted">{m.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setRoleAction({ type: 'demote', member: m })}
+                      className="text-xs px-3 py-1.5 rounded-md cursor-pointer transition-colors"
+                      style={{ background: 'rgba(255,180,50,0.1)', color: 'hsl(38,70%,55%)', border: '1px solid rgba(255,180,50,0.15)' }}
+                    >
+                      Demote to Cast
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cast members */}
+          {castMembers.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Cast</h3>
+              <div className="space-y-2">
+                {castMembers.map(m => (
+                  <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-md"
+                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+                        style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
+                        {(m.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm text-foreground">{m.name || m.email || 'Member'}</p>
+                        <p className="text-[10px] text-muted">{m.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setRoleAction({ type: 'promote', member: m })}
+                      className="text-xs px-3 py-1.5 rounded-md cursor-pointer transition-colors"
+                      style={{ background: 'rgba(100,180,255,0.1)', color: 'hsl(210,60%,60%)', border: '1px solid rgba(100,180,255,0.15)' }}
+                    >
+                      Promote to Staff
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(!members || (staffMembers.length === 0 && castMembers.length === 0)) && (
+            <p className="text-sm text-muted italic">No members to manage.</p>
+          )}
+        </section>
+      )}
 
       <section className="border border-destructive/30 rounded-lg p-5 space-y-4">
         <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
@@ -144,6 +252,23 @@ export function ProductionSettingsPage() {
         isLoading={busy}
       >
         <p>This will permanently delete "{production?.name}" and all associated data. This action cannot be undone.</p>
+      </Dialog>
+
+      {/* Role change confirmation */}
+      <Dialog
+        open={!!roleAction}
+        onClose={() => setRoleAction(null)}
+        title={roleAction?.type === 'promote' ? 'Promote to Staff' : 'Demote to Cast'}
+        confirmLabel={roleAction?.type === 'promote' ? 'Promote' : 'Demote'}
+        confirmVariant={roleAction?.type === 'demote' ? 'destructive' : 'primary'}
+        onConfirm={handleRoleChange}
+        isLoading={busy}
+      >
+        <p>
+          {roleAction?.type === 'promote'
+            ? `Promote ${roleAction.member.name || 'this member'} to staff? They will gain access to staff-level features like schedule management and bulletin editing.`
+            : `Demote ${roleAction?.member.name || 'this member'} back to cast? They will lose staff privileges.`}
+        </p>
       </Dialog>
     </div>
   );

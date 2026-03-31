@@ -8,7 +8,6 @@ Covers:
 - SCHED-07: Director adds new rehearsal date
 - SCHED-08: Director soft-deletes rehearsal date
 - SCHED-09: Director cancels rehearsal
-- SCHED-11: Schedule change triggers bulletin post
 - SCHED-13: Director hard-deletes rehearsal date
 """
 
@@ -57,25 +56,6 @@ class TestAddRehearsalDate:
             "type": "invalid_type",
         }, headers=headers)
         assert response.status_code == 400
-
-    async def test_add_triggers_bulletin_post(self, client, auth_headers):
-        """SCHED-11: Adding a date creates a system bulletin post."""
-        headers = auth_headers("director-id")
-        today = date.today()
-        new_date = (today + timedelta(days=45)).isoformat()
-        await client.post("/api/productions/prod-id/schedule", json={
-            "date": new_date,
-            "start_time": "18:00",
-            "end_time": "21:00",
-            "type": "regular",
-        }, headers=headers)
-
-        # Check bulletin for system post
-        bulletin_resp = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        assert bulletin_resp.status_code == 200
-        posts = bulletin_resp.json()
-        assert any("rehearsal added" in p["title"].lower() or "schedule updated" in p["title"].lower() for p in posts)
-
 
 class TestEditRehearsalTime:
     """DIR-06: Director edits a rehearsal time."""
@@ -137,18 +117,6 @@ class TestCancelRehearsal:
         data = response.json()
         assert data["is_cancelled"] is True
 
-    async def test_cancel_triggers_bulletin_post(self, client, auth_headers):
-        """Cancelling a rehearsal creates a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.post(
-            "/api/productions/prod-id/schedule/date-id/cancel",
-            headers=headers,
-        )
-        bulletin_resp = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = bulletin_resp.json()
-        assert any("cancel" in p.get("body", "").lower() for p in posts)
-
-
 class TestSoftDeleteRehearsal:
     """DIR-22, SCHED-08: Director soft-deletes a rehearsal date."""
 
@@ -179,15 +147,6 @@ class TestSoftDeleteRehearsal:
         # No soft-deleted dates should appear
         for d in dates:
             assert d.get("is_deleted") is not True
-
-    async def test_soft_delete_triggers_bulletin(self, client, auth_headers):
-        """Soft-delete creates a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.delete("/api/productions/prod-id/schedule/date-id", headers=headers)
-        bulletin_resp = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = bulletin_resp.json()
-        assert any("removed" in p.get("body", "").lower() for p in posts)
-
 
 class TestHardDeleteRehearsal:
     """SCHED-13: Director hard-deletes a rehearsal date."""

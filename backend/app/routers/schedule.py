@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import Production, ProductionMember, RehearsalDate, BulletinPost
+from app.models import Production, ProductionMember, RehearsalDate
 from app.routers.auth import get_current_user
 from app.services.business_logic import generate_schedule
 
@@ -211,17 +211,6 @@ async def add_rehearsal_date(
             type=date_type,
         )
         session.add(rehearsal)
-
-        # System bulletin post
-        post = BulletinPost(
-            id=str(uuid.uuid4()),
-            production_id=production_id,
-            author_id=current_user["id"],
-            title="Schedule Updated",
-            body=f"Rehearsal added: {date_str} {start_time}-{end_time} ({date_type})",
-        )
-        session.add(post)
-
         await session.commit()
 
         return {
@@ -262,7 +251,6 @@ async def update_rehearsal_date(
                 detail={"error": "NOT_FOUND", "message": "Date not found"},
             )
 
-        changes = []
         if start_time:
             if time.fromisoformat(start_time) >= rehearsal.end_time:
                 raise HTTPException(
@@ -273,8 +261,6 @@ async def update_rehearsal_date(
                     },
                 )
             rehearsal.start_time = time.fromisoformat(start_time)
-            end_fmt = rehearsal.end_time.strftime('%H:%M')
-            changes.append(f"time changed: {start_time}-{end_fmt}")
 
         if end_time:
             rehearsal.end_time = time.fromisoformat(end_time)
@@ -286,16 +272,6 @@ async def update_rehearsal_date(
                     detail={"error": "VALIDATION_ERROR", "message": "Note too long"},
                 )
             rehearsal.note = note
-
-        if changes:
-            post = BulletinPost(
-                id=str(uuid.uuid4()),
-                production_id=production_id,
-                author_id=current_user["id"],
-                title="Schedule Updated",
-                body=f"Rehearsal time changed: {rehearsal.rehearsal_date.isoformat()} now {rehearsal.start_time.strftime('%H:%M')}-{rehearsal.end_time.strftime('%H:%M')}",
-            )
-            session.add(post)
 
         await session.commit()
 
@@ -333,16 +309,6 @@ async def cancel_rehearsal(
             )
 
         rehearsal.is_cancelled = True
-
-        post = BulletinPost(
-            id=str(uuid.uuid4()),
-            production_id=production_id,
-            author_id=current_user["id"],
-            title="Schedule Updated",
-            body=f"Rehearsal cancelled: {rehearsal.rehearsal_date.isoformat()}",
-        )
-        session.add(post)
-
         await session.commit()
 
         return {
@@ -386,29 +352,11 @@ async def delete_rehearsal(
             for c in conflicts:
                 await session.delete(c)
 
-            post = BulletinPost(
-                id=str(uuid.uuid4()),
-                production_id=production_id,
-                author_id=current_user["id"],
-                title="Schedule Updated",
-                body=f"Rehearsal permanently deleted: {rehearsal.rehearsal_date.isoformat()}",
-            )
-            session.add(post)
-
             await session.delete(rehearsal)
         else:
             # Soft delete
             rehearsal.is_deleted = True
             rehearsal.deleted_at = datetime.utcnow()
-
-            post = BulletinPost(
-                id=str(uuid.uuid4()),
-                production_id=production_id,
-                author_id=current_user["id"],
-                title="Schedule Updated",
-                body=f"Rehearsal removed: {rehearsal.rehearsal_date.isoformat()}",
-            )
-            session.add(post)
 
         await session.commit()
 

@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApi } from '@/hooks/useApi';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
 import { getSchedule, updateDate, cancelDate, deleteDate, addDate } from '@/services/schedule';
+import { getPosts } from '@/services/bulletin';
 import { formatTime } from '@/utils/format';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
@@ -44,9 +45,23 @@ const spring = { type: 'spring' as const, stiffness: 120, damping: 18 };
 export function SchedulePage() {
   usePageTitle('Schedule');
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { userRole, production } = useProduction();
   const { toast } = useToast();
   const { data: dates, refetch } = useApi(() => getSchedule(id!), [id]);
+  const { data: bulletinPosts } = useApi(() => getPosts(id!), [id]);
+
+  // Map bulletin posts to dates (YYYY-MM-DD) for pulse indicators
+  const bulletinDateSet = useMemo(() => {
+    const set = new Set<string>();
+    if (!bulletinPosts) return set;
+    for (const post of bulletinPosts) {
+      const d = new Date(post.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      set.add(key);
+    }
+    return set;
+  }, [bulletinPosts]);
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -582,6 +597,7 @@ export function SchedulePage() {
           const config = displayType ? typeConfig[displayType] : null;
           const isCancelled = hasEvent && events.every(e => e.is_cancelled);
           const isBlocked = displayType === 'blocked';
+          const hasBulletinPost = bulletinDateSet.has(dateStr(day));
 
           return (
             <motion.button
@@ -650,6 +666,16 @@ export function SchedulePage() {
                 </div>
               )}
 
+              {/* Bulletin post pulse indicator */}
+              {!editMode && hasBulletinPost && (
+                <motion.div
+                  className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                  style={{ background: 'rgba(255,180,60,0.8)' }}
+                  animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              )}
+
               {isToday && <div className="absolute bottom-0.5 w-3 h-[2px] rounded-full" style={{ background: 'rgba(255,220,100,0.5)' }} />}
             </motion.button>
           );
@@ -685,6 +711,26 @@ export function SchedulePage() {
             </ChalkText>
             <button onClick={() => setSelectedDay(null)} className="cursor-pointer text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>x</button>
           </div>
+
+          {/* Bulletin post link */}
+          {bulletinDateSet.has(dateStr(selectedDay)) && (
+            <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,180,60,0.04)' }}>
+              <motion.div
+                className="w-2 h-2 rounded-full"
+                style={{ background: 'rgba(255,180,60,0.8)' }}
+                animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <span className="text-[11px]" style={{ color: 'rgba(255,220,100,0.7)' }}>Bulletin posted this day</span>
+              <button
+                onClick={() => navigate(`/productions/${id}/bulletin`)}
+                className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer ml-auto"
+                style={{ color: 'rgba(255,220,100,0.8)', background: 'rgba(255,220,100,0.08)', border: '1px solid rgba(255,220,100,0.12)' }}
+              >
+                View Bulletin
+              </button>
+            </div>
+          )}
 
           {selectedEvents.length === 0 ? (
             <div className="px-4 py-6 text-center">

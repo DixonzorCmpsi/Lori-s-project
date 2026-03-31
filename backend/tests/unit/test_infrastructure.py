@@ -192,55 +192,7 @@ class TestCascadeDeletes:
 
 
 class TestSystemBulletinPosts:
-    """System-generated bulletin posts on schedule changes."""
-
-    async def test_add_date_creates_bulletin(self, client, auth_headers):
-        """Adding a rehearsal date triggers a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.post("/api/productions/prod-id/schedule", json={
-            "date": "2026-06-01",
-            "start_time": "18:00",
-            "end_time": "21:00",
-            "type": "regular",
-        }, headers=headers)
-        response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = response.json()
-        assert any("added" in p.get("body", "").lower() or "schedule" in p.get("title", "").lower() for p in posts)
-
-    async def test_cancel_creates_bulletin(self, client, auth_headers):
-        """Cancelling a rehearsal triggers a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.post("/api/productions/prod-id/schedule/date-id/cancel", headers=headers)
-        response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = response.json()
-        assert any("cancel" in p.get("body", "").lower() for p in posts)
-
-    async def test_soft_delete_creates_bulletin(self, client, auth_headers):
-        """Soft-deleting a rehearsal triggers a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.delete("/api/productions/prod-id/schedule/date-id", headers=headers)
-        response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = response.json()
-        assert any("removed" in p.get("body", "").lower() for p in posts)
-
-    async def test_hard_delete_creates_bulletin(self, client, auth_headers):
-        """Hard-deleting a rehearsal triggers a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.delete("/api/productions/prod-id/schedule/date-id?permanent=true", headers=headers)
-        response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = response.json()
-        assert any("permanently deleted" in p.get("body", "").lower() for p in posts)
-
-    async def test_time_change_creates_bulletin(self, client, auth_headers):
-        """Changing rehearsal time triggers a system bulletin post."""
-        headers = auth_headers("director-id")
-        await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "start_time": "19:00",
-            "end_time": "22:00",
-        }, headers=headers)
-        response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = response.json()
-        assert any("time changed" in p.get("body", "").lower() or "schedule" in p.get("title", "").lower() for p in posts)
+    """System-generated bulletin posts for admin actions."""
 
     async def test_conflict_reset_creates_bulletin(self, client, auth_headers):
         """Resetting a cast member's conflicts triggers a system bulletin post."""
@@ -253,12 +205,21 @@ class TestSystemBulletinPosts:
         posts = response.json()
         assert any("reset" in p.get("body", "").lower() for p in posts)
 
-    async def test_system_post_attributed_to_director(self, client, auth_headers):
-        """System-generated posts have author_id = the Director who triggered it."""
+    async def test_schedule_changes_do_not_create_bulletin(self, client, auth_headers):
+        """Schedule changes should not auto-post to bulletin board."""
         headers = auth_headers("director-id")
-        await client.post("/api/productions/prod-id/schedule/date-id/cancel", headers=headers)
+        # Get initial post count
         response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
-        posts = response.json()
-        system_posts = [p for p in posts if "schedule" in p.get("title", "").lower()]
-        for post in system_posts:
-            assert post["author_id"] == "director-id"
+        initial_count = len(response.json())
+
+        # Add a date
+        await client.post("/api/productions/prod-id/schedule", json={
+            "date": "2026-06-01",
+            "start_time": "18:00",
+            "end_time": "21:00",
+            "type": "regular",
+        }, headers=headers)
+
+        # Post count should be unchanged
+        response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
+        assert len(response.json()) == initial_count

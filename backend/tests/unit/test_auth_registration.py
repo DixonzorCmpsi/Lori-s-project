@@ -164,8 +164,16 @@ class TestAgeGate:
 
     async def test_register_day_before_13_blocked(self, client):
         """User who turns 13 tomorrow is still blocked."""
+        from datetime import timedelta
         today = date.today()
-        dob_almost_13 = date(today.year - 13, today.month, today.day + 1)
+        # Use a safe date for the DOB calculation (avoid month-end overflow)
+        thirteen_years_ago = today.replace(year=today.year - 13, month=1, day=15)
+        # Born one day after today's date in their birth year = not yet 13
+        try:
+            dob_almost_13 = today.replace(year=today.year - 13) + timedelta(days=1)
+        except ValueError:
+            # Handle leap year edge case (Feb 29 -> Mar 1)
+            dob_almost_13 = today.replace(year=today.year - 13, day=28) + timedelta(days=2)
         response = await client.post("/api/auth/register", json={
             "email": "almost13@example.com",
             "name": "Almost Thirteen",

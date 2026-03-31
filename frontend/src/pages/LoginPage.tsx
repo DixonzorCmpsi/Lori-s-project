@@ -198,11 +198,12 @@ export function LoginPage() {
                   </motion.div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-5" data-testid="login-form">
                   <motion.div variants={fadeUp}>
-                    <label className="block text-xs font-medium mb-2 tracking-wide uppercase"
-                      style={{ color: 'hsl(25, 10%, 50%)' }}>Email</label>
+                    <label htmlFor="login-email" className="block text-xs font-medium mb-2 tracking-wide uppercase"
+                      style={{ color: 'hsl(25, 10%, 50%)' }}>Email Address</label>
                     <input
+                      id="login-email"
                       type="email" value={email} onChange={e => setEmail(e.target.value)}
                       placeholder="you@example.com" required autoComplete="email"
                       className={inputClasses} style={inputStyle}
@@ -211,9 +212,10 @@ export function LoginPage() {
                   </motion.div>
 
                   <motion.div variants={fadeUp}>
-                    <label className="block text-xs font-medium mb-2 tracking-wide uppercase"
+                    <label htmlFor="login-password" className="block text-xs font-medium mb-2 tracking-wide uppercase"
                       style={{ color: 'hsl(25, 10%, 50%)' }}>Password</label>
                     <input
+                      id="login-password"
                       type="password" value={password} onChange={e => setPassword(e.target.value)}
                       placeholder="Enter your password" required autoComplete="current-password"
                       className={inputClasses} style={inputStyle}
@@ -234,7 +236,7 @@ export function LoginPage() {
                       whileHover={{ scale: 1.01, boxShadow: '0 6px 24px rgba(200, 140, 40, 0.3), inset 0 1px 0 rgba(255,255,255,0.15)' }}
                       whileTap={{ scale: 0.98, y: 1 }}
                     >
-                      {isLoading ? 'Signing in...' : 'Sign In'}
+                      {isLoading ? 'Signing in...' : 'Access Dashboard'}
                     </motion.button>
                   </motion.div>
                 </form>
@@ -257,11 +259,11 @@ export function LoginPage() {
                 <motion.div variants={fadeUp} className="mt-6 flex items-center justify-between text-sm">
                   <Link to="/forgot-password" className="transition-colors duration-200 hover:text-[hsl(38,70%,55%)]"
                     style={{ color: 'hsl(25, 10%, 45%)' }}>
-                    Forgot password?
+                    Forgot?
                   </Link>
                   <Link to="/register" className="font-medium transition-colors duration-200 hover:text-[hsl(38,70%,60%)]"
                     style={{ color: 'hsl(38, 60%, 55%)' }}>
-                    Create account
+                    Join the Cast
                   </Link>
                 </motion.div>
               </motion.div>

@@ -36,6 +36,15 @@ const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
   e.target.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.02)';
 };
 
+const Field = ({ id, label, error, children }: { id?: string; label: string; error?: string; children: React.ReactNode }) => (
+  <motion.div variants={fadeUp}>
+    <label htmlFor={id} className="block text-xs font-medium mb-1.5 tracking-wide uppercase"
+      style={{ color: 'hsl(25, 10%, 50%)' }}>{label}</label>
+    {children}
+    {error && <p className="text-xs mt-1 font-medium" style={{ color: 'hsl(0, 65%, 65%)' }}>{error}</p>}
+  </motion.div>
+);
+
 export function RegisterPage() {
   usePageTitle('Create Account');
   const [name, setName] = useState('');
@@ -82,14 +91,6 @@ export function RegisterPage() {
     }
   };
 
-  const Field = ({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) => (
-    <motion.div variants={fadeUp}>
-      <label className="block text-xs font-medium mb-1.5 tracking-wide uppercase"
-        style={{ color: 'hsl(25, 10%, 50%)' }}>{label}</label>
-      {children}
-      {error && <p className="text-xs mt-1 font-medium" style={{ color: 'hsl(0, 65%, 65%)' }}>{error}</p>}
-    </motion.div>
-  );
 
   return (
     <TheaterLayout curtainsOpen={false}>
@@ -159,39 +160,41 @@ export function RegisterPage() {
               Fill in the details below to get started
             </motion.p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Field label="Full Name" error={errors.name}>
-                <input value={name} onChange={e => setName(e.target.value)} required placeholder="Your full name"
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+              <Field id="reg-name" label="Full Name" error={errors.name}>
+                <input id="reg-name" value={name} onChange={e => setName(e.target.value)} required placeholder="Your full name"
                   className={inputClasses} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
               </Field>
-              <Field label="Email" error={errors.email}>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com"
+              <Field id="reg-email" label="Email Address" error={errors.email}>
+                <input id="reg-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com"
                   className={inputClasses} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
               </Field>
-              <Field label="Date of Birth" error={errors.dob}>
-                <input type="date" value={dob} onChange={e => setDob(e.target.value)} required
+              <Field id="reg-dob" label="Date of Birth" error={errors.dob}>
+                <input id="reg-dob" type="date" value={dob} onChange={e => setDob(e.target.value)} required
                   max={new Date().toISOString().split('T')[0]}
                   className={inputClasses} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Password" error={errors.password}>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+                <Field id="reg-password" label="Password" error={errors.password}>
+                  <input id="reg-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required
                     autoComplete="new-password" placeholder="Min 8 chars"
                     className={inputClasses} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
                 </Field>
-                <Field label="Confirm" error={errors.confirm}>
-                  <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required
+                <Field id="reg-confirm" label="Confirm" error={errors.confirm}>
+                  <input id="reg-confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required
                     autoComplete="new-password" placeholder="Repeat"
                     className={inputClasses} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
                 </Field>
               </div>
 
-              <motion.label variants={fadeUp} className="flex items-start gap-2 text-xs cursor-pointer"
-                style={{ color: 'hsl(25, 10%, 50%)' }}>
-                <input type="checkbox" required className="mt-0.5 rounded"
-                  style={{ accentColor: 'hsl(38, 70%, 50%)' }} />
-                <span>I agree to the <a href="#" className="underline" style={{ color: 'hsl(38, 60%, 55%)' }}>Privacy Policy</a></span>
-              </motion.label>
+              <motion.div variants={fadeUp}>
+                <label className="flex items-start gap-2 text-xs cursor-pointer"
+                  style={{ color: 'hsl(25, 10%, 50%)' }}>
+                  <input type="checkbox" required className="mt-0.5 rounded"
+                    style={{ accentColor: 'hsl(38, 70%, 50%)' }} />
+                  <span>I agree to the <a href="#" className="underline" style={{ color: 'hsl(38, 60%, 55%)' }}>Privacy Policy</a></span>
+                </label>
+              </motion.div>
 
               <motion.div variants={fadeUp}>
                 <motion.button

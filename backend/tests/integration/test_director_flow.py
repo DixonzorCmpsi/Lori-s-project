@@ -251,16 +251,6 @@ class TestDirectorFullFlow:
         assert response.status_code == 200
         assert response.json()["is_cancelled"] is True
 
-    async def test_step_15_cancel_triggers_bulletin_post(self, client, auth_headers):
-        """Cancellation created a system bulletin post."""
-        headers = auth_headers(self.__class__.director_id)
-        response = await client.get(
-            f"/api/productions/{self.__class__.production_id}/bulletin",
-            headers=headers,
-        )
-        posts = response.json()
-        assert any("cancel" in p.get("body", "").lower() for p in posts)
-
     async def test_step_16_soft_delete_rehearsal(self, client, auth_headers):
         """Director soft-deletes a rehearsal date."""
         headers = auth_headers(self.__class__.director_id)
