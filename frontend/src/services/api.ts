@@ -19,12 +19,14 @@ export class ApiRequestError extends Error {
   code: string;
   fields?: { field: string; message: string }[];
   status: number;
+  detail: Record<string, unknown>;
 
-  constructor(status: number, body: ApiError) {
+  constructor(status: number, body: ApiError & Record<string, unknown>) {
     super(body.message);
     this.code = body.error;
     this.fields = body.fields;
     this.status = status;
+    this.detail = body;
   }
 }
 

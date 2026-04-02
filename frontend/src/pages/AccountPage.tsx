@@ -86,7 +86,7 @@ export function AccountPage() {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-6">Account Settings</h1>
 
       <section className="bg-surface-raised border border-border rounded-lg p-5 mb-6 space-y-4">

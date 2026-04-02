@@ -26,6 +26,7 @@ export function LoginPage() {
   usePageTitle('Sign In');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [curtainsOpen, setCurtainsOpen] = useState(false);
@@ -205,7 +206,7 @@ export function LoginPage() {
                     <input
                       id="login-email"
                       type="email" value={email} onChange={e => setEmail(e.target.value)}
-                      placeholder="you@example.com" required autoComplete="email"
+                      placeholder="you@example.com" required autoComplete="username"
                       className={inputClasses} style={inputStyle}
                       onFocus={handleFocus} onBlur={handleBlur}
                     />
@@ -214,13 +215,25 @@ export function LoginPage() {
                   <motion.div variants={fadeUp}>
                     <label htmlFor="login-password" className="block text-xs font-medium mb-2 tracking-wide uppercase"
                       style={{ color: 'hsl(25, 10%, 50%)' }}>Password</label>
-                    <input
-                      id="login-password"
-                      type="password" value={password} onChange={e => setPassword(e.target.value)}
-                      placeholder="Enter your password" required autoComplete="current-password"
-                      className={inputClasses} style={inputStyle}
-                      onFocus={handleFocus} onBlur={handleBlur}
-                    />
+                    <div className="relative">
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                        placeholder="Enter your password" required autoComplete="current-password"
+                        className={inputClasses} style={{ ...inputStyle, paddingRight: '3rem' }}
+                        onFocus={handleFocus} onBlur={handleBlur}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs cursor-pointer select-none"
+                        style={{ color: 'hsl(25, 10%, 50%)' }}
+                        tabIndex={-1}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? 'HIDE' : 'SHOW'}
+                      </button>
+                    </div>
                   </motion.div>
 
                   <motion.div variants={fadeUp}>

@@ -39,6 +39,17 @@ class UpdateDateRequest(BaseModel):
     note: Optional[str] = None
 
 
+class BulkDateEntry(BaseModel):
+    date: str
+    start_time: str
+    end_time: str
+    type: str
+
+
+class BulkScheduleRequest(BaseModel):
+    dates: list[BulkDateEntry]
+
+
 async def check_production_member(production_id: str, user_id: str) -> ProductionMember:
     """Check user is a member of production."""
     async with async_session_maker() as session:
@@ -178,6 +189,90 @@ async def get_schedule(
             }
             for d in dates
         ]
+
+
+@router.put("/{production_id}/schedule/bulk")
+async def bulk_sync_schedule(
+    production_id: str,
+    body: BulkScheduleRequest,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Replace the entire schedule in one transaction. Deletes dates not in the
+    new list and upserts the rest. Much faster than individual calls."""
+    member = await check_production_member(production_id, current_user["id"])
+    await check_can_edit_schedule(member)
+
+    valid_types = {"regular", "tech", "dress", "performance", "blocked"}
+    for entry in body.dates:
+        if entry.type not in valid_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "VALIDATION_ERROR", "message": f"Invalid type: {entry.type}"},
+            )
+
+    async with async_session_maker() as session:
+        # Fetch all existing non-deleted dates
+        stmt = select(RehearsalDate).where(
+            RehearsalDate.production_id == production_id,
+            RehearsalDate.is_deleted == False,
+        )
+        result = await session.execute(stmt)
+        existing = {d.rehearsal_date.isoformat(): d for d in result.scalars().all()}
+
+        # Build target set
+        target = {e.date: e for e in body.dates}
+
+        added = 0
+        updated = 0
+        removed = 0
+
+        # Delete dates not in target
+        for date_str, rd in existing.items():
+            if date_str not in target:
+                # Hard delete + cascade conflicts
+                from app.models import CastConflict
+                cstmt = select(CastConflict).where(CastConflict.rehearsal_date_id == rd.id)
+                cresult = await session.execute(cstmt)
+                for c in cresult.scalars().all():
+                    await session.delete(c)
+                await session.delete(rd)
+                removed += 1
+
+        # Add or update dates in target
+        for date_str, entry in target.items():
+            rd = existing.get(date_str)
+            t = time.fromisoformat(entry.start_time)
+            e = time.fromisoformat(entry.end_time)
+            if rd:
+                changed = False
+                if rd.type != entry.type:
+                    rd.type = entry.type
+                    changed = True
+                if rd.start_time != t:
+                    rd.start_time = t
+                    changed = True
+                if rd.end_time != e:
+                    rd.end_time = e
+                    changed = True
+                if rd.is_cancelled:
+                    rd.is_cancelled = False
+                    changed = True
+                if changed:
+                    updated += 1
+            else:
+                session.add(RehearsalDate(
+                    id=str(uuid.uuid4()),
+                    production_id=production_id,
+                    rehearsal_date=date.fromisoformat(date_str),
+                    start_time=t,
+                    end_time=e,
+                    type=entry.type,
+                ))
+                added += 1
+
+        await session.commit()
+
+    return {"added": added, "updated": updated, "removed": removed}
 
 
 @router.post("/{production_id}/schedule", status_code=201)

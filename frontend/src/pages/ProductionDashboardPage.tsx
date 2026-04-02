@@ -56,8 +56,30 @@ export function ProductionDashboardPage() {
   const castMembers = members.filter(m => m.role === 'cast');
   const conflictsIn = castMembers.filter(m => m.conflicts_submitted).length;
 
-  // Days of the week for mini calendar
+  // Days of the week for mini calendar — only this actual week
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const thisWeekDates = useMemo(() => {
+    const set = new Set<string>();
+    if (!dates) return set;
+    const now = new Date();
+    // Find Monday of this week
+    const monday = new Date(now);
+    const dow = now.getDay();
+    monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    for (const d of dates) {
+      if (d.is_deleted || d.is_cancelled) continue;
+      const dt = new Date(d.date + 'T00:00:00');
+      if (dt >= monday && dt <= sunday) {
+        const dayIdx = dt.getDay() === 0 ? 6 : dt.getDay() - 1;
+        set.add(days[dayIdx]);
+      }
+    }
+    return set;
+  }, [dates]);
 
   return (
       <motion.div
@@ -175,24 +197,22 @@ export function ProductionDashboardPage() {
             <StickyNote color="blue" rotate={0.5}>
               <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">This Week</p>
               <div className="grid grid-cols-7 gap-1">
-                {days.map(day => (
-                  <div key={day} className="text-center">
-                    <p className="text-[8px] font-bold uppercase opacity-50">{day}</p>
-                    <div className="w-5 h-5 mx-auto mt-0.5 rounded-full flex items-center justify-center text-[9px]"
-                      style={{
-                        background: upcoming.some(d => {
-                          const date = new Date(d.date + 'T00:00:00');
-                          return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.getDay() === 0 ? 6 : date.getDay() - 1] === day;
-                        }) ? 'rgba(0,0,0,0.12)' : 'transparent',
-                      }}
-                    >
-                      {upcoming.some(d => {
-                        const date = new Date(d.date + 'T00:00:00');
-                        return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.getDay() === 0 ? 6 : date.getDay() - 1] === day;
-                      }) ? '!' : ''}
+                {days.map(day => {
+                  const hasEvent = thisWeekDates.has(day);
+                  return (
+                    <div key={day} className="text-center">
+                      <p className="text-[8px] font-bold uppercase opacity-50">{day}</p>
+                      <div className="w-5 h-5 mx-auto mt-0.5 rounded-full flex items-center justify-center text-[9px]"
+                        style={{
+                          background: hasEvent ? 'rgba(0,120,60,0.15)' : 'rgba(0,0,0,0.04)',
+                          color: hasEvent ? '#2d6a4f' : 'rgba(0,0,0,0.2)',
+                        }}
+                      >
+                        {hasEvent ? '\u2713' : '\u2014'}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </StickyNote>
           </motion.div>

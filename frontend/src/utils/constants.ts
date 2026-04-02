@@ -28,6 +28,7 @@ export const SCHEDULE_COLORS = {
   tech: { bg: 'bg-blue-600/20', text: 'text-blue-400', label: 'Tech' },
   dress: { bg: 'bg-purple-600/20', text: 'text-purple-400', label: 'Dress' },
   performance: { bg: 'bg-red-600/20', text: 'text-red-400', label: 'Performance' },
+  blocked: { bg: 'bg-gray-600/20', text: 'text-gray-400', label: 'Blocked' },
 } as const;
 
 export const CONFLICT_SEVERITY = {

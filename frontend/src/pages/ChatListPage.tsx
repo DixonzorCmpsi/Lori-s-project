@@ -20,8 +20,15 @@ export function ChatListPage() {
   const [contacts, setContacts] = useState<{ id: string; name: string; role: string }[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
 
+  // Compose state — after picking a contact
+  const [selectedContact, setSelectedContact] = useState<{ id: string; name: string; role: string } | null>(null);
+  const [messageBody, setMessageBody] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+
   async function openContactPicker() {
     setShowPicker(true);
+    setSelectedContact(null);
+    setMessageBody('');
     setLoadingContacts(true);
     try {
       const data = await getContacts(id!);
@@ -33,14 +40,27 @@ export function ChatListPage() {
     }
   }
 
-  async function startConversation(recipientId: string) {
+  function pickContact(contact: { id: string; name: string; role: string }) {
+    setSelectedContact(contact);
+    setMessageBody('');
+  }
+
+  async function handleSendFirst() {
+    if (!selectedContact || !messageBody.trim() || !id) return;
+    setSendingMessage(true);
     try {
-      await sendMessage(id!, recipientId, 'Hello!');
+      const result = await sendMessage(id, selectedContact.id, messageBody.trim());
       toast('Message sent');
       setShowPicker(false);
+      setSelectedContact(null);
+      setMessageBody('');
       refetch();
+      // Navigate to the conversation
+      navigate(`/production/${id}/chat/${result.conversation_id}`);
     } catch (err: any) {
       toast(err.message || 'Failed to send', 'error');
+    } finally {
+      setSendingMessage(false);
     }
   }
 
@@ -87,23 +107,58 @@ export function ChatListPage() {
         </div>
       )}
 
-      <Dialog open={showPicker} onClose={() => setShowPicker(false)} title="New Message">
-        {loadingContacts ? (
-          <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
-        ) : contacts.length === 0 ? (
-          <p className="text-muted">No contacts available.</p>
+      <Dialog
+        open={showPicker}
+        onClose={() => { setShowPicker(false); setSelectedContact(null); }}
+        title={selectedContact ? `Message ${selectedContact.name}` : 'New Message'}
+        confirmLabel={selectedContact ? 'Send' : undefined}
+        onConfirm={selectedContact ? handleSendFirst : undefined}
+        isLoading={sendingMessage}
+      >
+        {!selectedContact ? (
+          /* Contact picker */
+          loadingContacts ? (
+            <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          ) : contacts.length === 0 ? (
+            <p className="text-muted">No contacts available.</p>
+          ) : (
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {contacts.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => pickContact(c)}
+                  className="w-full text-left p-3 rounded-md hover:bg-surface-raised transition-colors flex items-center gap-2"
+                >
+                  <span className="text-foreground">{c.name}</span>
+                  <Badge>{c.role}</Badge>
+                </button>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {contacts.map(c => (
-              <button
-                key={c.id}
-                onClick={() => startConversation(c.id)}
-                className="w-full text-left p-3 rounded-md hover:bg-surface-raised transition-colors flex items-center gap-2"
-              >
-                <span className="text-foreground">{c.name}</span>
-                <Badge>{c.role}</Badge>
-              </button>
-            ))}
+          /* Compose message */
+          <div className="space-y-3">
+            <button
+              onClick={() => setSelectedContact(null)}
+              className="text-xs text-muted hover:text-foreground cursor-pointer"
+            >
+              &larr; Pick a different contact
+            </button>
+            <textarea
+              value={messageBody}
+              onChange={e => setMessageBody(e.target.value.slice(0, 2000))}
+              placeholder="Type your message..."
+              className="w-full px-3 py-2 rounded-md bg-surface-raised border border-border text-foreground placeholder-muted resize-none min-h-[100px] focus:outline-none focus:ring-2 focus:ring-accent"
+              rows={4}
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendFirst();
+                }
+              }}
+            />
+            <p className="text-xs text-muted text-right">{messageBody.length}/2000</p>
           </div>
         )}
       </Dialog>

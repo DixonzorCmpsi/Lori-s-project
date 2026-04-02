@@ -30,7 +30,8 @@ export function Dialog({
       ref={dialogRef}
       onClose={onClose}
       className="bg-surface border border-border rounded-lg p-6 max-w-md w-full
-        text-foreground backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+        text-foreground backdrop:bg-black/60 backdrop:backdrop-blur-sm
+        fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
     >
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       <div className="mb-6 text-muted">{children}</div>

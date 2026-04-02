@@ -4,7 +4,7 @@
 
 - **Backend:** Python 3.9+ / FastAPI / SQLAlchemy async / JWT auth
 - **Frontend:** React 19 / Vite 6 / TypeScript / Tailwind CSS 4
-- **Database:** PostgreSQL (Supabase prod) / SQLite (dev/test)
+- **Database:** PostgreSQL (Supabase)
 - **Tests:** pytest 361 passing (backend) / Vitest stubs (frontend)
 
 ## Project Layout

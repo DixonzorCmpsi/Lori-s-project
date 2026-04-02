@@ -87,9 +87,15 @@ def reseed_after_tests():
     yield
     # After all tests, re-seed the database
     import subprocess, sys
+    backend_dir = os.path.dirname(__file__) + "/.."
     subprocess.run(
         [sys.executable, "seed_data.py"],
-        cwd=os.path.dirname(__file__) + "/..",
+        cwd=backend_dir,
+        capture_output=True,
+    )
+    subprocess.run(
+        [sys.executable, "seed_admin.py"],
+        cwd=backend_dir,
         capture_output=True,
     )
 

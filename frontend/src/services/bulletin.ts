@@ -5,7 +5,7 @@ export async function getPosts(productionId: string) {
   return apiClient<BulletinPost[]>(`/productions/${productionId}/bulletin`);
 }
 
-export async function createPost(productionId: string, data: { title: string; body: string }) {
+export async function createPost(productionId: string, data: { title: string; body: string; notify_members?: boolean }) {
   return apiClient<BulletinPost>(`/productions/${productionId}/bulletin`, { method: 'POST', body: JSON.stringify(data) });
 }
 

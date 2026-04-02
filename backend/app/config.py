@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Database
+    # Database (Supabase PostgreSQL — set via DATABASE_URL in .env)
     database_url: str = Field(
         default="postgresql://callboard:callboard_dev@localhost:5432/callboard",
     )

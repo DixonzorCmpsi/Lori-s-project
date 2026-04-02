@@ -143,6 +143,13 @@ async def list_conversations(
 
                 if other:
                     participant, user = other
+                    # Get role from production membership
+                    pm_stmt = select(ProductionMember).where(
+                        ProductionMember.production_id == production_id,
+                        ProductionMember.user_id == user.id,
+                    )
+                    pm_result = await session.execute(pm_stmt)
+                    pm = pm_result.scalar_one_or_none()
                     # Get last message
                     stmt = (
                         select(Message)
@@ -169,7 +176,7 @@ async def list_conversations(
                             "id": conv.id,
                             "participant_id": user.id,
                             "participant_name": user.name,
-                            "participant_role": participant.role,
+                            "participant_role": pm.role if pm else "cast",
                             "last_message": last_msg.body if last_msg else None,
                             "last_message_at": last_msg.created_at.isoformat()
                             if last_msg

@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useApi } from '@/hooks/useApi';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { apiClient } from '@/services/api';
+import { getMemberDetails, type MemberDetails } from '@/services/castAssignments';
+import { formatTime, formatDate } from '@/utils/format';
+import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -50,8 +53,22 @@ export function BackstageLayout() {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const isDesktop = bp === 'desktop';
+  const { unreadMessages, permission, requestPermission } = useNotifications(id);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [panelTab, setPanelTab] = useState<'staff' | 'cast'>('cast');
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [memberDetails, setMemberDetails] = useState<MemberDetails | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    if (!selectedMemberId || !id) { setMemberDetails(null); return; }
+    setLoadingDetails(true);
+    getMemberDetails(id, selectedMemberId)
+      .then(setMemberDetails)
+      .catch(() => setMemberDetails(null))
+      .finally(() => setLoadingDetails(false));
+  }, [selectedMemberId, id]);
 
   const noop = () => Promise.resolve(null as any);
   const { data: production, refetch } = useApi<Production>(
@@ -179,6 +196,12 @@ export function BackstageLayout() {
               )}
               <span className="text-xs opacity-60">{item.icon}</span>
               <span className="text-xs font-medium tracking-wide">{item.label}</span>
+              {item.label === 'Chat' && unreadMessages > 0 && (
+                <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'hsl(0,70%,50%)', color: 'white', minWidth: '18px', textAlign: 'center' }}>
+                  {unreadMessages}
+                </span>
+              )}
               {/* Gold indicator bar */}
               {active && (
                 <motion.div
@@ -275,7 +298,7 @@ export function BackstageLayout() {
 
       {/* Section header with on-air indicator */}
       <motion.div
-        className="mb-4 px-2 flex items-center gap-2 relative z-10"
+        className="mb-3 px-2 flex items-center gap-2 relative z-10"
         initial={{ opacity: 0, x: 10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ ...spring, delay: 0.3 }}
@@ -302,17 +325,125 @@ export function BackstageLayout() {
         )}
       </motion.div>
 
-      {/* Member list */}
-      {id && members ? (
+      {/* Tabs: Cast / Staff — always visible when in a production */}
+      {id && (
+        <div className="flex gap-0 mb-3 mx-2 relative z-10 rounded-md overflow-hidden flex-shrink-0"
+          style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+          {(['cast', 'staff'] as const).map(tab => {
+            const isActive = panelTab === tab;
+            const count = (members || []).filter(m => tab === 'staff' ? (m.role === 'director' || m.role === 'staff') : m.role === 'cast').length;
+            return (
+              <button
+                key={tab}
+                onClick={() => { setPanelTab(tab); setSelectedMemberId(null); }}
+                className="flex-1 py-1.5 text-[9px] uppercase tracking-[0.2em] cursor-pointer transition-colors"
+                style={{
+                  background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  color: isActive ? 'hsl(43,60%,58%)' : 'hsl(25,8%,42%)',
+                  borderRight: tab === 'cast' ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                }}
+              >
+                {tab} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Member list or detail view */}
+      {id && members && selectedMemberId ? (
+        /* ── Member Detail View ── */
+        <div className="relative z-10 px-2">
+          <button
+            onClick={() => setSelectedMemberId(null)}
+            className="text-[9px] uppercase tracking-widest mb-3 cursor-pointer flex items-center gap-1"
+            style={{ color: 'hsl(43,50%,50%)' }}
+          >
+            &larr; Back
+          </button>
+          {loadingDetails ? (
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ) : memberDetails ? (
+            <div className="space-y-3">
+              {/* Name + role */}
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'hsl(35,15%,80%)' }}>
+                  {memberDetails.display_name || memberDetails.name || 'Member'}
+                </p>
+                <p className="text-[10px] capitalize" style={{ color: 'hsl(43,50%,50%)' }}>
+                  {memberDetails.role}
+                  {memberDetails.character && ` — ${memberDetails.character}`}
+                </p>
+              </div>
+
+              {/* Contact */}
+              {memberDetails.email && (
+                <p className="text-[10px] truncate" style={{ color: 'hsl(25,8%,45%)' }}>
+                  {memberDetails.email}
+                </p>
+              )}
+
+              {/* Conflicts */}
+              <div>
+                <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: 'hsl(25,8%,40%)' }}>
+                  Conflicts {memberDetails.conflicts_submitted ? `(${memberDetails.conflicts.length})` : '— not submitted'}
+                </p>
+                {memberDetails.conflicts.length > 0 ? (
+                  <div className="max-h-[100px] overflow-y-auto space-y-0.5" style={{ scrollbarWidth: 'thin' }}>
+                    {memberDetails.conflicts.map((c, i) => (
+                      <div key={i} className="text-[10px] px-1.5 py-0.5 rounded"
+                        style={{ background: 'rgba(255,80,80,0.06)', color: 'hsl(0,50%,60%)' }}>
+                        {c.date ? formatDate(c.date) : 'Unknown'}{c.reason ? ` — ${c.reason}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                ) : memberDetails.conflicts_submitted ? (
+                  <p className="text-[10px] italic" style={{ color: 'hsl(25,8%,35%)' }}>No conflicts</p>
+                ) : null}
+              </div>
+
+              {/* Assigned dates */}
+              <div>
+                <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: 'hsl(25,8%,40%)' }}>
+                  Assigned Dates ({memberDetails.assigned_dates.length})
+                </p>
+                {memberDetails.assigned_dates.length > 0 ? (
+                  <div className="max-h-[140px] overflow-y-auto space-y-0.5" style={{ scrollbarWidth: 'thin' }}>
+                    {memberDetails.assigned_dates.map(d => (
+                      <div key={d.id} className="text-[10px] px-1.5 py-0.5 rounded flex justify-between"
+                        style={{ background: 'rgba(255,220,100,0.05)', color: 'hsl(35,15%,65%)' }}>
+                        <span>{formatDate(d.date)}</span>
+                        <span style={{ color: 'hsl(25,8%,45%)' }}>{formatTime(d.start_time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] italic" style={{ color: 'hsl(25,8%,35%)' }}>No dates assigned yet</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] italic" style={{ color: 'hsl(25,8%,35%)' }}>Could not load details</p>
+          )}
+        </div>
+      ) : id && members ? (
+        /* ── Member List (filtered by tab) ── */
         <div className="flex flex-col gap-0.5 relative z-10">
-          {members.map((member, i) => (
+          {members
+            .filter(m => panelTab === 'staff' ? (m.role === 'director' || m.role === 'staff') : m.role === 'cast')
+            .map((member, i) => (
             <motion.div
               key={member.id}
-              className="flex items-center gap-2.5 px-2 py-2 rounded-lg group cursor-default"
+              className="flex items-center gap-2.5 px-2 py-2 rounded-lg group cursor-pointer"
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ ...spring, delay: 0.4 + i * 0.03 }}
               whileHover={{ background: 'rgba(255,255,255,0.03)' }}
+              onClick={() => setSelectedMemberId(member.user_id)}
             >
               {/* Avatar */}
               <div
@@ -390,12 +521,23 @@ export function BackstageLayout() {
         boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}
     >
-      <h2
-        className="text-xs font-medium tracking-wide"
-        style={{ color: 'hsl(43, 55%, 52%)', fontFamily: '"Playfair Display", serif' }}
-      >
-        Digital Call Board
-      </h2>
+      <div className="flex items-center gap-3">
+        <h2
+          className="text-xs font-medium tracking-wide"
+          style={{ color: 'hsl(43, 55%, 52%)', fontFamily: '"Playfair Display", serif' }}
+        >
+          Digital Call Board
+        </h2>
+        {permission === 'default' && id && (
+          <button
+            onClick={requestPermission}
+            className="text-[9px] uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+            style={{ color: 'hsl(38,70%,55%)', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.12)' }}
+          >
+            Enable Notifications
+          </button>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         {/* Tablet/mobile drawer toggle */}
         {!isDesktop && id && (

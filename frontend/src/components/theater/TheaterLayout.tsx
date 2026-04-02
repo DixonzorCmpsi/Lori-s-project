@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Curtain } from './Curtain';
 import { StageFloor } from './StageFloor';
@@ -6,7 +6,10 @@ import { Spotlight } from './Spotlight';
 import { Pelmet } from './Pelmet';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 
-const PANEL_WIDTH = 18; // percentage for desktop side columns
+const DEFAULT_PANEL_PX = 240;
+const SNAP_CLOSE_PX = 80;   // below this, snap shut
+const MIN_OPEN_PX = 140;    // smallest usable open width
+const MAX_PANEL_PX = 400;
 const spring = { type: 'spring' as const, stiffness: 80, damping: 18 };
 
 interface TheaterLayoutProps {
@@ -15,9 +18,7 @@ interface TheaterLayoutProps {
   rightPanel?: ReactNode;
   children: ReactNode;
   topBar?: ReactNode;
-  /** Mobile bottom navigation bar */
   mobileNav?: ReactNode;
-  /** Slide-over drawer (tablet cast list, mobile menus) */
   drawerOpen?: boolean;
   drawerContent?: ReactNode;
   onDrawerClose?: () => void;
@@ -38,11 +39,41 @@ export function TheaterLayout({
   const isMobile = bp === 'mobile';
   const isDesktop = bp === 'desktop';
 
+  const [leftW, setLeftW] = useState(DEFAULT_PANEL_PX);
+  const [rightW, setRightW] = useState(DEFAULT_PANEL_PX);
+  const dragging = useRef<'left' | 'right' | null>(null);
+
+  const onMouseDown = useCallback((side: 'left' | 'right') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = side;
+    const startX = e.clientX;
+    const startW = side === 'left' ? leftW : rightW;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = side === 'left' ? ev.clientX - startX : startX - ev.clientX;
+      const raw = startW + delta;
+      // Snap closed if dragged below threshold, otherwise clamp to usable range
+      const next = raw < SNAP_CLOSE_PX ? 0 : Math.min(MAX_PANEL_PX, Math.max(MIN_OPEN_PX, raw));
+      if (side === 'left') setLeftW(next);
+      else setRightW(next);
+    };
+    const onUp = () => {
+      dragging.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [leftW, rightW]);
+
   return (
     <div
       className="relative w-screen min-h-[100dvh] overflow-hidden"
       style={{
-        /* Deep Stage Burgundy → Midnight Charcoal gradient */
         background: `radial-gradient(ellipse at 50% 30%,
           hsl(350, 10%, 8%) 0%,
           hsl(350, 7%, 5%) 40%,
@@ -52,7 +83,6 @@ export function TheaterLayout({
       <Spotlight />
       <StageFloor />
 
-      {/* Curtains — desktop & tablet only */}
       {!isMobile && (
         <>
           <Curtain side="left" isOpen={curtainsOpen} />
@@ -69,8 +99,8 @@ export function TheaterLayout({
             className="absolute z-[55]"
             style={{
               top: isMobile ? '40px' : '46px',
-              left: isMobile ? '0' : `${PANEL_WIDTH}%`,
-              right: isMobile ? '0' : `${PANEL_WIDTH}%`,
+              left: isMobile ? '0' : `${leftW}px`,
+              right: isMobile ? '0' : (isDesktop ? `${rightW}px` : '0'),
             }}
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -82,24 +112,32 @@ export function TheaterLayout({
         )}
       </AnimatePresence>
 
-      {/* === 3-column / 2-column / 1-column layout === */}
+      {/* 3-column layout */}
       <div className="relative z-[35] flex h-[100dvh]">
-        {/* Left panel column — hidden on mobile */}
+        {/* Left panel */}
         {!isMobile && (
-          <div className="flex-shrink-0" style={{ width: `${PANEL_WIDTH}%` }}>
-            <AnimatePresence>
-              {curtainsOpen && leftPanel && (
-                <motion.div
-                  className="h-full"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ ...spring, delay: 1.4 }}
-                >
-                  {leftPanel}
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <div className="flex-shrink-0 relative overflow-hidden" style={{ width: `${leftW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }}>
+            {leftW > 0 && (
+              <AnimatePresence>
+                {curtainsOpen && leftPanel && (
+                  <motion.div
+                    className="h-full"
+                    style={{ minWidth: `${MIN_OPEN_PX}px` }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ ...spring, delay: 1.4 }}
+                  >
+                    {leftPanel}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+            {/* Drag handle — right edge */}
+            <div
+              className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize z-10 hover:bg-[rgba(212,175,55,0.2)] transition-colors"
+              onMouseDown={onMouseDown('left')}
+            />
           </div>
         )}
 
@@ -108,22 +146,30 @@ export function TheaterLayout({
           {children}
         </div>
 
-        {/* Right panel column — desktop only */}
+        {/* Right panel — desktop only */}
         {isDesktop && (
-          <div className="flex-shrink-0" style={{ width: `${PANEL_WIDTH}%` }}>
-            <AnimatePresence>
-              {curtainsOpen && rightPanel && (
-                <motion.div
-                  className="h-full"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ ...spring, delay: 1.4 }}
-                >
-                  {rightPanel}
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <div className="flex-shrink-0 relative overflow-hidden" style={{ width: `${rightW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }}>
+            {/* Drag handle — left edge */}
+            <div
+              className="absolute top-0 left-0 w-1.5 h-full cursor-col-resize z-10 hover:bg-[rgba(212,175,55,0.2)] transition-colors"
+              onMouseDown={onMouseDown('right')}
+            />
+            {rightW > 0 && (
+              <AnimatePresence>
+                {curtainsOpen && rightPanel && (
+                  <motion.div
+                    className="h-full"
+                    style={{ minWidth: `${MIN_OPEN_PX}px` }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ ...spring, delay: 1.4 }}
+                  >
+                    {rightPanel}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
           </div>
         )}
       </div>
@@ -133,11 +179,10 @@ export function TheaterLayout({
         <div className="fixed bottom-0 left-0 right-0 z-[60]">{mobileNav}</div>
       )}
 
-      {/* Slide-over drawer (tablet cast panel / mobile menus) */}
+      {/* Slide-over drawer */}
       <AnimatePresence>
         {drawerOpen && drawerContent && (
           <>
-            {/* Scrim */}
             <motion.div
               className="fixed inset-0 z-[70]"
               style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(2px)' }}
@@ -146,7 +191,6 @@ export function TheaterLayout({
               exit={{ opacity: 0 }}
               onClick={onDrawerClose}
             />
-            {/* Curtain-wipe drawer from right */}
             <motion.div
               className="fixed top-0 right-0 bottom-0 z-[75] w-80 max-w-[85vw] overflow-hidden"
               initial={{ x: '100%', clipPath: 'inset(0 0 0 100%)' }}

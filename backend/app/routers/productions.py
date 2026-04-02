@@ -104,6 +104,7 @@ async def create_production(
                 detail={
                     "error": "CONFLICT",
                     "message": "You already have an active production.",
+                    "production_id": active.id,
                 },
             )
 

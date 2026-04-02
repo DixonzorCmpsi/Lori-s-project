@@ -19,35 +19,23 @@ class Base(DeclarativeBase):
 
 settings = get_settings()
 
-# Convert URL to async driver
+# Convert URL to async driver (Supabase PostgreSQL only)
 _raw_url = settings.database_url
-if _raw_url.startswith("sqlite"):
+if _raw_url.startswith("postgresql+asyncpg://"):
     _db_url = _raw_url
-    _is_sqlite = True
-elif _raw_url.startswith("postgresql+asyncpg://"):
-    _db_url = _raw_url
-    _is_sqlite = False
 elif _raw_url.startswith("postgresql://"):
     _db_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    _is_sqlite = False
 else:
-    _db_url = _raw_url
-    _is_sqlite = False
+    raise RuntimeError(
+        f"Only PostgreSQL (Supabase) is supported. Got: {_raw_url[:30]}..."
+    )
 
 engine: AsyncEngine = create_async_engine(
     _db_url,
     echo=settings.debug,
-    **(
-        dict(
-            pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
-        )
-        if not _is_sqlite
-        else dict(
-            connect_args={"check_same_thread": False},
-        )
-    ),
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10,
 )
 
 async_session_maker = async_sessionmaker(

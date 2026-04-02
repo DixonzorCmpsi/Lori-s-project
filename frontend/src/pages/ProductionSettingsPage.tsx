@@ -98,7 +98,7 @@ export function ProductionSettingsPage() {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-6">Production Settings</h1>
 
       <section className="bg-surface-raised border border-border rounded-lg p-5 mb-6 space-y-3">
@@ -133,6 +133,7 @@ export function ProductionSettingsPage() {
           <h2 className="text-lg font-semibold text-foreground">Member Roles</h2>
           <p className="text-xs text-muted">Promote cast to staff or demote staff back to cast.</p>
 
+          <div className="max-h-[400px] overflow-y-auto pr-1 space-y-4" style={{ scrollbarWidth: 'thin' }}>
           {/* Staff members */}
           {staffMembers.length > 0 && (
             <div>
@@ -198,6 +199,7 @@ export function ProductionSettingsPage() {
           {(!members || (staffMembers.length === 0 && castMembers.length === 0)) && (
             <p className="text-sm text-muted italic">No members to manage.</p>
           )}
+          </div>
         </section>
       )}
 

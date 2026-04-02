@@ -21,7 +21,7 @@ The backend auto-creates a virtual environment and installs dependencies on firs
 |-------|-----------|
 | Frontend | React 19, Vite 6, TypeScript, Tailwind CSS 4 |
 | Backend | Python, FastAPI, SQLAlchemy (async), JWT auth |
-| Database | PostgreSQL (Supabase prod) / SQLite (dev) |
+| Database | PostgreSQL (Supabase) |
 | Auth | Google OAuth 2.0 + email/password (bcrypt) |
 
 ## Project Structure
@@ -92,7 +92,7 @@ Run tests:
 
 ```bash
 cd backend
-DATABASE_URL="sqlite+aiosqlite:///:memory:" .venv/bin/python3 -m pytest tests/ -v
+.venv/bin/python3 -m pytest tests/ -v
 ```
 
 ### Frontend

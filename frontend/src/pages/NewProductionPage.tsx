@@ -24,7 +24,7 @@ export function NewProductionPage() {
 
   if (!theaterId) {
     return (
-      <div className="max-w-md">
+      <div className="max-w-md mx-auto">
         <h1 className="mb-4">Create Production</h1>
         <p className="text-muted mb-4">You need to add a theater first.</p>
         <Button onClick={() => navigate('/theater/new')}>Add Theater</Button>
@@ -52,7 +52,15 @@ export function NewProductionPage() {
       navigate(`/production/${prod.id}`);
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        if (err.fields) {
+        if (err.status === 409) {
+          toast('You already have an active production. Redirecting...', 'warning');
+          const prodId = err.detail?.production_id;
+          if (prodId) {
+            navigate(`/production/${prodId}`);
+          } else {
+            navigate('/');
+          }
+        } else if (err.fields) {
           const fe: Record<string, string> = {};
           err.fields.forEach(f => fe[f.field] = f.message);
           setErrors(fe);
@@ -66,7 +74,7 @@ export function NewProductionPage() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="max-w-md">
+    <div className="max-w-md mx-auto">
       <h1 className="mb-6">Create Production</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Production Name" value={name} onChange={e => setName(e.target.value)} error={errors.name} required placeholder="Into the Woods" maxLength={200} />

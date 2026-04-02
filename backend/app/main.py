@@ -16,6 +16,7 @@ from app.routers import (
     invite,
     conflicts,
     cast_profile,
+    cast_assignments,
     chat,
     join,
     scenes,
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(
         cast_profile.router, prefix="/api/productions", tags=["cast_profile"]
     )
+    app.include_router(cast_assignments.router, prefix="/api/productions", tags=["cast_assignments"])
     app.include_router(chat.router, prefix="/api/productions", tags=["chat"])
     app.include_router(join.router, prefix="/api", tags=["join"])
     app.include_router(scenes.router, prefix="/api", tags=["scenes"])

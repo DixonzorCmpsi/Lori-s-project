@@ -4,12 +4,12 @@ import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
 import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
-import { getMessages, sendMessage, markRead, deleteMessage } from '@/services/chat';
+import { getMessages, getConversations, sendMessage, markRead, deleteMessage } from '@/services/chat';
 import { formatRelativeTime } from '@/utils/format';
 import { MAX_LENGTHS, ROLES } from '@/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
-import type { Message } from '@/types';
+import type { Message, Conversation } from '@/types';
 
 export function ChatConversationPage() {
   const { id, convId } = useParams<{ id: string; convId: string }>();
@@ -21,6 +21,9 @@ export function ChatConversationPage() {
   const { data, isLoading, refetch } = useApi(
     () => getMessages(id!, convId!), [id, convId]
   );
+  const { data: conversations } = useApi<Conversation[]>(
+    () => getConversations(id!), [id]
+  );
   const messages = data?.messages || [];
 
   const [body, setBody] = useState('');
@@ -28,11 +31,11 @@ export function ChatConversationPage() {
 
   const isDirector = userRole === ROLES.DIRECTOR;
 
-  // Find the other participant's ID from the conversation
-  const otherParticipant = members.find(m => {
-    const msgs = messages;
-    return msgs.some((msg: Message) => msg.sender_id === m.user_id && m.user_id !== user?.id);
-  });
+  // Find the other participant — first from conversation list, then from messages
+  const conv = conversations?.find(c => c.id === convId);
+  const otherParticipant = conv
+    ? members.find(m => m.user_id === conv.participant_id)
+    : members.find(m => messages.some((msg: Message) => msg.sender_id === m.user_id && m.user_id !== user?.id));
 
   useEffect(() => {
     if (id && convId) markRead(id, convId).catch(() => {});

@@ -71,7 +71,7 @@ export function CastProfilePage() {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-6">Cast Profile</h1>
 
       <form onSubmit={e => { e.preventDefault(); handleSubmit(onSubmit); }} className="space-y-4">

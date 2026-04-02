@@ -5,8 +5,10 @@ import { useApi } from '@/hooks/useApi';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
-import { getSchedule, updateDate, cancelDate, deleteDate, addDate } from '@/services/schedule';
+import { getSchedule, updateDate, cancelDate, deleteDate, bulkSyncSchedule } from '@/services/schedule';
 import { getPosts } from '@/services/bulletin';
+import { getAssignments, type CastAssignment } from '@/services/castAssignments';
+import { useAuth } from '@/hooks/useAuth';
 import { formatTime } from '@/utils/format';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
@@ -48,8 +50,24 @@ export function SchedulePage() {
   const navigate = useNavigate();
   const { userRole, production } = useProduction();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isCast = userRole === 'cast';
   const { data: dates, refetch } = useApi(() => getSchedule(id!), [id]);
   const { data: bulletinPosts } = useApi(() => getPosts(id!), [id]);
+  const { data: myAssignments } = useApi<CastAssignment[]>(
+    () => isCast && user ? getAssignments(id!, user.id) : Promise.resolve([]),
+    [id, isCast, user?.id],
+  );
+
+  // Set of date strings the cast member is assigned to
+  const myAssignedDates = useMemo(() => {
+    const set = new Set<string>();
+    if (!myAssignments) return set;
+    for (const a of myAssignments) {
+      if (a.date) set.add(a.date);
+    }
+    return set;
+  }, [myAssignments]);
 
   // Map bulletin posts to dates (YYYY-MM-DD) for pulse indicators
   const bulletinDateSet = useMemo(() => {
@@ -77,17 +95,21 @@ export function SchedulePage() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
   const [weeklyPattern, setWeeklyPattern] = useState<Record<number, DayType>>({});
 
-  // Helper: fill dayTypes for a given month from a weekly pattern
-  function fillMonthFromPattern(year: number, month: number, pattern: Record<number, DayType>, base: Record<string, DayType> = {}): Record<string, DayType> {
-    const updated = { ...base };
+  // Helper: fill dayTypes for a given month from a weekly pattern.
+  // Pattern is authoritative — it sets the type for every matching day-of-week.
+  // `overrides` are per-day clicks that take priority over the pattern.
+  function fillMonthFromPattern(year: number, month: number, pattern: Record<number, DayType>, overrides: Record<string, DayType> = {}): Record<string, DayType> {
+    const updated: Record<string, DayType> = {};
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d);
       const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const pType = pattern[date.getDay()];
-      // Pattern fills in gaps; existing per-day overrides are preserved
-      if (pType && !updated[key]) {
-        updated[key] = pType;
+      // Per-day override wins, then pattern, then nothing
+      if (overrides[key]) {
+        updated[key] = overrides[key];
+      } else {
+        const pType = pattern[date.getDay()];
+        if (pType) updated[key] = pType;
       }
     }
     return updated;
@@ -165,22 +187,29 @@ export function SchedulePage() {
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === currentMonth.getFullYear() && today.getMonth() === currentMonth.getMonth();
 
+  // Build overrides for a given month — dates whose type differs from the weekly pattern
+  function getMonthOverrides(year: number, month: number, pattern: Record<number, DayType>): Record<string, DayType> {
+    const overrides: Record<string, DayType> = {};
+    if (!dates) return overrides;
+    for (const dt of dates) {
+      if (dt.is_deleted || dt.is_cancelled) continue;
+      const dd = new Date(dt.date + 'T00:00:00');
+      if (dd.getFullYear() === year && dd.getMonth() === month) {
+        const patternType = pattern[dd.getDay()];
+        if (dt.type !== patternType) {
+          overrides[dt.date] = dt.type as DayType;
+        }
+      }
+    }
+    return overrides;
+  }
+
   function prevMonth() {
     setCurrentMonth(d => {
       const next = new Date(d.getFullYear(), d.getMonth() - 1, 1);
       if (editMode && Object.keys(weeklyPattern).length > 0) {
-        // Load existing saved dates for this month, then fill from pattern
-        const base: Record<string, DayType> = {};
-        if (dates) {
-          for (const dt of dates) {
-            if (dt.is_deleted || dt.is_cancelled) continue;
-            const dd = new Date(dt.date + 'T00:00:00');
-            if (dd.getFullYear() === next.getFullYear() && dd.getMonth() === next.getMonth()) {
-              base[dt.date] = dt.type as DayType;
-            }
-          }
-        }
-        setDayTypes(fillMonthFromPattern(next.getFullYear(), next.getMonth(), weeklyPattern, base));
+        const overrides = getMonthOverrides(next.getFullYear(), next.getMonth(), weeklyPattern);
+        setDayTypes(fillMonthFromPattern(next.getFullYear(), next.getMonth(), weeklyPattern, overrides));
       }
       return next;
     });
@@ -190,17 +219,8 @@ export function SchedulePage() {
     setCurrentMonth(d => {
       const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
       if (editMode && Object.keys(weeklyPattern).length > 0) {
-        const base: Record<string, DayType> = {};
-        if (dates) {
-          for (const dt of dates) {
-            if (dt.is_deleted || dt.is_cancelled) continue;
-            const dd = new Date(dt.date + 'T00:00:00');
-            if (dd.getFullYear() === next.getFullYear() && dd.getMonth() === next.getMonth()) {
-              base[dt.date] = dt.type as DayType;
-            }
-          }
-        }
-        setDayTypes(fillMonthFromPattern(next.getFullYear(), next.getMonth(), weeklyPattern, base));
+        const overrides = getMonthOverrides(next.getFullYear(), next.getMonth(), weeklyPattern);
+        setDayTypes(fillMonthFromPattern(next.getFullYear(), next.getMonth(), weeklyPattern, overrides));
       }
       return next;
     });
@@ -237,16 +257,7 @@ export function SchedulePage() {
     setEditMode(true);
     setSelectedDay(null);
 
-    // Load existing saved dates as per-day overrides
-    const existing: Record<string, DayType> = {};
-    if (dates) {
-      for (const d of dates) {
-        if (d.is_deleted || d.is_cancelled) continue;
-        existing[d.date] = d.type as DayType;
-      }
-    }
-
-    // Reconstruct weekly pattern from ALL existing dates (not just current month)
+    // Reconstruct weekly pattern from ALL existing dates (most common type per day-of-week)
     const dowCounts: Record<number, Record<string, number>> = {};
     if (dates) {
       for (const d of dates) {
@@ -268,11 +279,23 @@ export function SchedulePage() {
     }
     setWeeklyPattern(reconstructed);
 
-    // Apply pattern to current month — fills all matching days visually
+    // Find per-day overrides — dates whose type differs from what the pattern says
+    const overrides: Record<string, DayType> = {};
+    if (dates) {
+      for (const d of dates) {
+        if (d.is_deleted || d.is_cancelled) continue;
+        const dt = new Date(d.date + 'T00:00:00');
+        const patternType = reconstructed[dt.getDay()];
+        if (d.type !== patternType) {
+          overrides[d.date] = d.type as DayType;
+        }
+      }
+    }
+
+    // Apply pattern to current month with overrides
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const populated = fillMonthFromPattern(year, month, reconstructed, existing);
-    setDayTypes(populated);
+    setDayTypes(fillMonthFromPattern(year, month, reconstructed, overrides));
 
     // Reconstruct default times from first existing date
     if (dates) {
@@ -340,70 +363,24 @@ export function SchedulePage() {
     if (!id) return;
     setSaving(true);
     try {
-      let added = 0, updated = 0, removed = 0, failed = 0;
-
       // Merge: weekly pattern expanded across ALL months + per-day overrides
       const patternDates = expandPatternToFullRange(weeklyPattern);
       const allDayTypes = { ...patternDates, ...dayTypes };
 
-      const keptDates = new Set<string>();
-      const ops: (() => Promise<void>)[] = [];
-
-      // 1. Build operations for add/update
+      // Build the full target list in one shot
+      const bulkDates: { date: string; start_time: string; end_time: string; type: string }[] = [];
       for (const [date, type] of Object.entries(allDayTypes)) {
         if (!type || !validBackendTypes.has(type)) continue;
-        keptDates.add(date);
-        const existing = existingByDate[date];
-        if (existing && !existing.is_cancelled) {
-          if (existing.type !== type) {
-            ops.push(async () => {
-              try {
-                await deleteDate(id, existing.id, true);
-                await addDate(id, { date, start_time: defaultTime.start, end_time: defaultTime.end, type });
-                updated++;
-              } catch { failed++; }
-            });
-          } else if (existing.start_time !== defaultTime.start || existing.end_time !== defaultTime.end) {
-            ops.push(async () => {
-              try {
-                await updateDate(id, existing.id, { start_time: defaultTime.start, end_time: defaultTime.end });
-                updated++;
-              } catch { failed++; }
-            });
-          }
-        } else {
-          ops.push(async () => {
-            try {
-              await addDate(id, { date, start_time: defaultTime.start, end_time: defaultTime.end, type });
-              added++;
-            } catch { failed++; }
-          });
-        }
+        bulkDates.push({ date, start_time: defaultTime.start, end_time: defaultTime.end, type });
       }
 
-      // 2. Build operations for deletes
-      for (const [, existing] of Object.entries(existingByDate)) {
-        if (existing.is_cancelled || keptDates.has(existing.date)) continue;
-        ops.push(async () => {
-          try { await deleteDate(id, existing.id, true); removed++; } catch { failed++; }
-        });
-      }
-
-      // Execute in parallel batches of 10 for speed
-      const BATCH_SIZE = 10;
-      for (let i = 0; i < ops.length; i += BATCH_SIZE) {
-        await Promise.all(ops.slice(i, i + BATCH_SIZE).map(op => op()));
-      }
+      const result = await bulkSyncSchedule(id, bulkDates);
 
       const parts = [];
-      if (added) parts.push(`${added} added`);
-      if (updated) parts.push(`${updated} updated`);
-      if (removed) parts.push(`${removed} removed`);
-      if (failed) parts.push(`${failed} failed`);
-      toast(
-        parts.length ? parts.join(', ') : 'No changes',
-        failed > 0 ? 'error' : undefined,
-      );
+      if (result.added) parts.push(`${result.added} added`);
+      if (result.updated) parts.push(`${result.updated} updated`);
+      if (result.removed) parts.push(`${result.removed} removed`);
+      toast(parts.length ? parts.join(', ') : 'No changes');
 
       setEditMode(false);
       setDayTypes({});
@@ -593,7 +570,11 @@ export function SchedulePage() {
           const topEvent = events.find(e => !e.is_cancelled) || events[0];
 
           // What to show: edit mode type OR existing event
-          const displayType = editMode && editType ? editType : (topEvent && !topEvent.is_cancelled ? topEvent.type : null);
+          // Cast: only see their assigned dates + blocked dates
+          const isBlockedDate = topEvent && topEvent.type === 'blocked';
+          const isAssignedToMe = !isCast || isBlockedDate || myAssignedDates.has(key);
+          const displayType = editMode && editType ? editType
+            : (topEvent && !topEvent.is_cancelled && isAssignedToMe ? topEvent.type : null);
           const config = displayType ? typeConfig[displayType] : null;
           const isCancelled = hasEvent && events.every(e => e.is_cancelled);
           const isBlocked = displayType === 'blocked';
@@ -646,9 +627,9 @@ export function SchedulePage() {
                 >
                   <span className="font-bold block truncate">{config.label}</span>
                   {!editMode && topEvent && (
-                    <span className="opacity-60 block truncate">{formatTime(topEvent.start_time)}</span>
+                    <span className="opacity-60 block truncate">{formatTime(topEvent.start_time)}-{formatTime(topEvent.end_time)}</span>
                   )}
-                  {editMode && <span className="opacity-50 block">{defaultTime.start}</span>}
+                  {editMode && <span className="opacity-50 block">{defaultTime.start}-{defaultTime.end}</span>}
                 </motion.div>
               )}
 
@@ -749,7 +730,14 @@ export function SchedulePage() {
                       </span>
                       {d.is_cancelled && <span className="text-[9px] px-1.5 py-0.5 rounded-sm" style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,150,150,0.7)' }}>Cancelled</span>}
                     </div>
-                    {d.note && <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{d.note}</p>}
+                    {d.note ? (
+                      <div className="mt-2 px-2 py-1.5 rounded-sm" style={{ background: 'rgba(255,220,100,0.04)', border: '1px solid rgba(255,220,100,0.08)' }}>
+                        <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'rgba(255,220,100,0.5)' }}>Notes</p>
+                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>{d.note}</p>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] mt-1 italic" style={{ color: 'rgba(255,255,255,0.2)' }}>No notes for this day</p>
+                    )}
                     {canEdit && !d.is_cancelled && (
                       <div className="flex gap-2 mt-2">
                         <button className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer"

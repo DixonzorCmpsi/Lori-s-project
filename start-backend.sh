@@ -18,22 +18,18 @@ if ! .venv/bin/python3 -c "import fastapi" 2>/dev/null; then
   .venv/bin/pip install -r requirements.txt
 fi
 
-# Load env from root .env (for Google OAuth keys etc)
+# Load env from root .env
 if [ -f "../.env" ]; then
   set -a
   source "../.env"
   set +a
 fi
 
-# Override DATABASE_URL to use SQLite for local dev
-# Supabase PostgreSQL is for production deployment
-export DATABASE_URL="sqlite+aiosqlite:///./callboard.db"
-
 echo ""
 echo "  Digital Call Board — Backend"
 echo "  http://localhost:8000"
 echo "  API docs: http://localhost:8000/docs"
-echo "  Database: SQLite (local dev)"
+echo "  Database: Supabase PostgreSQL"
 echo ""
 
 .venv/bin/uvicorn app.main:app --reload --port 8000

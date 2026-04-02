@@ -213,6 +213,7 @@ class BulletinPost(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    notify_members: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(
         DateTime, default=utcnow, onupdate=utcnow
@@ -465,6 +466,37 @@ class SceneRole(Base):
     character_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
     scene: Mapped["Scene"] = relationship("Scene", back_populates="roles")
+
+
+class CastAssignment(Base):
+    """Links a cast member to a specific rehearsal date — determines which dates
+    each cast member sees on their personal calendar."""
+    __tablename__ = "cast_assignments"
+    __table_args__ = (
+        UniqueConstraint("rehearsal_date_id", "user_id", name="uq_cast_assignment"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    production_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("productions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    rehearsal_date_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("rehearsal_dates.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    production: Mapped["Production"] = relationship("Production")
+    rehearsal_date: Mapped["RehearsalDate"] = relationship("RehearsalDate")
+    user: Mapped["User"] = relationship("User")
 
 
 class Attendance(Base):

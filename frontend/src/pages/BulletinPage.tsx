@@ -38,6 +38,7 @@ export function BulletinPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [notifyMembers, setNotifyMembers] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const sorted = useMemo(() => {
@@ -57,7 +58,7 @@ export function BulletinPage() {
   }
 
   function openNew() {
-    setEditPost(null); setTitle(''); setBody(''); setShowForm(true);
+    setEditPost(null); setTitle(''); setBody(''); setNotifyMembers(false); setShowForm(true);
   }
 
   async function handleSubmit() {
@@ -67,7 +68,8 @@ export function BulletinPage() {
       if (editPost) {
         await updatePost(id!, editPost.id, { title, body }); toast('Post updated');
       } else {
-        await createPost(id!, { title, body }); toast('Post created');
+        await createPost(id!, { title, body, notify_members: notifyMembers });
+        toast(notifyMembers ? 'Post created — members notified' : 'Post created');
       }
       setShowForm(false); setEditPost(null); refetch();
     } catch { toast('Failed to save post', 'error'); }
@@ -118,6 +120,27 @@ export function BulletinPage() {
                 placeholder="Write your announcement..." rows={4}
                 className="w-full px-2 py-1.5 rounded text-sm border outline-none resize-none"
                 style={{ borderColor: 'rgba(0,0,0,0.1)', background: 'rgba(0,0,0,0.02)' }} />
+              {/* Notify toggle — only for new posts */}
+              {!editPost && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div
+                    className="relative w-8 h-4 rounded-full transition-colors"
+                    style={{ background: notifyMembers ? 'hsl(38,70%,50%)' : 'rgba(0,0,0,0.12)' }}
+                    onClick={() => setNotifyMembers(!notifyMembers)}
+                  >
+                    <div
+                      className="absolute top-0.5 w-3 h-3 rounded-full transition-all"
+                      style={{
+                        background: notifyMembers ? 'white' : 'rgba(0,0,0,0.25)',
+                        left: notifyMembers ? '17px' : '2px',
+                      }}
+                    />
+                  </div>
+                  <span className="text-[11px]" style={{ opacity: 0.6 }}>
+                    {notifyMembers ? 'Notify members' : 'Silent post'}
+                  </span>
+                </label>
+              )}
               <div className="flex gap-2">
                 <button onClick={handleSubmit} disabled={busy || !title.trim()}
                   className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"

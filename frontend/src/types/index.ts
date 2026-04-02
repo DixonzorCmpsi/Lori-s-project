@@ -36,7 +36,7 @@ export interface RehearsalDate {
   date: string;
   start_time: string;
   end_time: string;
-  type: 'regular' | 'tech' | 'dress' | 'performance';
+  type: 'regular' | 'tech' | 'dress' | 'performance' | 'blocked';
   note: string | null;
   is_cancelled: boolean;
   is_deleted: boolean;
@@ -49,6 +49,7 @@ export interface BulletinPost {
   title: string;
   body: string;
   is_pinned: boolean;
+  notify_members: boolean;
   created_at: string;
   updated_at?: string;
 }

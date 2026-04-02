@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApi } from '@/hooks/useApi';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { apiClient } from '@/services/api';
+import { apiClient, ApiRequestError } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -30,7 +30,7 @@ export function DashboardPage() {
   const { data: theaters, isLoading: theatersLoading } = useApi<Theater[]>(
     () => apiClient('/theaters')
   );
-  const { data: productions, isLoading: prodsLoading } = useApi<Production[]>(
+  const { data: productions, isLoading: prodsLoading, error: prodsError } = useApi<Production[]>(
     () => apiClient('/productions')
   );
 
@@ -43,6 +43,17 @@ export function DashboardPage() {
           <Skeleton className="h-40" />
         </div>
       </div>
+    );
+  }
+
+  // Handle profile-incomplete error from productions API
+  if (prodsError && prodsError instanceof ApiRequestError && prodsError.status === 403) {
+    return (
+      <EmptyState
+        title="Complete Your Profile"
+        description="Please complete your profile to view your productions."
+        action={{ label: 'Go to Account', onClick: () => navigate('/account') }}
+      />
     );
   }
 

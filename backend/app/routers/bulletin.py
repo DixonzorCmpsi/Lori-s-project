@@ -19,6 +19,7 @@ router = APIRouter()
 class CreatePostRequest(BaseModel):
     title: str
     body: str
+    notify_members: bool = False
 
 
 class UpdatePostRequest(BaseModel):
@@ -74,6 +75,7 @@ async def get_bulletin_posts(
                 "body": p.body,
                 "author_id": p.author_id,
                 "is_pinned": p.is_pinned,
+                "notify_members": p.notify_members,
                 "created_at": p.created_at.isoformat(),
                 "updated_at": p.updated_at.isoformat()
                 if p.updated_at != p.created_at
@@ -138,6 +140,7 @@ async def create_bulletin_post(
             author_id=current_user["id"],
             title=title,
             body=sanitized_body,
+            notify_members=body.notify_members,
         )
         session.add(post)
         await session.commit()
@@ -148,6 +151,7 @@ async def create_bulletin_post(
             "body": post.body,
             "author_id": post.author_id,
             "is_pinned": post.is_pinned,
+            "notify_members": post.notify_members,
             "created_at": post.created_at.isoformat(),
         }
 
