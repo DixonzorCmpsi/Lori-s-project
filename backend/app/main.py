@@ -40,15 +40,21 @@ def create_app() -> FastAPI:
         version="1.0.0",
     )
 
-    # CORS middleware
+    # CORS middleware — include production origin from NEXTAUTH_URL
+    from app.config import get_settings
+    settings = get_settings()
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
+    if settings.nextauth_url and settings.nextauth_url not in allowed_origins:
+        allowed_origins.append(settings.nextauth_url)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:3000",
-        ],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -115,11 +121,14 @@ def create_app() -> FastAPI:
             response.headers["referrer-policy"] = "strict-origin-when-cross-origin"
             response.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
             response.headers["permissions-policy"] = "camera=(), microphone=(), geolocation=()"
+            csp_connect = "'self' wss: https://accounts.google.com https://oauth2.googleapis.com"
+            if settings.nextauth_url:
+                csp_connect += f" {settings.nextauth_url}"
             response.headers["content-security-policy"] = (
                 "default-src 'self'; script-src 'self' 'unsafe-inline'; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' blob: data: https://lh3.googleusercontent.com; "
-                "connect-src 'self' wss: https://accounts.google.com https://oauth2.googleapis.com; "
+                f"connect-src {csp_connect}; "
                 "font-src 'self' data:; form-action 'self' https://accounts.google.com"
             )
             return response
@@ -132,17 +141,21 @@ def create_app() -> FastAPI:
         "/api/auth/forgot-password", "/api/auth/reset-password",
     ]
 
+    csrf_allowed_origins = {
+        "http://localhost:5173", "http://localhost:3000",
+        "http://127.0.0.1:5173", "http://127.0.0.1:3000",
+        "http://test",  # httpx test client
+    }
+    if settings.nextauth_url:
+        csrf_allowed_origins.add(settings.nextauth_url)
+
     class CSRFMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request, call_next):
             if request.method in ("POST", "PUT", "PATCH", "DELETE"):
                 path = request.scope.get("path", "")
                 if any(path.startswith(p) for p in CSRF_PROTECTED_PATHS):
                     origin = request.headers.get("origin", "")
-                    if origin and origin not in (
-                        "http://localhost:5173", "http://localhost:3000",
-                        "http://127.0.0.1:5173", "http://127.0.0.1:3000",
-                        "http://test",  # httpx test client
-                    ):
+                    if origin and origin not in csrf_allowed_origins:
                         return JSONResponse(
                             status_code=403,
                             content={"error": "FORBIDDEN", "message": "Invalid origin"},
