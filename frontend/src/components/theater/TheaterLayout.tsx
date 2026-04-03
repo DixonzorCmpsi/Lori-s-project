@@ -8,6 +8,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 const DEFAULT_PANEL_PX = 240;
 const SNAP_CLOSE_PX = 80;   // below this, snap shut
+const COLLAPSED_PX = 6;     // thin grab strip when collapsed
 const MIN_OPEN_PX = 140;    // smallest usable open width
 const MAX_PANEL_PX = 400;
 const spring = { type: 'spring' as const, stiffness: 80, damping: 18 };
@@ -52,8 +53,8 @@ export function TheaterLayout({
     const onMove = (ev: MouseEvent) => {
       const delta = side === 'left' ? ev.clientX - startX : startX - ev.clientX;
       const raw = startW + delta;
-      // Snap closed if dragged below threshold, otherwise clamp to usable range
-      const next = raw < SNAP_CLOSE_PX ? 0 : Math.min(MAX_PANEL_PX, Math.max(MIN_OPEN_PX, raw));
+      // Snap closed if dragged below threshold, snap open if dragged above it
+      const next = raw < SNAP_CLOSE_PX ? COLLAPSED_PX : Math.min(MAX_PANEL_PX, Math.max(MIN_OPEN_PX, raw));
       if (side === 'left') setLeftW(next);
       else setRightW(next);
     };
@@ -116,8 +117,8 @@ export function TheaterLayout({
       <div className="relative z-[35] flex h-[100dvh]">
         {/* Left panel */}
         {!isMobile && (
-          <div className="flex-shrink-0 relative overflow-hidden" style={{ width: `${leftW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }}>
-            {leftW > 0 && (
+          <div className="flex-shrink-0 relative overflow-hidden cursor-col-resize" style={{ width: `${leftW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }} onMouseDown={leftW <= COLLAPSED_PX ? onMouseDown('left') : undefined}>
+            {leftW > COLLAPSED_PX && (
               <AnimatePresence>
                 {curtainsOpen && leftPanel && (
                   <motion.div
@@ -148,13 +149,13 @@ export function TheaterLayout({
 
         {/* Right panel — desktop only */}
         {isDesktop && (
-          <div className="flex-shrink-0 relative overflow-hidden" style={{ width: `${rightW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }}>
+          <div className="flex-shrink-0 relative overflow-hidden cursor-col-resize" style={{ width: `${rightW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }} onMouseDown={rightW <= COLLAPSED_PX ? onMouseDown('right') : undefined}>
             {/* Drag handle — left edge */}
             <div
               className="absolute top-0 left-0 w-1.5 h-full cursor-col-resize z-10 hover:bg-[rgba(212,175,55,0.2)] transition-colors"
               onMouseDown={onMouseDown('right')}
             />
-            {rightW > 0 && (
+            {rightW > COLLAPSED_PX && (
               <AnimatePresence>
                 {curtainsOpen && rightPanel && (
                   <motion.div

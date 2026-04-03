@@ -615,7 +615,7 @@ export function BackstageLayout() {
       >
         {/* Center stage — chalkboard nailed to the middle */}
         <div
-          className="w-full h-full pt-20 px-4 flex items-start justify-center overflow-y-auto"
+          className="w-full h-full pt-28 px-4 flex items-start justify-center overflow-y-auto"
           style={{ paddingBottom: isMobile ? '100px' : '144px' }}
         >
           <Chalkboard className="w-full max-w-4xl mt-2">

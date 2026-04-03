@@ -170,15 +170,7 @@ async def list_productions(
     current_user: dict = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """List user's productions."""
-    # Check if user has completed profile (age_range set)
     async with async_session_maker() as session:
-        user_result = await session.execute(select(User).where(User.id == current_user["id"]))
-        user = user_result.scalar_one_or_none()
-        if user and user.age_range is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"error": "FORBIDDEN", "message": "Please complete your profile first"},
-            )
         stmt = select(ProductionMember).where(
             ProductionMember.user_id == current_user["id"]
         )

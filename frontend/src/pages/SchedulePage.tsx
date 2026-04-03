@@ -7,7 +7,8 @@ import { useProduction } from '@/components/theater/BackstageLayout';
 import { useToast } from '@/components/ui/Toast';
 import { getSchedule, updateDate, cancelDate, deleteDate, bulkSyncSchedule } from '@/services/schedule';
 import { getPosts } from '@/services/bulletin';
-import { getAssignments, type CastAssignment } from '@/services/castAssignments';
+import { getConflicts } from '@/services/conflicts';
+import { getAssignments, assignCast, unassignCast, type CastAssignment } from '@/services/castAssignments';
 import { useAuth } from '@/hooks/useAuth';
 import { formatTime } from '@/utils/format';
 import { Input } from '@/components/ui/Input';
@@ -48,16 +49,49 @@ export function SchedulePage() {
   usePageTitle('Schedule');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { userRole, production } = useProduction();
+  const { userRole, production, members } = useProduction();
   const { toast } = useToast();
   const { user } = useAuth();
   const isCast = userRole === 'cast';
+  const canEdit = isStaffRole(userRole);
   const { data: dates, refetch } = useApi(() => getSchedule(id!), [id]);
   const { data: bulletinPosts } = useApi(() => getPosts(id!), [id]);
   const { data: myAssignments } = useApi<CastAssignment[]>(
     () => isCast && user ? getAssignments(id!, user.id) : Promise.resolve([]),
     [id, isCast, user?.id],
   );
+
+  // Admin/staff: fetch conflicts and all assignments
+  const { data: conflictsData } = useApi<any[]>(
+    () => canEdit ? getConflicts(id!) : Promise.resolve([]),
+    [id, canEdit],
+  );
+  const { data: allAssignments, refetch: refetchAssignments } = useApi<CastAssignment[]>(
+    () => canEdit ? getAssignments(id!) : Promise.resolve([]),
+    [id, canEdit],
+  );
+
+  // Conflict count map: date string -> { count, conflicts[] }
+  const conflictMap = useMemo(() => {
+    const map: Record<string, { count: number; conflicts: { user_id: string; reason: string | null }[] }> = {};
+    if (!conflictsData) return map;
+    for (const d of conflictsData) {
+      if (d.conflict_count > 0) {
+        map[d.date] = { count: d.conflict_count, conflicts: d.conflicts || [] };
+      }
+    }
+    return map;
+  }, [conflictsData]);
+
+  // Assignments by date ID
+  const assignmentsByDateId = useMemo(() => {
+    const map: Record<string, string[]> = {}; // dateId -> userId[]
+    if (!allAssignments) return map;
+    for (const a of allAssignments) {
+      (map[a.rehearsal_date_id] ??= []).push(a.user_id);
+    }
+    return map;
+  }, [allAssignments]);
 
   // Set of date strings the cast member is assigned to
   const myAssignedDates = useMemo(() => {
@@ -151,8 +185,6 @@ export function SchedulePage() {
   const [editNote, setEditNote] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const canEdit = isStaffRole(userRole);
 
   // Build calendar grid
   const calendarDays = useMemo(() => {
@@ -657,6 +689,14 @@ export function SchedulePage() {
                 />
               )}
 
+              {/* Conflict count badge — admin/staff only */}
+              {!editMode && canEdit && conflictMap[key] && (
+                <div className="absolute top-0.5 left-0.5 text-[8px] font-bold px-1 rounded-full"
+                  style={{ background: 'rgba(255,80,80,0.2)', color: 'rgba(255,120,120,0.9)' }}>
+                  {conflictMap[key].count}
+                </div>
+              )}
+
               {isToday && <div className="absolute bottom-0.5 w-3 h-[2px] rounded-full" style={{ background: 'rgba(255,220,100,0.5)' }} />}
             </motion.button>
           );
@@ -756,6 +796,93 @@ export function SchedulePage() {
               })}
             </div>
           )}
+
+          {/* Conflicts for this day — admin/staff only */}
+          {canEdit && selectedDay && conflictMap[dateStr(selectedDay)] && (
+            <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,80,80,0.02)' }}>
+              <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,120,120,0.7)' }}>
+                Conflicts ({conflictMap[dateStr(selectedDay)].count})
+              </p>
+              <div className="space-y-1 max-h-[120px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                {conflictMap[dateStr(selectedDay)].conflicts.map((c, i) => {
+                  const member = members.find(m => m.user_id === c.user_id);
+                  return (
+                    <div key={i} className="text-[11px] px-2 py-1 rounded" style={{ background: 'rgba(255,80,80,0.06)' }}>
+                      <span style={{ color: 'rgba(255,150,150,0.8)' }}>{member?.name || 'Unknown'}</span>
+                      {c.reason && <span style={{ color: 'rgba(255,255,255,0.3)' }}> — {c.reason}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Cast Assignment — admin/staff can assign cast to this date */}
+          {canEdit && selectedDay && selectedEvents.length > 0 && (() => {
+            const topEvent = selectedEvents.find(e => !e.is_cancelled);
+            if (!topEvent) return null;
+            const assignedUserIds = new Set(assignmentsByDateId[topEvent.id] || []);
+            const castMembers = members.filter(m => m.role === 'cast');
+            const assigned = castMembers.filter(m => assignedUserIds.has(m.user_id));
+            const unassigned = castMembers.filter(m => !assignedUserIds.has(m.user_id));
+
+            async function toggleAssignment(userId: string, isAssigned: boolean) {
+              if (!id || !topEvent) return;
+              try {
+                if (isAssigned) {
+                  await unassignCast(id, userId, topEvent.id);
+                } else {
+                  await assignCast(id, userId, topEvent.id);
+                }
+                refetchAssignments();
+              } catch { toast('Failed to update assignment', 'error'); }
+            }
+
+            return (
+              <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,220,100,0.6)' }}>
+                  Cast Assigned ({assigned.length}/{castMembers.length})
+                </p>
+                <div className="space-y-0.5 max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                  {assigned.map(m => (
+                    <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
+                      style={{ background: 'rgba(100,200,100,0.06)' }}>
+                      <span style={{ color: 'rgba(150,220,150,0.8)' }}>{m.name || 'Member'}</span>
+                      <button onClick={() => toggleAssignment(m.user_id, true)}
+                        className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
+                        style={{ color: 'rgba(255,150,150,0.6)', background: 'rgba(255,80,80,0.06)' }}>
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  {unassigned.length > 0 && (
+                    <>
+                      <p className="text-[9px] uppercase tracking-wider mt-2 mb-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                        Not assigned
+                      </p>
+                      {unassigned.map(m => {
+                        const hasConflict = conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === m.user_id);
+                        return (
+                          <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
+                            style={{ background: hasConflict ? 'rgba(255,80,80,0.04)' : 'rgba(255,255,255,0.02)' }}>
+                            <span style={{ color: hasConflict ? 'rgba(255,150,150,0.5)' : 'rgba(255,255,255,0.4)' }}>
+                              {m.name || 'Member'}
+                              {hasConflict && <span className="text-[8px] ml-1" style={{ color: 'rgba(255,120,120,0.6)' }}>conflict</span>}
+                            </span>
+                            <button onClick={() => toggleAssignment(m.user_id, false)}
+                              className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
+                              style={{ color: 'rgba(150,220,150,0.6)', background: 'rgba(100,200,100,0.06)' }}>
+                              Assign
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </motion.div>
       )}
 
