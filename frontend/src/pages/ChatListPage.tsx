@@ -3,12 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApi } from '@/hooks/useApi';
 import { getConversations, getContacts, sendMessage } from '@/services/chat';
 import { formatRelativeTime } from '@/utils/format';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Dialog } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
+import { ChalkText } from '@/components/theater/Chalkboard';
 
 export function ChatListPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,41 +63,70 @@ export function ChatListPage() {
   }
 
   if (isLoading) {
-    return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>;
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        ))}
+      </div>
+    );
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-        <Button onClick={openContactPicker}>New Message</Button>
+        <ChalkText size="lg">Messages</ChalkText>
+        <button onClick={openContactPicker}
+          className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
+          style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
+          New Message
+        </button>
       </div>
 
       {(!conversations || conversations.length === 0) ? (
-        <EmptyState title="No conversations" description="Start a new message to begin chatting." />
+        <div className="text-center py-12">
+          <ChalkText size="md">No conversations yet</ChalkText>
+          <p className="mt-2" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
+            Start a new message to begin chatting.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {conversations.map(conv => (
             <button
               key={conv.id}
               onClick={() => navigate(`/production/${id}/chat/${conv.id}`)}
-              className="w-full text-left p-4 rounded-md bg-surface border border-border hover:bg-surface-raised transition-colors flex items-center gap-3"
+              className="w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 cursor-pointer transition-colors"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
             >
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
+                style={{ background: 'linear-gradient(135deg, hsl(25,20%,20%), hsl(25,15%,15%))', color: 'hsl(25,10%,60%)' }}>
+                {(conv.participant_name || '?').charAt(0).toUpperCase()}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">{conv.participant_name}</span>
-                  <Badge>{conv.participant_role}</Badge>
+                  <span className="text-xs font-medium" style={{ color: 'hsl(35,15%,75%)' }}>{conv.participant_name}</span>
+                  <span className="text-[9px] uppercase tracking-wider px-1 py-0.5 rounded"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: 'hsl(25,8%,50%)' }}>
+                    {conv.participant_role}
+                  </span>
                 </div>
                 {conv.last_message && (
-                  <p className="text-sm text-muted truncate mt-0.5">{conv.last_message}</p>
+                  <p className="text-[11px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{conv.last_message}</p>
                 )}
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 {conv.last_message_at && (
-                  <span className="text-xs text-muted">{formatRelativeTime(conv.last_message_at)}</span>
+                  <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.25)' }}>{formatRelativeTime(conv.last_message_at)}</span>
                 )}
                 {conv.unread_count > 0 && (
-                  <Badge variant="warning">{conv.unread_count}</Badge>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ background: 'hsl(0,70%,50%)', color: 'white', minWidth: '18px', textAlign: 'center' }}>
+                    {conv.unread_count}
+                  </span>
                 )}
               </div>
             </button>

@@ -614,17 +614,15 @@ export function BackstageLayout() {
         drawerContent={castPanel}
         onDrawerClose={() => setDrawerOpen(false)}
       >
-        {/* Center stage — chalkboard nailed to the middle */}
+        {/* Center stage — chalkboard fills from top bar to stage floor */}
         <div
-          className="w-full h-full pt-28 px-2 flex items-start justify-center overflow-y-auto"
+          className="w-full h-full pt-14 px-2 flex flex-col overflow-hidden"
           style={{
-            paddingBottom: isMobile ? '100px' : '144px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
+            paddingBottom: isMobile ? '4px' : '8px',
           }}
         >
-          <Chalkboard className="w-full mt-2">
-            <div className="p-4 sm:p-6 min-h-[400px]">
+          <Chalkboard className="w-full flex-1 min-h-0 mt-1">
+            <div className="p-4 sm:p-6 h-full overflow-y-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'none' }}>
               <Outlet />
             </div>
           </Chalkboard>

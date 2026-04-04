@@ -157,6 +157,19 @@ export function BulletinPage() {
         </div>
       )}
 
+      {/* Loading state */}
+      {isLoading && sorted.length === 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[1, 2].map(i => (
+            <div key={i} className="rounded-sm p-4 animate-pulse" style={{ background: 'rgba(255,220,100,0.04)', minHeight: '120px' }}>
+              <div className="h-3 w-1/3 rounded mb-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              <div className="h-2 w-full rounded mb-2" style={{ background: 'rgba(255,255,255,0.04)' }} />
+              <div className="h-2 w-2/3 rounded" style={{ background: 'rgba(255,255,255,0.04)' }} />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Empty state */}
       {!isLoading && sorted.length === 0 && !showForm && (
         <div className="text-center py-12">

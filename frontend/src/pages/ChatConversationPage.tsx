@@ -81,16 +81,22 @@ export function ChatConversationPage() {
   }
 
   if (isLoading) {
-    return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-3/4" />)}</div>;
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className={`flex flex-col ${isMobile ? 'h-[calc(100dvh-18rem)]' : 'h-[calc(100vh-8rem)]'}`}>
-      <h1 className="text-xl font-bold text-foreground mb-4">
+      <h1 className="text-base font-semibold mb-4" style={{ color: 'rgba(255,255,255,0.72)', fontFamily: '"Playfair Display", serif' }}>
         {otherParticipant?.name || 'Conversation'}
       </h1>
 
-      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-1" style={{ scrollbarWidth: 'thin' }}>
         {messages.filter((m: Message) => !m.is_deleted).map((msg: Message) => {
           const isMine = msg.sender_id === user?.id;
           const sender = members.find(m => m.user_id === msg.sender_id);
@@ -98,20 +104,23 @@ export function ChatConversationPage() {
 
           return (
             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] p-3 rounded-lg ${
-                isMine ? 'bg-accent/20 text-foreground' : 'bg-surface-raised border border-border text-foreground'
-              }`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-muted">
+              <div className="max-w-[75%] px-3 py-2 rounded-lg"
+                style={{
+                  background: isMine ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.05)',
+                  border: isMine ? '1px solid rgba(212,175,55,0.12)' : '1px solid rgba(255,255,255,0.06)',
+                }}>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-medium" style={{ color: isMine ? 'hsl(43,55%,55%)' : 'hsl(25,8%,55%)' }}>
                     {isMine ? 'You' : sender?.name || 'Unknown'}
                   </span>
-                  <span className="text-xs text-muted">{formatRelativeTime(msg.created_at)}</span>
+                  <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.25)' }}>{formatRelativeTime(msg.created_at)}</span>
                 </div>
-                <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
+                <p className="text-[12px] whitespace-pre-wrap break-words" style={{ color: 'rgba(255,255,255,0.65)' }}>{msg.body}</p>
                 {canDelete && (
                   <button
                     onClick={() => handleDelete(msg.id)}
-                    className="text-xs text-destructive hover:underline mt-1"
+                    className="text-[9px] mt-1 cursor-pointer"
+                    style={{ color: 'rgba(255,100,100,0.5)' }}
                   >
                     Delete
                   </button>
@@ -123,21 +132,32 @@ export function ChatConversationPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-border pt-3">
+      <div className="pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex gap-2">
           <textarea
             value={body}
             onChange={e => setBody(e.target.value.slice(0, MAX_LENGTHS.message_body))}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
-            className="flex-1 px-3 py-2 rounded-md bg-surface-raised border border-border text-foreground placeholder-muted resize-none min-h-[44px] max-h-32 focus:outline-none focus:ring-2 focus:ring-accent"
+            placeholder="Type a message..."
+            className="flex-1 px-3 py-2 rounded-lg resize-none min-h-[44px] max-h-32 text-[12px] outline-none"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.7)',
+            }}
             rows={1}
           />
-          <Button onClick={handleSend} isLoading={sending} disabled={!body.trim()}>
-            Send
-          </Button>
+          <button onClick={handleSend} disabled={!body.trim() || sending}
+            className="px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest font-semibold cursor-pointer"
+            style={{
+              background: body.trim() ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.03)',
+              color: body.trim() ? 'hsl(43,60%,58%)' : 'rgba(255,255,255,0.2)',
+              border: '1px solid rgba(212,175,55,0.1)',
+            }}>
+            {sending ? '...' : 'Send'}
+          </button>
         </div>
-        <p className="text-xs text-muted mt-1 text-right">{body.length}/{MAX_LENGTHS.message_body}</p>
+        <p className="text-[9px] mt-1 text-right" style={{ color: 'rgba(255,255,255,0.2)' }}>{body.length}/{MAX_LENGTHS.message_body}</p>
       </div>
     </div>
   );

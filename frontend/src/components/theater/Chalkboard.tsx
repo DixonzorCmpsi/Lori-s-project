@@ -9,7 +9,7 @@ interface ChalkboardProps {
 export function Chalkboard({ children, className = '' }: ChalkboardProps) {
   return (
     <div
-      className={`rounded-lg ${className}`}
+      className={`rounded-lg flex flex-col ${className}`}
       style={{
         /* Wooden frame as border + padding */
         background: 'linear-gradient(145deg, hsl(28, 40%, 25%) 0%, hsl(25, 35%, 20%) 40%, hsl(22, 30%, 16%) 100%)',
@@ -31,7 +31,7 @@ export function Chalkboard({ children, className = '' }: ChalkboardProps) {
 
       {/* Green chalk surface */}
       <div
-        className="rounded-sm relative overflow-hidden"
+        className="rounded-sm relative overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
           background: 'linear-gradient(155deg, hsl(155, 20%, 24%) 0%, hsl(158, 16%, 20%) 30%, hsl(150, 13%, 18%) 70%, hsl(155, 18%, 22%) 100%)',
           boxShadow: 'inset 2px 2px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(0,0,0,0.2)',
@@ -60,7 +60,7 @@ export function Chalkboard({ children, className = '' }: ChalkboardProps) {
         />
 
         {/* Content on the board */}
-        <div className="relative z-10">
+        <div className="relative z-10 flex-1 min-h-0">
           {children}
         </div>
       </div>
