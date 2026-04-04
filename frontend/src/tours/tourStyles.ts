@@ -83,4 +83,5 @@ export const theaterTourLocale = {
 export const theaterTourOptions = {
   closeButtonAction: 'skip' as const,
   zIndex: 200,
+  scrollOffset: 100,
 };

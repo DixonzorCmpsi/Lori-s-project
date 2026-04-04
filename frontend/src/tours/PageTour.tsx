@@ -20,7 +20,7 @@ export function PageTour({ tourId, steps }: PageTourProps) {
       run={run}
       onEvent={handleEvent}
       continuous
-      scrollToFirstStep
+      scrollToFirstStep={false}
       styles={theaterTourStyles}
       locale={theaterTourLocale}
       options={theaterTourOptions}

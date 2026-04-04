@@ -682,7 +682,7 @@ export function BackstageLayout() {
           run={tourRun}
           onEvent={tourEvent}
           continuous
-          scrollToFirstStep
+          scrollToFirstStep={false}
           styles={theaterTourStyles}
           locale={theaterTourLocale}
           options={theaterTourOptions}
