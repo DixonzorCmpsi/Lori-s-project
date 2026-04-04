@@ -39,6 +39,11 @@ export function resetAllTours() {
   sessionStorage.removeItem(ACTIVE_TOUR_KEY);
 }
 
+/** Dispatch event to tell the current page's tour to start */
+export function triggerPageTour() {
+  window.dispatchEvent(new Event('start-page-tour'));
+}
+
 /**
  * Primary tour hook. Used for the production-level tour in BackstageLayout.
  * Has priority — page tours wait for this to complete.
@@ -48,7 +53,7 @@ export function useTour(tourId: string, steps: Step[], autoStart = true) {
   const isCompleted = getCompletedTours()[tourId] === true;
 
   useEffect(() => {
-    if (autoStart && !isCompleted && steps.length > 0) {
+    if (autoStart && !isCompleted && steps.length > 0 && tourId) {
       const timer = setTimeout(() => {
         setActiveTour(tourId);
         setRun(true);
@@ -58,8 +63,8 @@ export function useTour(tourId: string, steps: Step[], autoStart = true) {
   }, [autoStart, isCompleted, steps.length, tourId]);
 
   const handleEvent = useCallback((data: EventData) => {
-    const { status } = data;
-    if (status === 'finished' || status === 'skipped') {
+    const { status, type, action } = data as EventData & { type?: string; action?: string };
+    if (status === 'finished' || status === 'skipped' || type === 'tour:end' || action === 'close') {
       setRun(false);
       markTourComplete(tourId);
     }
@@ -103,20 +108,26 @@ export function usePageTour(tourId: string, steps: Step[]) {
 
     // Listen for production tour completion
     function onTourCompleted() {
-      // Small delay so the UI settles
       setTimeout(tryStart, 500);
     }
+    // Listen for manual "Take Tour" button
+    function onManualStart() {
+      setActiveTour(tourId);
+      setRun(true);
+    }
     window.addEventListener('tour-completed', onTourCompleted);
+    window.addEventListener('start-page-tour', onManualStart);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('tour-completed', onTourCompleted);
+      window.removeEventListener('start-page-tour', onManualStart);
     };
   }, [isCompleted, steps.length, tourId]);
 
   const handleEvent = useCallback((data: EventData) => {
-    const { status } = data;
-    if (status === 'finished' || status === 'skipped') {
+    const { status, type, action } = data as EventData & { type?: string; action?: string };
+    if (status === 'finished' || status === 'skipped' || type === 'tour:end' || action === 'close') {
       setRun(false);
       markTourComplete(tourId);
     }
