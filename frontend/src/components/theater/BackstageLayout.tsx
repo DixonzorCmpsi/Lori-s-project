@@ -1,7 +1,8 @@
-import { useState, useEffect, Component } from 'react';
+import { useState, useEffect, Component, useMemo } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Joyride } from 'react-joyride';
 import { useAuth } from '@/hooks/useAuth';
 import { useApi } from '@/hooks/useApi';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -10,9 +11,10 @@ import { getMemberDetails, type MemberDetails } from '@/services/castAssignments
 import { formatTime, formatDate } from '@/utils/format';
 import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
-import { Chalkboard } from './Chalkboard';
-import { ChalkText } from './Chalkboard';
+import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useTour, theaterTourStyles } from '@/hooks/useTour';
+import { directorTourSteps, castTourSteps } from '@/tours/productionTour';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
 
@@ -129,22 +131,30 @@ export function BackstageLayout() {
   const isDirectorOrStaff = userRole === 'director' || userRole === 'staff';
   const basePath = id ? `/production/${id}` : '';
 
+  // Tour system
+  const tourSteps = useMemo(() => {
+    if (!id) return [];
+    return isDirectorOrStaff ? directorTourSteps : castTourSteps;
+  }, [id, isDirectorOrStaff]);
+  const tourId = id ? `production-${isDirectorOrStaff ? 'director' : 'cast'}` : '';
+  const { run: tourRun, stepIndex: tourStep, handleEvent: tourEvent, startTour } = useTour(tourId, tourSteps, !!id);
+
   // Navigation config
   const directorNav = [
-    { icon: '◈', label: 'Dashboard', path: basePath || '/' },
-    { icon: '◷', label: 'Schedule', path: `${basePath}/schedule` },
-    { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin` },
-    { icon: '◉', label: 'Members', path: `${basePath}/roster` },
-    { icon: '◆', label: 'Chat', path: `${basePath}/chat` },
-    { icon: '◎', label: 'Settings', path: `${basePath}/settings` },
+    { icon: '◈', label: 'Dashboard', path: basePath || '/', tourId: 'nav-dashboard' },
+    { icon: '◷', label: 'Schedule', path: `${basePath}/schedule`, tourId: 'nav-schedule' },
+    { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin`, tourId: 'nav-bulletin' },
+    { icon: '◉', label: 'Members', path: `${basePath}/roster`, tourId: 'nav-members' },
+    { icon: '◆', label: 'Chat', path: `${basePath}/chat`, tourId: 'nav-chat' },
+    { icon: '◎', label: 'Settings', path: `${basePath}/settings`, tourId: 'nav-settings' },
   ];
   const castNav = [
-    { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin` },
-    { icon: '◷', label: 'Schedule', path: `${basePath}/schedule` },
-    { icon: '◆', label: 'Chat', path: `${basePath}/chat` },
+    { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin`, tourId: 'nav-bulletin' },
+    { icon: '◷', label: 'Schedule', path: `${basePath}/schedule`, tourId: 'nav-schedule' },
+    { icon: '◆', label: 'Chat', path: `${basePath}/chat`, tourId: 'nav-chat' },
   ];
   const navItems = isDirectorOrStaff ? directorNav : (id ? castNav : [
-    { icon: '◈', label: 'Dashboard', path: '/' },
+    { icon: '◈', label: 'Dashboard', path: '/', tourId: 'nav-dashboard' },
   ]);
 
   function isActive(path: string) {
@@ -214,6 +224,7 @@ export function BackstageLayout() {
           return (
             <motion.button
               key={item.path}
+              data-tour={item.tourId}
               onClick={() => navigate(item.path)}
               className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left cursor-pointer group"
               style={{
@@ -296,6 +307,17 @@ export function BackstageLayout() {
           <span className="text-xs opacity-60">◇</span>
           <span className="truncate">{user?.name || 'Account'}</span>
         </motion.button>
+        {id && (
+          <motion.button
+            onClick={startTour}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+            style={{ color: 'hsl(43, 50%, 45%)' }}
+            whileHover={{ background: 'rgba(255,180,80,0.06)' }}
+          >
+            <span className="text-xs opacity-60">?</span>
+            <span className="font-medium">Take Tour</span>
+          </motion.button>
+        )}
         <motion.button
           onClick={logout}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
@@ -313,6 +335,7 @@ export function BackstageLayout() {
 
   const castPanel = (
     <div
+      data-tour="cast-panel"
       className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
       style={{
         ...flightCaseBase,
@@ -650,6 +673,16 @@ export function BackstageLayout() {
 
   return (
     <ProductionContext.Provider value={{ production, members: members || [], userRole, refetch }}>
+      {id && tourSteps.length > 0 && (
+        <Joyride
+          steps={tourSteps}
+          run={tourRun}
+          stepIndex={tourStep}
+          onEvent={tourEvent}
+          continuous
+          scrollToFirstStep
+        />
+      )}
       <TheaterLayout
         curtainsOpen={true}
         leftPanel={leftPanel}
