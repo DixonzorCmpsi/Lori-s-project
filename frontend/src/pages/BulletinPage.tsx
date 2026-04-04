@@ -95,7 +95,7 @@ export function BulletinPage() {
 
   return (
     <div>
-      <PageTour tourId={`page-bulletin-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? bulletinTourSteps : bulletinCastTourSteps} />
+      {userRole && <PageTour tourId={`page-bulletin-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? bulletinTourSteps : bulletinCastTourSteps} />}
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <ChalkText size="lg">Bulletin Board</ChalkText>

@@ -474,7 +474,7 @@ export function SchedulePage() {
 
   return (
     <div>
-      <PageTour tourId={`page-schedule-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? scheduleTourSteps : scheduleCastTourSteps} />
+      {userRole && <PageTour tourId={`page-schedule-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? scheduleTourSteps : scheduleCastTourSteps} />}
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <ChalkText size="lg">Schedule</ChalkText>
