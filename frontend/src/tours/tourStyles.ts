@@ -1,12 +1,10 @@
-import type { Styles } from 'react-joyride';
-
 /** Shared Joyride styles matching the theater backstage aesthetic */
-export const theaterTourStyles: Partial<Styles> = {
+export const theaterTourStyles = {
   tooltip: {
     background: 'linear-gradient(180deg, hsl(220, 6%, 13%) 0%, hsl(220, 5%, 9%) 100%)',
     borderRadius: '8px',
     border: '1px solid rgba(212, 175, 55, 0.15)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
     padding: '20px 24px',
     maxWidth: '360px',
     fontFamily: '"Inter", system-ui, sans-serif',
@@ -20,13 +18,16 @@ export const theaterTourStyles: Partial<Styles> = {
     fontSize: '16px',
     fontWeight: 600,
     letterSpacing: '0.01em',
-    marginBottom: '8px',
+    marginBottom: '4px',
   },
   tooltipContent: {
     color: 'hsl(25, 8%, 65%)',
     fontSize: '13px',
     lineHeight: '1.6',
     padding: '4px 0 12px',
+  },
+  tooltipFooter: {
+    marginTop: '0',
   },
   buttonPrimary: {
     background: 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
@@ -50,14 +51,19 @@ export const theaterTourStyles: Partial<Styles> = {
     marginRight: '8px',
   },
   buttonClose: {
-    width: '28px',
-    height: '28px',
-    color: 'hsl(25, 8%, 40%)',
-    padding: 0,
+    top: '8px',
+    right: '8px',
+    width: '24px',
+    height: '24px',
+    color: 'hsl(25, 8%, 35%)',
+    padding: '0',
   },
   buttonSkip: {
     color: 'hsl(25, 8%, 45%)',
     fontSize: '11px',
+  },
+  arrow: {
+    color: 'hsl(220, 6%, 13%)',
   },
   spotlight: {
     borderRadius: '8px',

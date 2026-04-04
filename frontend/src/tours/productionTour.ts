@@ -1,11 +1,8 @@
 import type { Step } from 'react-joyride';
 
+/** Per-step defaults — only skipBeacon; all visual styling comes from tourStyles.ts */
 const theaterStep = {
-  backgroundColor: 'hsl(220, 6%, 11%)',
-  textColor: 'hsl(35, 20%, 85%)',
-  primaryColor: 'hsl(38, 70%, 50%)',
-  overlayColor: 'rgba(0, 0, 0, 0.7)',
-  arrowColor: 'hsl(220, 6%, 11%)',
+  skipBeacon: true,
 };
 
 /** Tour for directors/staff when they first enter a production */
