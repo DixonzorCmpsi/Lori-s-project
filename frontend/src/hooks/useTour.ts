@@ -85,6 +85,7 @@ export function usePageTour(tourId: string, steps: Step[]) {
   const [run, setRun] = useState(false);
   const isCompleted = getCompletedTours()[tourId] === true;
 
+  // Auto-start: only runs when the tour hasn't been completed yet
   useEffect(() => {
     if (isCompleted || steps.length === 0) return;
 
@@ -114,22 +115,26 @@ export function usePageTour(tourId: string, steps: Step[]) {
     function onTourCompleted() {
       setTimeout(tryStart, 500);
     }
-    // Listen for manual "Take Tour" button
-    function onManualStart() {
-      if (cancelled || getCompletedTours()[tourId]) return;
-      setActiveTour(tourId);
-      setRun(true);
-    }
     window.addEventListener('tour-completed', onTourCompleted);
-    window.addEventListener('start-page-tour', onManualStart);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
       window.removeEventListener('tour-completed', onTourCompleted);
-      window.removeEventListener('start-page-tour', onManualStart);
     };
   }, [isCompleted, steps.length, tourId]);
+
+  // Manual start: always active so "Take Tour" button works even after dismissal
+  useEffect(() => {
+    if (steps.length === 0) return;
+
+    function onManualStart() {
+      setActiveTour(tourId);
+      setRun(true);
+    }
+    window.addEventListener('start-page-tour', onManualStart);
+    return () => window.removeEventListener('start-page-tour', onManualStart);
+  }, [steps.length, tourId]);
 
   const handleEvent = useCallback((data: EventData) => {
     const { status, type, action } = data as EventData & { type?: string; action?: string };
