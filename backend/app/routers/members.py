@@ -60,18 +60,18 @@ async def list_members(
         result = await session.execute(stmt)
         members = result.all()
 
+        # Batch-fetch all conflict submissions for this production (avoids N+1)
+        sub_stmt = select(ConflictSubmission.user_id).where(
+            ConflictSubmission.production_id == production_id,
+        )
+        sub_result = await session.execute(sub_stmt)
+        submitted_user_ids = {row[0] for row in sub_result.all()}
+
         member_list = []
         for member, user in members:
-            # Check if cast has submitted conflicts
             has_conflicts = None
             if member.role == "cast":
-                stmt = select(ConflictSubmission).where(
-                    ConflictSubmission.production_id == production_id,
-                    ConflictSubmission.user_id == user.id,
-                )
-                result = await session.execute(stmt)
-                submission = result.scalar_one_or_none()
-                has_conflicts = "Submitted" if submission else "Pending"
+                has_conflicts = "Submitted" if user.id in submitted_user_ids else "Pending"
 
             member_list.append(
                 {
