@@ -14,7 +14,7 @@ import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useTour, theaterTourStyles } from '@/hooks/useTour';
-import { directorTourSteps, castTourSteps } from '@/tours/productionTour';
+import { directorTourSteps, staffTourSteps, castTourSteps } from '@/tours/productionTour';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
 
@@ -131,13 +131,15 @@ export function BackstageLayout() {
   const isDirectorOrStaff = userRole === 'director' || userRole === 'staff';
   const basePath = id ? `/production/${id}` : '';
 
-  // Tour system
+  // Tour system — different flows per role
   const tourSteps = useMemo(() => {
     if (!id) return [];
-    return isDirectorOrStaff ? directorTourSteps : castTourSteps;
-  }, [id, isDirectorOrStaff]);
-  const tourId = id ? `production-${isDirectorOrStaff ? 'director' : 'cast'}` : '';
-  const { run: tourRun, stepIndex: tourStep, handleEvent: tourEvent, startTour } = useTour(tourId, tourSteps, !!id);
+    if (userRole === 'director') return directorTourSteps;
+    if (userRole === 'staff') return staffTourSteps;
+    return castTourSteps;
+  }, [id, userRole]);
+  const tourId = id ? `production-${userRole || 'cast'}` : '';
+  const { run: tourRun, handleEvent: tourEvent, startTour } = useTour(tourId, tourSteps, !!id);
 
   // Navigation config
   const directorNav = [
@@ -677,7 +679,6 @@ export function BackstageLayout() {
         <Joyride
           steps={tourSteps}
           run={tourRun}
-          stepIndex={tourStep}
           onEvent={tourEvent}
           continuous
           scrollToFirstStep

@@ -1,28 +1,28 @@
 # SPEC-009: Frontend Architecture & UI Design System
 
-**Status:** Draft
-**Last Updated:** 2026-03-21
+**Status:** Active
+**Last Updated:** 2026-04-04
 **Depends On:** SPEC-001, SPEC-007
 
 ---
 
 ## Goals (Immutable)
 
-- Next.js 14+ App Router with TypeScript strict mode as the sole frontend framework.
-- Theater backstage visual identity: warm dark wood, cork boards, amber work lights, serif headings.
+- React 19 + Vite 6 + TypeScript strict mode as the frontend framework.
+- Theater backstage visual identity: green chalkboard, wooden frame, curtains, flight-case panels, gaffer tape, sticky notes.
 - Fully responsive across mobile (375px+), tablet (768px+), and desktop (1024px+).
-- shadcn/ui component primitives for all base UI elements.
+- Custom UI components matching the theater theme (no generic component library).
 - Dark theme only — no light mode toggle, no light mode variant.
-- Skeleton loading states on every async boundary; zero spinners anywhere in the app.
-- WCAG AA accessible: every interactive element keyboard-navigable, minimum 4.5:1 contrast ratio.
-- Zod validation on every form (client-side and server-side schemas shared).
+- Loading skeletons on async pages; animated pulse placeholders matching the chalkboard.
+- framer-motion for curtain animations, panel transitions, and nav highlights.
+- react-joyride guided tour system for onboarding (different flows per role).
+- Error boundary around page content — crashes show "Something went wrong" not a blank screen.
 
 ## Non-Goals (Explicit Exclusions)
 
 - Light mode or any theme-switching capability.
 - CSS-in-JS solutions (use Tailwind CSS only).
-- Custom component library built from scratch (use shadcn/ui exclusively).
-- Animations or transitions beyond subtle hover states (no page transitions, no loading animations).
+- shadcn/ui or any generic component library (all components are theater-themed).
 - Image-based textures (all textures achieved via CSS gradients and shadows only).
 - PWA capabilities or service workers.
 - Offline mode or offline-first data storage.

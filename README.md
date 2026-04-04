@@ -2,6 +2,8 @@
 
 A web app replacing the physical backstage call board for theater productions. Directors create productions, build rehearsal schedules, and manage cast. Cast members join via invite link, submit scheduling conflicts, and communicate with staff.
 
+**Live:** [callboard.deetalk.win](https://callboard.deetalk.win)
+
 ## Quick Start
 
 ```bash
@@ -15,43 +17,61 @@ A web app replacing the physical backstage call board for theater productions. D
 
 The backend auto-creates a virtual environment and installs dependencies on first run. The frontend auto-runs `npm install` if needed.
 
+## Production Deployment
+
+```bash
+# Build and run Docker containers
+docker compose build && docker compose up -d   # App at localhost:8080
+
+# Start Cloudflare Tunnel
+cloudflared tunnel run callboard               # Routes to callboard.deetalk.win
+```
+
+Requires `.env.production` (gitignored) with database URL, JWT secret, and OAuth credentials. See `.env` for the template.
+
 ## Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19, Vite 6, TypeScript, Tailwind CSS 4 |
+| Frontend | React 19, Vite 6, TypeScript, Tailwind CSS 4, framer-motion |
 | Backend | Python, FastAPI, SQLAlchemy (async), JWT auth |
-| Database | PostgreSQL (Supabase) |
+| Database | PostgreSQL (Supabase, PgBouncer pooler) |
 | Auth | Google OAuth 2.0 + email/password (bcrypt) |
+| Deployment | Docker Compose, nginx, Cloudflare Tunnel |
 
 ## Project Structure
 
 ```text
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app + middleware
+│   │   ├── main.py              # FastAPI app + middleware (CORS, CSRF, rate limit)
 │   │   ├── config.py            # Environment settings
-│   │   ├── database.py          # SQLAlchemy engine
+│   │   ├── database.py          # SQLAlchemy async engine (PgBouncer compatible)
 │   │   ├── models.py            # All database models
 │   │   ├── routers/             # API endpoints
 │   │   └── services/            # Business logic
-│   ├── tests/                   # pytest suite (361 passing)
+│   ├── tests/                   # pytest suite
+│   ├── seed_data.py             # Seed: Into the Woods (12 cast)
+│   ├── seed_admin.py            # Seed: Phantom of the Opera (50 cast)
 │   ├── requirements.txt
-│   └── pyproject.toml
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/               # 19 route pages
-│   │   ├── components/          # UI components + layouts
+│   │   ├── pages/               # 20 route pages
+│   │   ├── components/          # UI components + theater layouts
 │   │   ├── services/            # API client modules
-│   │   ├── contexts/            # Auth context
-│   │   ├── hooks/               # useAuth, useApi, useForm
+│   │   ├── hooks/               # useAuth, useApi, useTour, useBreakpoint
+│   │   ├── tours/               # Guided tour step definitions
 │   │   ├── types/               # TypeScript interfaces
 │   │   └── utils/               # Validation, formatting
 │   ├── tests/                   # Vitest test stubs
-│   ├── package.json
-│   └── vite.config.ts
+│   ├── nginx.conf               # Production reverse proxy
+│   ├── Dockerfile               # Multi-stage build (node + nginx)
+│   └── package.json
 ├── spec/                        # 10 specification documents
-├── start.sh                     # Start both servers
+├── docker-compose.yml           # Production orchestration
+├── .env.production              # Production secrets (gitignored)
+├── start.sh                     # Start both dev servers
 ├── start-backend.sh             # Start backend only
 └── start-frontend.sh            # Start frontend only
 ```
@@ -66,12 +86,18 @@ The backend auto-creates a virtual environment and installs dependencies on firs
 
 ## Key Features
 
-- **Schedule Builder** — 7-question wizard generates a rehearsal calendar with tech week, dress rehearsal, and performance dates
-- **Conflict Submission** — Cast marks unavailable dates once; Director sees aggregated view with severity badges
-- **Bulletin Board** — Markdown posts with pinning, role-based editing, XSS sanitization
-- **Role-Based Chat** — 1-on-1 messaging; cast-to-cast blocked at API level
-- **Invite Links** — Single link per production, 30-day expiry, max 100 uses
-- **Production Archival** — Read-only mode with 90-day PII deletion
+- **Schedule Builder** — Weekly pattern toolbar generates rehearsal calendar. Click to override individual dates. Conflict counts and cast assignments visible per day.
+- **Conflict Submission** — Cast marks unavailable dates once. Director sees aggregated conflict view with severity badges.
+- **Bulletin Board** — Sticky note posts on the chalkboard with pinning, role-based editing.
+- **Role-Based Chat** — 1-on-1 messaging. Cast-to-cast blocked at API level. Director can moderate any conversation.
+- **Invite Links** — Single link per production, 30-day expiry, max 100 uses. Cast routed to conflict submission on join.
+- **Production Archival** — Read-only mode with 90-day PII deletion.
+- **Guided Tours** — react-joyride onboarding for directors (7 steps) and cast (3 steps). "Take Tour" button always available.
+- **Error Boundary** — Page crashes show a "Something went wrong" message with retry, not a blank screen.
+
+## UI Theme
+
+Theater backstage aesthetic: dark background, green chalkboard content area, wooden frame with nails, curtain open/close animations, flight-case side panels with rivets, gaffer tape schedule indicators, sticky note bulletin posts, spotlight effects. Dark mode only.
 
 ## API Documentation
 
@@ -89,10 +115,8 @@ python3 -m venv .venv
 ```
 
 Run tests:
-
 ```bash
-cd backend
-.venv/bin/python3 -m pytest tests/ -v
+cd backend && .venv/bin/python3 -m pytest tests/ -v
 ```
 
 ### Frontend
@@ -103,23 +127,27 @@ npm install
 npm run dev
 ```
 
-Build for production:
+### Seed Data
 
 ```bash
-npm run build
+docker compose exec backend python3 seed_data.py    # Into the Woods
+docker compose exec backend python3 seed_admin.py   # Phantom of the Opera
 ```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env` template and configure:
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | PostgreSQL connection string (Supabase pooler, port 6543) |
 | `NEXTAUTH_SECRET` | JWT signing secret (min 32 chars) |
+| `NEXTAUTH_URL` | Production URL (e.g. https://callboard.deetalk.win) |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `SMTP_HOST` | Email server for verification/reset emails |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 
 ## Specifications
 
