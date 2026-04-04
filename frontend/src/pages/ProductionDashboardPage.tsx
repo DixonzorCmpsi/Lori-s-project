@@ -44,7 +44,7 @@ export function ProductionDashboardPage() {
   }, [inviteUrl, toast]);
 
   const upcoming = useMemo(() => {
-    if (!dates) return [];
+    if (!Array.isArray(dates)) return [];
     const today = new Date().toISOString().split('T')[0];
     return dates
       .filter((d: RehearsalDate) => !d.is_deleted && !d.is_cancelled && d.date >= today)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface UseApiResult<T> {
   data: T | null;
@@ -7,52 +7,25 @@ interface UseApiResult<T> {
   refetch: () => void;
 }
 
-// Simple in-memory cache — keyed by serialized deps, cleared on refetch
-const cache = new Map<string, { data: unknown; ts: number }>();
-const CACHE_TTL_MS = 30_000; // 30 seconds
-
 export function useApi<T>(
   fetcher: () => Promise<T>,
   deps: unknown[] = []
 ): UseApiResult<T> {
-  const cacheKey = JSON.stringify(deps);
-  const cached = cache.get(cacheKey);
-  const isFresh = !!(cached && Date.now() - cached.ts < CACHE_TTL_MS);
-
-  const [data, setData] = useState<T | null>(isFresh ? (cached!.data as T) : null);
+  const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [isLoading, setIsLoading] = useState(!isFresh);
+  const [isLoading, setIsLoading] = useState(true);
   const [trigger, setTrigger] = useState(0);
-  const forceRefetch = useRef(false);
 
-  const refetch = useCallback(() => {
-    cache.delete(cacheKey);
-    forceRefetch.current = true;
-    setTrigger(t => t + 1);
-  }, [cacheKey]);
+  const refetch = useCallback(() => setTrigger(t => t + 1), []);
 
   useEffect(() => {
-    const key = cacheKey;
-    const hit = cache.get(key);
-    const fresh = !!(hit && Date.now() - hit.ts < CACHE_TTL_MS);
-
-    if (fresh && !forceRefetch.current) {
-      setData(hit!.data as T);
-      setIsLoading(false);
-      return;
-    }
-    forceRefetch.current = false;
-
     let cancelled = false;
     setIsLoading(true);
     setError(null);
 
     fetcher()
       .then(result => {
-        if (!cancelled) {
-          cache.set(key, { data: result, ts: Date.now() });
-          setData(result);
-        }
+        if (!cancelled) setData(result);
       })
       .catch(err => {
         if (!cancelled) setError(err);

@@ -17,6 +17,7 @@ export function formatTime(timeStr: string): string {
 }
 
 export function formatRelativeTime(dateStr: string): string {
+  if (!dateStr) return '';
   return formatDistanceToNow(parseISO(dateStr), { addSuffix: true });
 }
 

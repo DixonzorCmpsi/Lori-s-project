@@ -9,7 +9,6 @@ import { getMessages, getConversations, sendMessage, markRead, deleteMessage } f
 import { formatRelativeTime } from '@/utils/format';
 import { MAX_LENGTHS, ROLES } from '@/utils/constants';
 import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
 import type { Message, Conversation } from '@/types';
 
 export function ChatConversationPage() {
