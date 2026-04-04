@@ -82,4 +82,5 @@ export const theaterTourLocale = {
 /** Shared Joyride options */
 export const theaterTourOptions = {
   closeButtonAction: 'skip' as const,
+  zIndex: 200,
 };
