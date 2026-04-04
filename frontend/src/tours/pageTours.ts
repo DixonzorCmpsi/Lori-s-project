@@ -169,8 +169,8 @@ export const rosterTourSteps: Step[] = [
   },
   {
     target: '[data-tour="roster-members"]',
-    title: 'Your Company',
-    content: 'All members are listed by role: Directors, Staff, then Cast. Each card shows their conflict status (submitted or pending). As director, you can promote cast to staff, demote staff, or remove members.',
+    title: 'Production Roster',
+    content: 'All members are listed by role: Directors, Staff, then Cast. Each card shows their conflict status (submitted or pending). As director, you can promote cast to staff, demote staff, or remove members from the production.',
     placement: 'top',
     ...s,
   },

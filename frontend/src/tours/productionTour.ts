@@ -34,7 +34,7 @@ export const directorTourSteps: Step[] = [
   },
   {
     target: '[data-tour="nav-members"]',
-    title: 'Company Roster',
+    title: 'Production Roster',
     content: 'View all members and their conflict status. Generate invite links to add cast. You can promote cast to staff, reset their conflicts, or remove them from the production.',
     placement: 'right',
     ...theaterStep,
@@ -88,7 +88,7 @@ export const staffTourSteps: Step[] = [
   },
   {
     target: '[data-tour="nav-members"]',
-    title: 'Company Roster',
+    title: 'Production Roster',
     content: 'View all members and their conflict submission status. Generate invite links to share with new cast members.',
     placement: 'right',
     ...theaterStep,
