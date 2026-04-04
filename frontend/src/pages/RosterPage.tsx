@@ -93,10 +93,10 @@ export function RosterPage() {
             {inviteUrl ? (
               <div>
                 <p className="text-[10px] font-mono break-all leading-relaxed opacity-60 mb-2">{inviteUrl}</p>
-                <div className="flex gap-2 items-center">
+                <div className="flex flex-wrap gap-2 items-center">
                   <button onClick={copyInvite} className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded cursor-pointer" style={{ background: 'rgba(0,0,0,0.08)' }}>Copy</button>
                   <button onClick={handleRegenerate} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded cursor-pointer opacity-60" disabled={busy}>Regen</button>
-                  <span className="text-[9px] opacity-40 ml-auto">
+                  <span className="text-[9px] opacity-40">
                     {invite!.use_count}/{invite!.max_uses} used · expires {formatRelativeTime(invite!.expires_at)}
                   </span>
                 </div>

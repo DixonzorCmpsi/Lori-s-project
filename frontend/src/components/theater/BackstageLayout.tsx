@@ -534,7 +534,8 @@ export function BackstageLayout() {
             className="text-[9px] uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
             style={{ color: 'hsl(38,70%,55%)', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.12)' }}
           >
-            Enable Notifications
+            <span className="hidden sm:inline">Enable Notifications</span>
+            <span className="sm:hidden">🔔</span>
           </button>
         )}
       </div>
@@ -550,7 +551,7 @@ export function BackstageLayout() {
           </button>
         )}
         <p
-          className="text-[10px] tracking-widest uppercase"
+          className="hidden sm:block text-[10px] tracking-widest uppercase truncate max-w-[160px]"
           style={{ color: 'hsl(25, 8%, 36%)' }}
         >
           {production?.name || 'Backstage'}
@@ -615,10 +616,14 @@ export function BackstageLayout() {
       >
         {/* Center stage — chalkboard nailed to the middle */}
         <div
-          className="w-full h-full pt-28 px-4 flex items-start justify-center overflow-y-auto"
-          style={{ paddingBottom: isMobile ? '100px' : '144px' }}
+          className="w-full h-full pt-28 px-2 flex items-start justify-center overflow-y-auto"
+          style={{
+            paddingBottom: isMobile ? '100px' : '144px',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
         >
-          <Chalkboard className="w-full max-w-4xl mt-2">
+          <Chalkboard className="w-full mt-2">
             <div className="p-4 sm:p-6 min-h-[400px]">
               <Outlet />
             </div>

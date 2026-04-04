@@ -168,48 +168,50 @@ export function BulletinPage() {
       )}
 
       {/* Posts as sticky notes */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 gap-5"
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-      >
-        {sorted.map((post, i) => (
-          <motion.div key={post.id} variants={fadeIn}>
-            <StickyNote
-              color={post.is_pinned ? 'yellow' : noteColorCycle[i % noteColorCycle.length]}
-              rotate={rotations[i % rotations.length]}
-            >
-              {/* Pinned badge */}
-              {post.is_pinned && (
-                <span className="text-[8px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded-sm mb-2 inline-block"
-                  style={{ background: 'rgba(0,0,0,0.06)' }}>
-                  Pinned
-                </span>
-              )}
-
-              <h3 className="font-bold text-sm leading-tight mb-1">{post.title}</h3>
-              <p className="text-[11px] leading-relaxed opacity-70 line-clamp-4 whitespace-pre-line">{post.body}</p>
-
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-[9px] opacity-40">
-                  {authorName(post.author_id)} · {formatRelativeTime(post.created_at)}
-                </span>
-
-                {canEdit && (
-                  <div className="flex gap-1">
-                    <button onClick={() => handlePin(post.id)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer">
-                      {post.is_pinned ? 'Unpin' : 'Pin'}
-                    </button>
-                    <button onClick={() => openEdit(post)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer">Edit</button>
-                    <button onClick={() => setDeleteId(post.id)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer" style={{ color: 'hsl(0,50%,45%)' }}>Del</button>
-                  </div>
+      {sorted.length > 0 && (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 gap-5"
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+        >
+          {sorted.map((post, i) => (
+            <motion.div key={post.id} variants={fadeIn}>
+              <StickyNote
+                color={post.is_pinned ? 'yellow' : noteColorCycle[i % noteColorCycle.length]}
+                rotate={rotations[i % rotations.length]}
+              >
+                {/* Pinned badge */}
+                {post.is_pinned && (
+                  <span className="text-[8px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded-sm mb-2 inline-block"
+                    style={{ background: 'rgba(0,0,0,0.06)' }}>
+                    Pinned
+                  </span>
                 )}
-              </div>
-            </StickyNote>
-          </motion.div>
-        ))}
-      </motion.div>
+
+                <h3 className="font-bold text-sm leading-tight mb-1">{post.title}</h3>
+                <p className="text-[11px] leading-relaxed opacity-70 line-clamp-4 whitespace-pre-line">{post.body}</p>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[9px] opacity-40">
+                    {authorName(post.author_id)} · {formatRelativeTime(post.created_at)}
+                  </span>
+
+                  {canEdit && (
+                    <div className="flex gap-1">
+                      <button onClick={() => handlePin(post.id)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer">
+                        {post.is_pinned ? 'Unpin' : 'Pin'}
+                      </button>
+                      <button onClick={() => openEdit(post)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer">Edit</button>
+                      <button onClick={() => setDeleteId(post.id)} className="text-[9px] opacity-40 hover:opacity-70 cursor-pointer" style={{ color: 'hsl(0,50%,45%)' }}>Del</button>
+                    </div>
+                  )}
+                </div>
+              </StickyNote>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
       <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Post" confirmLabel="Delete" confirmVariant="destructive" onConfirm={handleDelete} isLoading={busy}>
         <p>Are you sure you want to delete this post?</p>

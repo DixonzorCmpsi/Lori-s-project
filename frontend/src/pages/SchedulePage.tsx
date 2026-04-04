@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApi } from '@/hooks/useApi';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -43,6 +44,7 @@ const typeConfig: Record<string, { label: string; noteBg: string; noteText: stri
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_HEADERS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const spring = { type: 'spring' as const, stiffness: 120, damping: 18 };
 
 export function SchedulePage() {
@@ -50,6 +52,8 @@ export function SchedulePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { userRole, production, members } = useProduction();
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
   const { toast } = useToast();
   const { user } = useAuth();
   const isCast = userRole === 'cast';
@@ -532,19 +536,21 @@ export function SchedulePage() {
             </p>
 
             {/* Default times */}
-            <div className="flex items-center gap-3">
+            <div className={`flex gap-3 ${isMobile ? 'flex-col items-start' : 'items-center'}`}>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Default time:</span>
-              <input type="time" value={defaultTime.start} onChange={e => setDefaultTime(p => ({ ...p, start: e.target.value }))}
-                className="px-2 py-1 rounded-sm text-xs outline-none w-24"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
-              <span style={{ color: 'rgba(255,255,255,0.25)' }}>to</span>
-              <input type="time" value={defaultTime.end} onChange={e => setDefaultTime(p => ({ ...p, end: e.target.value }))}
-                className="px-2 py-1 rounded-sm text-xs outline-none w-24"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
+              <div className="flex items-center gap-2">
+                <input type="time" value={defaultTime.start} onChange={e => setDefaultTime(p => ({ ...p, start: e.target.value }))}
+                  className="px-2 py-1 rounded-sm text-xs outline-none w-24"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
+                <span style={{ color: 'rgba(255,255,255,0.25)' }}>to</span>
+                <input type="time" value={defaultTime.end} onChange={e => setDefaultTime(p => ({ ...p, end: e.target.value }))}
+                  className="px-2 py-1 rounded-sm text-xs outline-none w-24"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
+              </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between">
+            <div className={`flex gap-3 ${isMobile ? 'flex-col' : 'items-center justify-between'}`}>
               <div className="flex gap-2 flex-wrap">
                 {Object.entries(typeConfig).map(([type, c]) => (
                   <div key={type} className="flex items-center gap-1">
@@ -580,8 +586,8 @@ export function SchedulePage() {
 
       {/* Day headers */}
       <div className="grid grid-cols-7 mb-1">
-        {DAY_HEADERS.map(day => (
-          <div key={day} className="text-center py-1" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+        {(isMobile ? DAY_HEADERS_SHORT : DAY_HEADERS).map((day, i) => (
+          <div key={i} className="text-center py-1" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             {day}
           </div>
         ))}
@@ -591,7 +597,7 @@ export function SchedulePage() {
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-[2px]">
         {calendarDays.map((day, i) => {
-          if (day === null) return <div key={`e-${i}`} className="min-h-[80px]" />;
+          if (day === null) return <div key={`e-${i}`} className={isMobile ? 'min-h-[56px]' : 'min-h-[80px]'} />;
 
           const key = dateStr(day);
           const editType = dayTypes[key]; // Type set in edit mode
@@ -616,7 +622,7 @@ export function SchedulePage() {
             <motion.button
               key={day}
               onClick={() => handleDayClick(day)}
-              className="relative flex flex-col items-center rounded-sm cursor-pointer min-h-[80px] p-1"
+              className={`relative flex flex-col items-center rounded-sm cursor-pointer p-1 ${isMobile ? 'min-h-[56px]' : 'min-h-[80px]'}`}
               style={{
                 background: isSelected ? 'rgba(255,255,255,0.06)'
                   : isBlocked ? (typeConfig.blocked?.chalkBg || 'rgba(255,80,80,0.06)')

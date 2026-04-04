@@ -1,4 +1,4 @@
-import { ReactNode, useState, useCallback, useRef } from 'react';
+import { ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Curtain } from './Curtain';
 import { StageFloor } from './StageFloor';
@@ -39,6 +39,11 @@ export function TheaterLayout({
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const isDesktop = bp === 'desktop';
+
+  // Track whether curtains were already open on mount — skip intro delays if so
+  const alreadyOpen = useRef(curtainsOpen);
+  useEffect(() => { if (curtainsOpen) alreadyOpen.current = true; }, [curtainsOpen]);
+  const introDelay = (d: number) => alreadyOpen.current ? 0 : d;
 
   const [leftW, setLeftW] = useState(DEFAULT_PANEL_PX);
   const [rightW, setRightW] = useState(DEFAULT_PANEL_PX);
@@ -106,7 +111,7 @@ export function TheaterLayout({
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -20, opacity: 0 }}
-            transition={{ ...spring, delay: isMobile ? 0.3 : 1.2 }}
+            transition={{ ...spring, delay: introDelay(isMobile ? 0.3 : 1.2) }}
           >
             {topBar}
           </motion.div>
@@ -127,7 +132,7 @@ export function TheaterLayout({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ ...spring, delay: 1.4 }}
+                    transition={{ ...spring, delay: introDelay(1.4) }}
                   >
                     {leftPanel}
                   </motion.div>
@@ -164,7 +169,7 @@ export function TheaterLayout({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ ...spring, delay: 1.4 }}
+                    transition={{ ...spring, delay: introDelay(1.4) }}
                   >
                     {rightPanel}
                   </motion.div>

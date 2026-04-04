@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
 import { useProduction } from '@/components/theater/BackstageLayout';
@@ -15,6 +16,8 @@ export function ChatConversationPage() {
   const { id, convId } = useParams<{ id: string; convId: string }>();
   const { user } = useAuth();
   const { userRole, members } = useProduction();
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
   const { toast } = useToast();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +85,7 @@ export function ChatConversationPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className={`flex flex-col ${isMobile ? 'h-[calc(100dvh-18rem)]' : 'h-[calc(100vh-8rem)]'}`}>
       <h1 className="text-xl font-bold text-foreground mb-4">
         {otherParticipant?.name || 'Conversation'}
       </h1>

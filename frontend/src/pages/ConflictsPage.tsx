@@ -83,10 +83,10 @@ export function ConflictsPage() {
             const d = activeDates.find(dt => dt.id === c.rehearsal_date_id);
             if (!d) return null;
             return (
-              <div key={c.id} className="p-3 rounded-md bg-surface border border-border flex items-center gap-3">
-                <span className="text-foreground font-medium min-w-[90px]">{formatDate(d.date)}</span>
+              <div key={c.id} className="p-3 rounded-md bg-surface border border-border flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                <span className="text-foreground font-medium">{formatDate(d.date)}</span>
                 <span className="text-muted text-sm">{formatTime(d.start_time)} - {formatTime(d.end_time)}</span>
-                {c.reason && <span className="text-muted text-sm truncate max-w-[250px]">{c.reason}</span>}
+                {c.reason && <span className="text-muted text-sm sm:truncate sm:max-w-[250px]">{c.reason}</span>}
               </div>
             );
           })}
@@ -110,11 +110,11 @@ export function ConflictsPage() {
               <button
                 type="button"
                 onClick={() => toggleDate(d.id)}
-                className={`w-full text-left p-3 rounded-md border transition-colors flex items-center gap-3 ${
+                className={`w-full text-left p-3 rounded-md border transition-colors flex flex-wrap items-center gap-2 ${
                   isSelected ? 'bg-destructive/10 border-destructive' : 'bg-surface border-border hover:bg-surface-raised'
                 }`}
               >
-                <span className="font-medium text-foreground min-w-[90px]">{formatDate(d.date)}</span>
+                <span className="font-medium text-foreground">{formatDate(d.date)}</span>
                 <span className="text-muted text-sm">{formatTime(d.start_time)} - {formatTime(d.end_time)}</span>
                 <Badge className={`${color.bg} ${color.text}`}>{color.label}</Badge>
                 {isSelected && <Badge variant="destructive" className="ml-auto">Conflict</Badge>}
