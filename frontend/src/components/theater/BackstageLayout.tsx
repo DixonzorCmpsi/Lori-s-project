@@ -13,7 +13,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useTour, theaterTourStyles } from '@/hooks/useTour';
+import { useTour } from '@/hooks/useTour';
 import { directorTourSteps, staffTourSteps, castTourSteps } from '@/tours/productionTour';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';

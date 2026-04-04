@@ -9,6 +9,8 @@ import { MAX_LENGTHS, SCHEDULE_COLORS } from '@/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { PageTour } from '@/tours/PageTour';
+import { conflictsTourSteps } from '@/tours/pageTours';
 import { Dialog } from '@/components/ui/Dialog';
 import { Textarea } from '@/components/ui/Textarea';
 
@@ -98,10 +100,11 @@ export function ConflictsPage() {
 
   return (
     <div>
+      <PageTour tourId="page-conflicts" steps={conflictsTourSteps} />
       <h1 className="text-2xl font-bold text-foreground mb-2">Submit Conflicts</h1>
       <p className="text-muted mb-6">Select dates you are unavailable. Click a row to toggle it.</p>
 
-      <div className="space-y-2 mb-6">
+      <div data-tour="conflicts-date-list" className="space-y-2 mb-6">
         {activeDates.map(d => {
           const isSelected = !!selected[d.id];
           const color = SCHEDULE_COLORS[d.type];
@@ -135,7 +138,7 @@ export function ConflictsPage() {
         })}
       </div>
 
-      <Button onClick={() => setConfirmOpen(true)}>Submit Conflicts</Button>
+      <div data-tour="conflicts-submit"><Button onClick={() => setConfirmOpen(true)}>Submit Conflicts</Button></div>
 
       <Dialog
         open={confirmOpen}

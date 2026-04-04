@@ -11,6 +11,8 @@ import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import { ROLES } from '@/utils/constants';
 import { formatRelativeTime } from '@/utils/format';
 import type { Member } from '@/types';
+import { PageTour } from '@/tours/PageTour';
+import { rosterTourSteps } from '@/tours/pageTours';
 
 const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
 const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.1 } } };
@@ -78,6 +80,7 @@ export function RosterPage() {
 
   return (
     <div>
+      {isDirector && <PageTour tourId="page-roster" steps={rosterTourSteps} />}
       <div className="flex items-center justify-between mb-6">
         <ChalkText size="lg">Company Roster</ChalkText>
         <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', fontFamily: '"JetBrains Mono", monospace' }}>
@@ -87,7 +90,7 @@ export function RosterPage() {
 
       {/* Invite link section */}
       {isDirector && (
-        <div className="mb-6">
+        <div data-tour="roster-invite" className="mb-6">
           <StickyNote color="green" rotate={-0.5}>
             <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">Cast Invite</p>
             {inviteUrl ? (
@@ -113,6 +116,7 @@ export function RosterPage() {
       )}
 
       {/* Members by role group */}
+      <div data-tour="roster-members" />
       {[
         { label: 'Direction', list: directors },
         { label: 'Staff', list: staff },

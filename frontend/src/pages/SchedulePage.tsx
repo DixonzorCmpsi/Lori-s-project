@@ -17,6 +17,8 @@ import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText } from '@/components/theater/Chalkboard';
 import { GafferTape } from '@/components/theater/GafferTape';
 import type { RehearsalDate } from '@/types';
+import { PageTour } from '@/tours/PageTour';
+import { scheduleTourSteps, scheduleCastTourSteps } from '@/tours/pageTours';
 
 // Map rehearsal types to gaffer tape colors (must match sticky note colors)
 const tapeColorMap: Record<string, 'yellow' | 'blue' | 'purple' | 'pink' | 'white'> = {
@@ -472,11 +474,12 @@ export function SchedulePage() {
 
   return (
     <div>
+      <PageTour tourId={`page-schedule-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? scheduleTourSteps : scheduleCastTourSteps} />
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <ChalkText size="lg">Schedule</ChalkText>
         {canEdit && !editMode && (
-          <button onClick={startEditMode}
+          <button data-tour="schedule-edit-btn" onClick={startEditMode}
             className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
             style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
             Edit Schedule
@@ -595,7 +598,7 @@ export function SchedulePage() {
       <div className="mb-3 mx-1" style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12) 10%, rgba(255,255,255,0.1) 90%, transparent)' }} />
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-[2px]">
+      <div data-tour="schedule-calendar" className="grid grid-cols-7 gap-[2px]">
         {calendarDays.map((day, i) => {
           if (day === null) return <div key={`e-${i}`} className={isMobile ? 'min-h-[56px]' : 'min-h-[80px]'} />;
 
@@ -711,7 +714,7 @@ export function SchedulePage() {
 
       {/* Legend (view mode) — gaffer tape strips */}
       {!editMode && (
-        <div className="flex gap-3 justify-center mt-5 flex-wrap">
+        <div data-tour="schedule-legend" className="flex gap-3 justify-center mt-5 flex-wrap">
           {Object.entries(typeConfig).filter(([k]) => k !== 'blocked').map(([type, c]) => (
             <GafferTape
               key={type}
@@ -727,6 +730,7 @@ export function SchedulePage() {
       {/* Selected day detail */}
       {!editMode && selectedDay !== null && (
         <motion.div
+          data-tour="schedule-day-detail"
           className="mt-5 rounded-sm overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
           initial={{ opacity: 0, y: 8 }}

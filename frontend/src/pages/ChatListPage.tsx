@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Dialog } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
 import { ChalkText } from '@/components/theater/Chalkboard';
+import { PageTour } from '@/tours/PageTour';
+import { chatTourSteps } from '@/tours/pageTours';
 
 export function ChatListPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,9 +76,10 @@ export function ChatListPage() {
 
   return (
     <div>
+      <PageTour tourId="page-chat" steps={chatTourSteps} />
       <div className="flex items-center justify-between mb-6">
         <ChalkText size="lg">Messages</ChalkText>
-        <button onClick={openContactPicker}
+        <button data-tour="chat-new-message" onClick={openContactPicker}
           className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
           style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
           New Message
@@ -91,7 +94,7 @@ export function ChatListPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div data-tour="chat-conversations" className="space-y-1.5">
           {conversations.map(conv => (
             <button
               key={conv.id}

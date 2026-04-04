@@ -11,6 +11,8 @@ import { formatDate, formatTime, formatRelativeTime } from '@/utils/format';
 import { ROLES } from '@/utils/constants';
 import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import type { RehearsalDate } from '@/types';
+import { PageTour } from '@/tours/PageTour';
+import { dashboardTourSteps } from '@/tours/pageTours';
 
 const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
 const stagger = {
@@ -82,6 +84,8 @@ export function ProductionDashboardPage() {
   }, [dates]);
 
   return (
+      <>
+      <PageTour tourId="page-dashboard" steps={dashboardTourSteps} />
       <motion.div
         variants={stagger}
         initial="hidden"
@@ -94,10 +98,10 @@ export function ProductionDashboardPage() {
         </motion.div>
 
         {/* Pinned items grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div data-tour="dashboard-cards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* Schedule card — yellow sticky */}
-          <motion.div variants={fadeIn} className="cursor-pointer" onClick={() => navigate(`/production/${id}/schedule`)}>
+          <motion.div data-tour="dashboard-schedule-card" variants={fadeIn} className="cursor-pointer" onClick={() => navigate(`/production/${id}/schedule`)}>
             <StickyNote color="yellow" rotate={-1.5}>
               <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">Rehearsal Schedule</p>
               {upcoming.length === 0 ? (
@@ -122,7 +126,7 @@ export function ProductionDashboardPage() {
           </motion.div>
 
           {/* Stats card — white index card */}
-          <motion.div variants={fadeIn}>
+          <motion.div data-tour="dashboard-status-card" variants={fadeIn}>
             <StickyNote color="white" rotate={0.8}>
               <p className="text-[10px] uppercase tracking-widest font-bold mb-3 opacity-60">Production Status</p>
               <div className="space-y-2">
@@ -149,7 +153,7 @@ export function ProductionDashboardPage() {
           </motion.div>
 
           {/* Announcements — pink sticky */}
-          <motion.div variants={fadeIn} className="cursor-pointer" onClick={() => navigate(`/production/${id}/bulletin`)}>
+          <motion.div data-tour="dashboard-announcements-card" variants={fadeIn} className="cursor-pointer" onClick={() => navigate(`/production/${id}/bulletin`)}>
             <StickyNote color="pink" rotate={1.2}>
               <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">Announcements</p>
               {recentPosts.length === 0 ? (
@@ -169,7 +173,7 @@ export function ProductionDashboardPage() {
 
           {/* Invite link — green sticky (director only) */}
           {isDirectorOrStaff && (
-            <motion.div variants={fadeIn}>
+            <motion.div data-tour="dashboard-invite-card" variants={fadeIn}>
               <StickyNote color="green" rotate={-0.8}>
                 <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">Cast Invite</p>
                 {inviteUrl ? (
@@ -193,7 +197,7 @@ export function ProductionDashboardPage() {
           )}
 
           {/* Mini week view — blue sticky */}
-          <motion.div variants={fadeIn} className="cursor-pointer" onClick={() => navigate(`/production/${id}/schedule`)}>
+          <motion.div data-tour="dashboard-week-card" variants={fadeIn} className="cursor-pointer" onClick={() => navigate(`/production/${id}/schedule`)}>
             <StickyNote color="blue" rotate={0.5}>
               <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">This Week</p>
               <div className="grid grid-cols-7 gap-1">
@@ -218,7 +222,7 @@ export function ProductionDashboardPage() {
           </motion.div>
 
           {/* Quick nav — white card */}
-          <motion.div variants={fadeIn}>
+          <motion.div data-tour="dashboard-quickactions-card" variants={fadeIn}>
             <StickyNote color="white" rotate={-0.5}>
               <p className="text-[10px] uppercase tracking-widest font-bold mb-3 opacity-60">Quick Actions</p>
               <div className="space-y-1.5">
@@ -248,5 +252,6 @@ export function ProductionDashboardPage() {
           </ChalkText>
         </motion.div>
       </motion.div>
+      </>
   );
 }

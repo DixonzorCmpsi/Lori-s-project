@@ -13,6 +13,8 @@ import { Dialog } from '@/components/ui/Dialog';
 import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import type { BulletinPost } from '@/types';
 import { motion } from 'framer-motion';
+import { PageTour } from '@/tours/PageTour';
+import { bulletinTourSteps, bulletinCastTourSteps } from '@/tours/pageTours';
 
 function isStaff(role: string | null) {
   return role === 'director' || role === 'staff';
@@ -93,11 +95,12 @@ export function BulletinPage() {
 
   return (
     <div>
+      <PageTour tourId={`page-bulletin-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? bulletinTourSteps : bulletinCastTourSteps} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <ChalkText size="lg">Bulletin Board</ChalkText>
         {canEdit && !showForm && (
-          <button onClick={openNew}
+          <button data-tour="bulletin-new-post" onClick={openNew}
             className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
             style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
             New Post
@@ -183,6 +186,7 @@ export function BulletinPage() {
       {/* Posts as sticky notes */}
       {sorted.length > 0 && (
         <motion.div
+          data-tour="bulletin-posts"
           className="grid grid-cols-1 md:grid-cols-2 gap-5"
           variants={stagger}
           initial="hidden"
