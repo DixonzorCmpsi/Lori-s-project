@@ -3,10 +3,11 @@ import { ReactNode } from 'react';
 interface ChalkboardProps {
   children: ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /** A realistic chalkboard with wooden frame, nailed to the stage wall */
-export function Chalkboard({ children, className = '' }: ChalkboardProps) {
+export function Chalkboard({ children, className = '', style }: ChalkboardProps) {
   return (
     <div
       className={`rounded-lg flex flex-col ${className}`}
@@ -16,6 +17,7 @@ export function Chalkboard({ children, className = '' }: ChalkboardProps) {
         padding: '10px',
         boxShadow: '0 12px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,200,120,0.1)',
         position: 'relative',
+        ...style,
       }}
     >
       {/* Wood grain texture on frame */}
@@ -31,7 +33,7 @@ export function Chalkboard({ children, className = '' }: ChalkboardProps) {
 
       {/* Green chalk surface */}
       <div
-        className="rounded-sm relative overflow-hidden flex-1 min-h-0 flex flex-col"
+        className="rounded-sm relative overflow-hidden flex-1"
         style={{
           background: 'linear-gradient(155deg, hsl(155, 20%, 24%) 0%, hsl(158, 16%, 20%) 30%, hsl(150, 13%, 18%) 70%, hsl(155, 18%, 22%) 100%)',
           boxShadow: 'inset 2px 2px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(0,0,0,0.2)',
@@ -60,7 +62,7 @@ export function Chalkboard({ children, className = '' }: ChalkboardProps) {
         />
 
         {/* Content on the board */}
-        <div className="relative z-10 flex-1 min-h-0">
+        <div className="relative z-10">
           {children}
         </div>
       </div>

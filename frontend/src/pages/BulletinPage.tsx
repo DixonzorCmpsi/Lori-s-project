@@ -45,7 +45,7 @@ export function BulletinPage() {
     if (!posts) return [];
     return [...posts].sort((a, b) => {
       if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-      return b.created_at.localeCompare(a.created_at);
+      return (b.created_at || '').localeCompare(a.created_at || '');
     });
   }, [posts]);
 
