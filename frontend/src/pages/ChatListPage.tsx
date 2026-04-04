@@ -145,7 +145,7 @@ export function ChatListPage() {
         {!selectedContact ? (
           /* Contact picker */
           loadingContacts ? (
-            <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-10 w-full rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />)}</div>
           ) : contacts.length === 0 ? (
             <p className="text-muted">No contacts available.</p>
           ) : (
