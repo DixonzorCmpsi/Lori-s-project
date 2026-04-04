@@ -20,6 +20,7 @@ export function PageTour({ tourId, steps }: PageTourProps) {
       onEvent={handleEvent}
       continuous
       scrollToFirstStep
+      options={{ closeButtonAction: 'skip' }}
     />
   );
 }

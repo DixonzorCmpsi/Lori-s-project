@@ -682,6 +682,7 @@ export function BackstageLayout() {
           onEvent={tourEvent}
           continuous
           scrollToFirstStep
+          options={{ closeButtonAction: 'skip' }}
         />
       )}
       <TheaterLayout

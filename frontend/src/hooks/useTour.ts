@@ -63,8 +63,8 @@ export function useTour(tourId: string, steps: Step[], autoStart = true) {
   }, [autoStart, isCompleted, steps.length, tourId]);
 
   const handleEvent = useCallback((data: EventData) => {
-    const { status, type, action } = data as EventData & { type?: string; action?: string };
-    if (status === 'finished' || status === 'skipped' || type === 'tour:end' || action === 'close') {
+    const { status, type } = data as EventData & { type?: string };
+    if (status === 'finished' || status === 'skipped' || type === 'tour:end') {
       setRun(false);
       markTourComplete(tourId);
     }
