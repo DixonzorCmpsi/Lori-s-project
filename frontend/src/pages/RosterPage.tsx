@@ -116,7 +116,7 @@ export function RosterPage() {
       )}
 
       {/* Members by role group */}
-      <div data-tour="roster-members" />
+      <div data-tour="roster-members">
       {[
         { label: 'Direction', list: directors },
         { label: 'Staff', list: staff },
@@ -181,6 +181,7 @@ export function RosterPage() {
           </motion.div>
         </div>
       ))}
+      </div>
 
       {isLoading && (
         <div className="space-y-2">
