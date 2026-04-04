@@ -48,7 +48,7 @@ export function ProductionDashboardPage() {
     const today = new Date().toISOString().split('T')[0];
     return dates
       .filter((d: RehearsalDate) => !d.is_deleted && !d.is_cancelled && d.date >= today)
-      .sort((a: RehearsalDate, b: RehearsalDate) => a.date.localeCompare(b.date))
+      .sort((a: RehearsalDate, b: RehearsalDate) => (a.date || '').localeCompare(b.date || ''))
       .slice(0, 6);
   }, [dates]);
 

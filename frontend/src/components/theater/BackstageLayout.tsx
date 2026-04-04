@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +11,54 @@ import { formatTime, formatDate } from '@/utils/format';
 import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard } from './Chalkboard';
+import { ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
+
+// ── Error boundary — catches page crashes so the theater stays intact ──
+
+class PageErrorBoundary extends Component<
+  { children: ReactNode; location: string },
+  { hasError: boolean; error: string }
+> {
+  state = { hasError: false, error: '' };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Page crash caught by error boundary:', error, info);
+  }
+
+  componentDidUpdate(prevProps: { location: string }) {
+    if (prevProps.location !== this.props.location && this.state.hasError) {
+      this.setState({ hasError: false, error: '' });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="text-center py-12">
+          <ChalkText size="lg">Something went wrong</ChalkText>
+          <p className="mt-3" style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>
+            {this.state.error}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: '' })}
+            className="mt-4 text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
+            style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
 
@@ -624,7 +670,9 @@ export function BackstageLayout() {
         >
           <Chalkboard className="w-full" style={{ minHeight: 'calc(100% - 1rem)' }}>
             <div className="p-4 sm:p-6">
-              <Outlet />
+              <PageErrorBoundary location={location.pathname}>
+                <Outlet />
+              </PageErrorBoundary>
             </div>
           </Chalkboard>
         </div>
