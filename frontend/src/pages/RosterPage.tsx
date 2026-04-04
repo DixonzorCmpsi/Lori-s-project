@@ -90,9 +90,9 @@ export function RosterPage() {
 
       {/* Invite link section */}
       {isDirector && (
-        <div className="mb-6">
+        <div className="mb-6" data-tour="roster-invite">
           <StickyNote color="green" rotate={-0.5}>
-            <p data-tour="roster-invite" className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">Cast Invite</p>
+            <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-60">Cast Invite</p>
             {inviteUrl ? (
               <div>
                 <p className="text-[10px] font-mono break-all leading-relaxed opacity-60 mb-2">{inviteUrl}</p>
