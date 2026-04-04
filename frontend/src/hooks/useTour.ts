@@ -88,7 +88,11 @@ export function usePageTour(tourId: string, steps: Step[]) {
   useEffect(() => {
     if (isCompleted || steps.length === 0) return;
 
+    let cancelled = false;
+
     function tryStart() {
+      // Re-check completion from localStorage to avoid stale closure
+      if (cancelled || getCompletedTours()[tourId]) return;
       const active = getActiveTour();
       // Don't start if another tour is running
       if (active && active !== tourId) return;
@@ -112,6 +116,7 @@ export function usePageTour(tourId: string, steps: Step[]) {
     }
     // Listen for manual "Take Tour" button
     function onManualStart() {
+      if (cancelled || getCompletedTours()[tourId]) return;
       setActiveTour(tourId);
       setRun(true);
     }
@@ -119,6 +124,7 @@ export function usePageTour(tourId: string, steps: Step[]) {
     window.addEventListener('start-page-tour', onManualStart);
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
       window.removeEventListener('tour-completed', onTourCompleted);
       window.removeEventListener('start-page-tour', onManualStart);
