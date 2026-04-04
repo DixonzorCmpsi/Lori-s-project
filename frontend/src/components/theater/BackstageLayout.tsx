@@ -13,7 +13,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useTour } from '@/hooks/useTour';
+import { useTour, triggerPageTour } from '@/hooks/useTour';
 import { directorTourSteps, staffTourSteps, castTourSteps } from '@/tours/productionTour';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
@@ -138,7 +138,7 @@ export function BackstageLayout() {
     if (userRole === 'staff') return staffTourSteps;
     return castTourSteps;
   }, [id, userRole]);
-  const tourId = id ? `production-${userRole || 'cast'}` : '';
+  const tourId = id && userRole ? `production-${userRole}` : '';
   const { run: tourRun, handleEvent: tourEvent, startTour } = useTour(tourId, tourSteps, !!id);
 
   // Navigation config
@@ -311,7 +311,7 @@ export function BackstageLayout() {
         </motion.button>
         {id && (
           <motion.button
-            onClick={startTour}
+            onClick={triggerPageTour}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
             style={{ color: 'hsl(43, 50%, 45%)' }}
             whileHover={{ background: 'rgba(255,180,80,0.06)' }}
