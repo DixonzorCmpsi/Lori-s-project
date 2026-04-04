@@ -163,7 +163,7 @@ export const rosterTourSteps: Step[] = [
     target: '[data-tour="roster-invite"]',
     title: 'Invite Cast Members',
     content: 'Generate an invite link and share it with your cast. They\'ll create an account, join the production, and be prompted to submit their scheduling conflicts right away.',
-    placement: 'bottom',
+    placement: 'right',
     skipBeacon: true,
     ...s,
   },
