@@ -1,6 +1,6 @@
 import type { Step } from 'react-joyride';
 
-/** Per-step defaults — only skipBeacon; all visual styling comes from tourStyles.ts */
+/** Per-step defaults — all visual styling comes from tourStyles.ts */
 const s = {
   skipBeacon: true,
 };
@@ -10,8 +10,8 @@ const s = {
 export const dashboardTourSteps: Step[] = [
   {
     target: '[data-tour="dashboard-schedule-card"]',
-    title: 'Rehearsal Schedule',
-    content: 'This yellow sticky shows your upcoming rehearsals. Click it to jump to the full schedule calendar. Color dots indicate the type: gold for regular, blue for tech, purple for dress, red for performances.',
+    title: 'Upcoming Rehearsals',
+    content: 'Your next rehearsals at a glance. Click to jump to the full calendar. Colors tell you the type: gold for rehearsal, blue for tech, purple for dress, red for performance.',
     placement: 'bottom',
     skipBeacon: true,
     ...s,
@@ -19,35 +19,35 @@ export const dashboardTourSteps: Step[] = [
   {
     target: '[data-tour="dashboard-status-card"]',
     title: 'Production Status',
-    content: 'Quick stats at a glance: how many cast have joined, how many submitted conflicts, your next call date, and opening night. This updates in real time as people join and submit.',
+    content: 'How many cast have joined, how many submitted conflicts, your next call, and opening night. Updates in real time as people join.',
     placement: 'bottom',
     ...s,
   },
   {
     target: '[data-tour="dashboard-announcements-card"]',
-    title: 'Announcements',
-    content: 'Recent bulletin posts appear here. Click to go to the full bulletin board where you can read everything and post new announcements.',
+    title: 'Latest Announcements',
+    content: 'Recent bulletin posts show up here. Click through to see the full board and post new ones.',
     placement: 'bottom',
     ...s,
   },
   {
     target: '[data-tour="dashboard-invite-card"]',
-    title: 'Cast Invite Link',
-    content: 'Share this link with your cast to let them join the production. Click "Copy Link" to put it on your clipboard. The link expires after 30 days or 100 uses.',
+    title: 'Invite Link',
+    content: 'Share this link with your cast to get them on the Call Board. They\'ll create an account, join the production, and submit their conflicts. Click "Copy Link" to grab it.',
     placement: 'bottom',
     ...s,
   },
   {
     target: '[data-tour="dashboard-week-card"]',
     title: 'This Week',
-    content: 'A quick view of what\'s happening this week. Colored squares mean there\'s a rehearsal that day. Click to jump to the full calendar.',
+    content: 'A quick look at what\'s happening this week. Colored squares mean there\'s a call that day.',
     placement: 'bottom',
     ...s,
   },
   {
     target: '[data-tour="dashboard-quickactions-card"]',
     title: 'Quick Actions',
-    content: 'Jump to any section of the app from here. View schedule, post on the bulletin, manage your roster, or open chat.',
+    content: 'Jump to any part of the Call Board from here. Schedule, bulletin, roster, or chat.',
     placement: 'bottom',
     ...s,
   },
@@ -58,8 +58,8 @@ export const dashboardTourSteps: Step[] = [
 export const scheduleTourSteps: Step[] = [
   {
     target: '[data-tour="schedule-edit-btn"]',
-    title: 'Edit Your Schedule',
-    content: 'Click this to enter edit mode. You\'ll see a weekly pattern toolbar at the top where you set which days of the week have rehearsals (Mon/Wed/Fri, for example). Then you can override individual dates below.',
+    title: 'Edit the Schedule',
+    content: 'Click to enter edit mode. Set a weekly pattern at the top (which days have rehearsals), then override individual dates below. Set default times and hit Apply.',
     placement: 'bottom',
     skipBeacon: true,
     ...s,
@@ -67,14 +67,14 @@ export const scheduleTourSteps: Step[] = [
   {
     target: '[data-tour="schedule-calendar"]',
     title: 'The Calendar',
-    content: 'Each day shows a colored sticky note with the rehearsal type and time. Click any day to see details, including who\'s assigned and who has conflicts. In edit mode, click days to cycle through types: Rehearsal, Tech, Dress, Performance, Blocked, or Off.',
+    content: 'Each day shows a note with the rehearsal type and time. Click any day to see who\'s assigned and who has conflicts. In edit mode, click days to cycle through types.',
     placement: 'top',
     ...s,
   },
   {
     target: '[data-tour="schedule-legend"]',
-    title: 'Color Legend',
-    content: 'These gaffer tape strips show what each color means. Yellow = regular rehearsal, Blue = tech, Purple = dress, Pink = performance. The colors match the sticky notes on each calendar day.',
+    title: 'Color Key',
+    content: 'Yellow = rehearsal, Blue = tech, Purple = dress, Pink = performance. These match the notes on each calendar day.',
     placement: 'top',
     ...s,
   },
@@ -85,16 +85,16 @@ export const scheduleTourSteps: Step[] = [
 export const scheduleCastTourSteps: Step[] = [
   {
     target: '[data-tour="schedule-calendar"]',
-    title: 'Your Rehearsal Calendar',
-    content: 'Days you\'re called for show colored sticky notes with the type and time. Days marked with an X are blocked (no rehearsal). Click any day to see the full details for that date.',
+    title: 'Your Calendar',
+    content: 'Days you\'re called for show colored notes with the type and time. Days marked with an X are off. Click any day to see details.',
     placement: 'top',
     skipBeacon: true,
     ...s,
   },
   {
     target: '[data-tour="schedule-legend"]',
-    title: 'What the Colors Mean',
-    content: 'Yellow = regular rehearsal, Blue = tech rehearsal, Purple = dress rehearsal, Pink = performance. Check your call time on each day\'s sticky note.',
+    title: 'Color Key',
+    content: 'Yellow = rehearsal, Blue = tech, Purple = dress, Pink = performance. Check the note on each day for your call time.',
     placement: 'top',
     ...s,
   },
@@ -106,15 +106,15 @@ export const bulletinTourSteps: Step[] = [
   {
     target: '[data-tour="bulletin-new-post"]',
     title: 'Post an Announcement',
-    content: 'Click here to create a new announcement. You can add a title and body, then choose whether to notify all members or post silently.',
+    content: 'Write a title and body, then choose whether to notify the cast or post quietly. Every post goes up as a note on the board.',
     placement: 'bottom',
     skipBeacon: true,
     ...s,
   },
   {
     target: '[data-tour="bulletin-posts"]',
-    title: 'Announcements Board',
-    content: 'Each post appears as a sticky note on the chalkboard. Pinned posts (marked with a yellow note) stay at the top. You can pin, edit, or delete any post using the controls at the bottom of each note.',
+    title: 'The Board',
+    content: 'Pinned posts stay at the top. You can pin, edit, or delete any post from the controls at the bottom of each note.',
     placement: 'top',
     ...s,
   },
@@ -126,7 +126,7 @@ export const bulletinCastTourSteps: Step[] = [
   {
     target: '[data-tour="bulletin-posts"]',
     title: 'Announcements',
-    content: 'Your director and stage manager post announcements here. Pinned posts (in yellow) are the most important. Check back regularly for updates about rehearsals, schedule changes, and company news.',
+    content: 'Your director and stage manager post here. Pinned notes are the most important. Check back often for schedule changes and updates.',
     placement: 'top',
     skipBeacon: true,
     ...s,
@@ -138,8 +138,8 @@ export const bulletinCastTourSteps: Step[] = [
 export const chatTourSteps: Step[] = [
   {
     target: '[data-tour="chat-new-message"]',
-    title: 'Start a Conversation',
-    content: 'Click here to message someone. You\'ll see a contact picker with everyone you can message. Pick a person, type your message, and send.',
+    title: 'New Message',
+    content: 'Pick someone from the contact list, type your message, send. Simple as that.',
     placement: 'bottom',
     skipBeacon: true,
     ...s,
@@ -147,7 +147,7 @@ export const chatTourSteps: Step[] = [
   {
     target: '[data-tour="chat-conversations"]',
     title: 'Your Conversations',
-    content: 'All your ongoing conversations appear here, sorted by most recent. Unread messages show a red badge with the count. Click any conversation to open it.',
+    content: 'All your threads, sorted by most recent. Unread messages show a red badge. Click to open.',
     placement: 'top',
     ...s,
   },
@@ -158,16 +158,16 @@ export const chatTourSteps: Step[] = [
 export const rosterTourSteps: Step[] = [
   {
     target: '[data-tour="roster-invite"]',
-    title: 'Invite Cast Members',
-    content: 'Generate an invite link and share it with your cast. They\'ll create an account, join the production, and be prompted to submit their scheduling conflicts right away.',
+    title: 'Invite Your Cast',
+    content: 'Generate an invite link and share it. They\'ll create an account, join the production, and get prompted to submit their scheduling conflicts.',
     placement: 'right',
     skipBeacon: true,
     ...s,
   },
   {
     target: '[data-tour="roster-members"]',
-    title: 'Production Roster',
-    content: 'All members are listed by role: Directors, Staff, then Cast. Each card shows their conflict status (submitted or pending). As director, you can promote cast to staff, demote staff, or remove members from the production.',
+    title: 'The Roster',
+    content: 'Everyone listed by role. Each card shows conflict status. You can promote, demote, or remove people from here.',
     placement: 'top',
     ...s,
   },
@@ -178,8 +178,8 @@ export const rosterTourSteps: Step[] = [
 export const conflictsTourSteps: Step[] = [
   {
     target: '[data-tour="conflicts-date-list"]',
-    title: 'Mark Your Unavailable Dates',
-    content: 'Click any date you CANNOT attend. It\'ll turn red. You can optionally add a reason (like "work" or "family event"). Only mark dates you truly can\'t make.',
+    title: 'Mark Your Conflicts',
+    content: 'Click any date you can\'t make. It turns red. Add a reason if you want (like "work" or "family"). Only mark dates you truly cannot attend.',
     placement: 'top',
     skipBeacon: true,
     ...s,
@@ -187,7 +187,7 @@ export const conflictsTourSteps: Step[] = [
   {
     target: '[data-tour="conflicts-submit"]',
     title: 'Submit Once',
-    content: 'When you\'re done selecting all your conflicts, hit Submit. This is a one-time submission. You cannot change your conflicts after submitting, so make sure you\'ve marked everything.',
+    content: 'When you\'re done, hit Submit. This is a one-time submission, you can\'t change it after, so double-check everything first.',
     placement: 'top',
     ...s,
   },
