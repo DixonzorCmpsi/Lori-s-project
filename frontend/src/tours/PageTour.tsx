@@ -20,6 +20,7 @@ export function PageTour({ tourId, steps }: PageTourProps) {
       onEvent={handleEvent}
       continuous
       scrollToFirstStep
+      locale={{ last: 'End' }}
       options={{ closeButtonAction: 'skip' }}
     />
   );

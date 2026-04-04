@@ -682,6 +682,7 @@ export function BackstageLayout() {
           onEvent={tourEvent}
           continuous
           scrollToFirstStep
+          locale={{ last: 'End' }}
           options={{ closeButtonAction: 'skip' }}
         />
       )}
