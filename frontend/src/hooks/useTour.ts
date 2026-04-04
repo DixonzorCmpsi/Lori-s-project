@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { Step, EventData, Controls } from 'react-joyride';
+import type { Step, EventData } from 'react-joyride';
 
 const TOUR_STORAGE_KEY = 'dcb-tours-completed';
+const ACTIVE_TOUR_KEY = 'dcb-tour-active';
 
 function getCompletedTours(): Record<string, boolean> {
   try {
@@ -15,23 +16,46 @@ function markTourComplete(tourId: string) {
   const completed = getCompletedTours();
   completed[tourId] = true;
   localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(completed));
+  // Clear active flag
+  sessionStorage.removeItem(ACTIVE_TOUR_KEY);
+  // Notify other hooks that a tour finished
+  window.dispatchEvent(new Event('tour-completed'));
+}
+
+function setActiveTour(tourId: string) {
+  sessionStorage.setItem(ACTIVE_TOUR_KEY, tourId);
+}
+
+function getActiveTour(): string | null {
+  return sessionStorage.getItem(ACTIVE_TOUR_KEY);
+}
+
+export function isTourCompleted(tourId: string): boolean {
+  return getCompletedTours()[tourId] === true;
 }
 
 export function resetAllTours() {
   localStorage.removeItem(TOUR_STORAGE_KEY);
+  sessionStorage.removeItem(ACTIVE_TOUR_KEY);
 }
 
+/**
+ * Primary tour hook. Used for the production-level tour in BackstageLayout.
+ * Has priority — page tours wait for this to complete.
+ */
 export function useTour(tourId: string, steps: Step[], autoStart = true) {
   const [run, setRun] = useState(false);
-
   const isCompleted = getCompletedTours()[tourId] === true;
 
   useEffect(() => {
     if (autoStart && !isCompleted && steps.length > 0) {
-      const timer = setTimeout(() => setRun(true), 1200);
+      const timer = setTimeout(() => {
+        setActiveTour(tourId);
+        setRun(true);
+      }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [autoStart, isCompleted, steps.length]);
+  }, [autoStart, isCompleted, steps.length, tourId]);
 
   const handleEvent = useCallback((data: EventData) => {
     const { status } = data;
@@ -42,8 +66,61 @@ export function useTour(tourId: string, steps: Step[], autoStart = true) {
   }, [tourId]);
 
   const startTour = useCallback(() => {
+    setActiveTour(tourId);
     setRun(true);
-  }, []);
+  }, [tourId]);
 
   return { run, steps, handleEvent, startTour, isCompleted };
+}
+
+/**
+ * Page-level tour hook. Waits for any active primary tour to finish before starting.
+ */
+export function usePageTour(tourId: string, steps: Step[]) {
+  const [run, setRun] = useState(false);
+  const isCompleted = getCompletedTours()[tourId] === true;
+
+  useEffect(() => {
+    if (isCompleted || steps.length === 0) return;
+
+    function tryStart() {
+      const active = getActiveTour();
+      // Don't start if another tour is running
+      if (active && active !== tourId) return;
+      setActiveTour(tourId);
+      setRun(true);
+    }
+
+    // Wait a bit for the production tour to claim the active slot
+    const timer = setTimeout(() => {
+      const active = getActiveTour();
+      if (!active) {
+        // No production tour running, start page tour
+        tryStart();
+      }
+      // Otherwise wait for it to finish
+    }, 2000);
+
+    // Listen for production tour completion
+    function onTourCompleted() {
+      // Small delay so the UI settles
+      setTimeout(tryStart, 500);
+    }
+    window.addEventListener('tour-completed', onTourCompleted);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('tour-completed', onTourCompleted);
+    };
+  }, [isCompleted, steps.length, tourId]);
+
+  const handleEvent = useCallback((data: EventData) => {
+    const { status } = data;
+    if (status === 'finished' || status === 'skipped') {
+      setRun(false);
+      markTourComplete(tourId);
+    }
+  }, [tourId]);
+
+  return { run, handleEvent, isCompleted };
 }

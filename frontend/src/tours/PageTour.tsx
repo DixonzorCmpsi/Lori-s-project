@@ -1,15 +1,15 @@
 import { Joyride } from 'react-joyride';
 import type { Step } from 'react-joyride';
-import { useTour } from '@/hooks/useTour';
+import { usePageTour } from '@/hooks/useTour';
 
 interface PageTourProps {
   tourId: string;
   steps: Step[];
 }
 
-/** Drop-in component that runs a page-specific tour on first visit */
+/** Drop-in component for page-specific tours. Waits for production tour to finish first. */
 export function PageTour({ tourId, steps }: PageTourProps) {
-  const { run, handleEvent } = useTour(tourId, steps, true);
+  const { run, handleEvent } = usePageTour(tourId, steps);
 
   if (steps.length === 0) return null;
 
