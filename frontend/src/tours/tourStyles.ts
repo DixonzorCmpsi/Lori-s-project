@@ -1,0 +1,79 @@
+import type { Styles } from 'react-joyride';
+
+/** Shared Joyride styles matching the theater backstage aesthetic */
+export const theaterTourStyles: Partial<Styles> = {
+  tooltip: {
+    background: 'linear-gradient(180deg, hsl(220, 6%, 13%) 0%, hsl(220, 5%, 9%) 100%)',
+    borderRadius: '8px',
+    border: '1px solid rgba(212, 175, 55, 0.15)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+    padding: '20px 24px',
+    maxWidth: '360px',
+    fontFamily: '"Inter", system-ui, sans-serif',
+  },
+  tooltipContainer: {
+    textAlign: 'left' as const,
+  },
+  tooltipTitle: {
+    fontFamily: '"Playfair Display", serif',
+    color: 'hsl(43, 74%, 55%)',
+    fontSize: '16px',
+    fontWeight: 600,
+    letterSpacing: '0.01em',
+    marginBottom: '8px',
+  },
+  tooltipContent: {
+    color: 'hsl(25, 8%, 65%)',
+    fontSize: '13px',
+    lineHeight: '1.6',
+    padding: '4px 0 12px',
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
+    color: 'hsl(220, 6%, 9%)',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase' as const,
+    padding: '8px 18px',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(212,175,55,0.2)',
+  },
+  buttonBack: {
+    color: 'hsl(25, 8%, 50%)',
+    fontSize: '11px',
+    fontWeight: 500,
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase' as const,
+    marginRight: '8px',
+  },
+  buttonClose: {
+    width: '28px',
+    height: '28px',
+    color: 'hsl(25, 8%, 40%)',
+    padding: 0,
+  },
+  buttonSkip: {
+    color: 'hsl(25, 8%, 45%)',
+    fontSize: '11px',
+  },
+  spotlight: {
+    borderRadius: '8px',
+  },
+  overlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+};
+
+/** Shared Joyride locale */
+export const theaterTourLocale = {
+  last: 'End',
+  close: 'Close',
+};
+
+/** Shared Joyride options */
+export const theaterTourOptions = {
+  closeButtonAction: 'skip' as const,
+};

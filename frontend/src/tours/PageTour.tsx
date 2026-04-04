@@ -1,6 +1,7 @@
 import { Joyride } from 'react-joyride';
 import type { Step } from 'react-joyride';
 import { usePageTour } from '@/hooks/useTour';
+import { theaterTourStyles, theaterTourLocale, theaterTourOptions } from './tourStyles';
 
 interface PageTourProps {
   tourId: string;
@@ -20,8 +21,9 @@ export function PageTour({ tourId, steps }: PageTourProps) {
       onEvent={handleEvent}
       continuous
       scrollToFirstStep
-      locale={{ last: 'End' }}
-      options={{ closeButtonAction: 'skip' }}
+      styles={theaterTourStyles}
+      locale={theaterTourLocale}
+      options={theaterTourOptions}
     />
   );
 }

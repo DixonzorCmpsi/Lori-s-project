@@ -15,6 +15,7 @@ import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useTour, triggerPageTour } from '@/hooks/useTour';
 import { directorTourSteps, staffTourSteps, castTourSteps } from '@/tours/productionTour';
+import { theaterTourStyles, theaterTourLocale, theaterTourOptions } from '@/tours/tourStyles';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
 
@@ -682,8 +683,9 @@ export function BackstageLayout() {
           onEvent={tourEvent}
           continuous
           scrollToFirstStep
-          locale={{ last: 'End' }}
-          options={{ closeButtonAction: 'skip' }}
+          styles={theaterTourStyles}
+          locale={theaterTourLocale}
+          options={theaterTourOptions}
         />
       )}
       <TheaterLayout
