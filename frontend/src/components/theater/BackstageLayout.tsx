@@ -341,7 +341,7 @@ export function BackstageLayout() {
           );
         })()}
         <motion.button
-          onClick={() => navigate('/account')}
+          onClick={() => navigate(id ? `/production/${id}/account` : '/account')}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
           style={{ color: 'hsl(25, 8%, 44%)' }}
           whileHover={{ background: 'rgba(255,255,255,0.03)' }}

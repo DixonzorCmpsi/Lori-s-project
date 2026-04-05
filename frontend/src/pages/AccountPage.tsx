@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -10,6 +10,16 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText } from '@/components/theater/Chalkboard';
+
+interface EmergencyContact {
+  name: string;
+  email: string;
+  phone: string;
+  relationship: string;
+}
+
+const RELATIONSHIPS = ['Parent', 'Guardian', 'Spouse', 'Sibling', 'Other'];
+const emptyContact = (): EmergencyContact => ({ name: '', email: '', phone: '', relationship: 'Parent' });
 
 export function AccountPage() {
   usePageTitle('Account');
@@ -30,13 +40,31 @@ export function AccountPage() {
   const [emailNotifs, setEmailNotifs] = useState(user?.email_notifications ?? true);
   const [savingPrefs, setSavingPrefs] = useState(false);
 
-  const [parentEmail, setParentEmail] = useState(user?.parent_email || '');
-  const [savingParent, setSavingParent] = useState(false);
+  const [contacts, setContacts] = useState<EmergencyContact[]>([emptyContact(), emptyContact()]);
+  const [savingContacts, setSavingContacts] = useState(false);
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+
+  useEffect(() => {
+    apiClient<{ name: string; email: string; phone: string; relationship: string }[]>('/auth/emergency-contacts')
+      .then(data => {
+        if (data.length > 0) {
+          const loaded = data.map(c => ({ name: c.name, email: c.email || '', phone: c.phone || '', relationship: c.relationship }));
+          while (loaded.length < 2) loaded.push(emptyContact());
+          setContacts(loaded);
+        }
+        setContactsLoaded(true);
+      })
+      .catch(() => setContactsLoaded(true));
+  }, []);
+
+  const [dob, setDob] = useState('');
+  const [savingDob, setSavingDob] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const isMinor = user?.age_range === '13-17';
+  const profileIncomplete = !user?.age_range;
 
   async function handleNameSave() {
     const err = validateName(name);
@@ -92,18 +120,44 @@ export function AccountPage() {
     }
   }
 
-  async function handleParentEmailSave() {
-    setSavingParent(true);
+  async function handleContactsSave() {
+    const valid = contacts.filter(c => c.name.trim());
+    if (valid.length === 0) { toast('At least one emergency contact is required', 'error'); return; }
+    if (!valid[0].email && !valid[0].phone) { toast('First contact needs email or phone', 'error'); return; }
+    setSavingContacts(true);
     try {
-      await apiClient('/auth/account', {
-        method: 'PATCH', body: JSON.stringify({ parent_email: parentEmail.trim(), parental_consent: true }),
+      await apiClient('/auth/emergency-contacts', {
+        method: 'PUT', body: JSON.stringify({ contacts: valid }),
       });
-      setUser({ ...user!, parent_email: parentEmail.trim(), parental_consent: true });
-      toast('Parent/guardian email saved');
+      if (isMinor) {
+        await apiClient('/auth/account', { method: 'PATCH', body: JSON.stringify({ parental_consent: true }) });
+        setUser({ ...user!, parental_consent: true });
+      }
+      toast('Emergency contacts saved');
     } catch (e: any) {
       toast(e.message || 'Failed', 'error');
     } finally {
-      setSavingParent(false);
+      setSavingContacts(false);
+    }
+  }
+
+  function updateContact(idx: number, field: keyof EmergencyContact, value: string) {
+    setContacts(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
+  }
+
+  async function handleDobSave() {
+    if (!dob) return;
+    setSavingDob(true);
+    try {
+      const result = await apiClient<{ age_range: string }>('/auth/complete-profile', {
+        method: 'POST', body: JSON.stringify({ date_of_birth: dob }),
+      });
+      setUser({ ...user!, age_range: result.age_range });
+      toast('Age verified');
+    } catch (e: any) {
+      toast(e.message || 'Failed', 'error');
+    } finally {
+      setSavingDob(false);
     }
   }
 
@@ -126,13 +180,26 @@ export function AccountPage() {
       <ChalkText size="lg">Account Settings</ChalkText>
       <div className="h-4" />
 
+      {/* Incomplete profile banner */}
+      {profileIncomplete && (
+        <div className="rounded-sm p-4 mb-6"
+          style={{ background: 'rgba(255,180,50,0.08)', border: '1px solid rgba(255,180,50,0.2)' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: 'rgba(255,220,100,0.9)' }}>
+            Complete your profile
+          </p>
+          <p className="text-xs" style={{ color: 'var(--t-subtle-text-bright)' }}>
+            Your date of birth is required for age verification. Please provide it below.
+          </p>
+        </div>
+      )}
+
       {/* Profile */}
       <section className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Profile</p>
         <Input label="Name" value={name} onChange={e => setName(e.target.value)} error={nameError} />
         <Input label="Email" value={user?.email || ''} disabled className="opacity-60" />
-        {user?.age_range && (
+        {user?.age_range ? (
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>Age Range:</span>
             <span className="text-xs font-medium px-2 py-0.5 rounded" style={{
@@ -141,6 +208,24 @@ export function AccountPage() {
             }}>
               {user.age_range}
             </span>
+          </div>
+        ) : (
+          <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--t-section-border)' }}>
+            <p className="text-xs font-medium" style={{ color: 'rgba(255,200,80,0.8)' }}>Date of Birth (required)</p>
+            <p className="text-[10px]" style={{ color: 'var(--t-subtle-text)' }}>
+              We only store your age range (13-17 or 18+), never your exact birthday.
+            </p>
+            <input
+              type="date"
+              value={dob}
+              onChange={e => setDob(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="px-3 py-2 rounded-sm text-sm outline-none w-full"
+              style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)', color: 'var(--t-subtle-text-bright)' }}
+            />
+            <Button size="sm" onClick={handleDobSave} isLoading={savingDob} disabled={!dob}>
+              Verify Age
+            </Button>
           </div>
         )}
         <Button onClick={handleNameSave} isLoading={savingName} disabled={name === user?.name}>Save Name</Button>
@@ -172,27 +257,62 @@ export function AccountPage() {
         )}
       </section>
 
-      {/* Parental Consent — minors only */}
-      {isMinor && (
-        <section className="rounded-sm p-5 mb-6 space-y-4"
-          style={{ background: 'rgba(255,180,50,0.04)', border: '1px solid rgba(255,180,50,0.15)' }}>
-          <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'rgba(255,200,80,0.7)' }}>
-            Parent / Guardian Consent
+      {/* Emergency Contacts */}
+      <section className="rounded-sm p-5 mb-6 space-y-4"
+        style={{
+          background: isMinor ? 'rgba(255,180,50,0.04)' : 'var(--t-subtle-bg)',
+          border: `1px solid ${isMinor ? 'rgba(255,180,50,0.15)' : 'var(--t-section-border)'}`,
+        }}>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: isMinor ? 'rgba(255,200,80,0.7)' : 'var(--t-subtle-text)' }}>
+            Emergency Contacts
           </p>
-          <p className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>
-            Since you're under 18, we need a parent or guardian's email address on file. This is required by COPPA regulations.
-          </p>
-          <Input label="Parent/Guardian Email" type="email" value={parentEmail}
-            onChange={e => setParentEmail(e.target.value)} placeholder="parent@email.com" />
-          {user?.parental_consent && (
-            <p className="text-[10px]" style={{ color: 'rgba(100,220,100,0.7)' }}>Parental consent recorded.</p>
+          {isMinor && !user?.parental_consent && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.8)' }}>Required</span>
           )}
-          <Button size="sm" onClick={handleParentEmailSave} isLoading={savingParent}
-            disabled={!parentEmail.trim() || parentEmail === (user?.parent_email || '')}>
-            {user?.parental_consent ? 'Update' : 'Save & Confirm Consent'}
-          </Button>
-        </section>
-      )}
+        </div>
+        <p className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>
+          {isMinor
+            ? 'COPPA requires at least one emergency contact on file. Please provide a parent or guardian.'
+            : 'Add an emergency contact so your production team can reach someone if needed.'}
+        </p>
+        {contacts.map((c, idx) => (
+          <div key={idx} className="space-y-2 pt-3" style={{ borderTop: idx > 0 ? '1px solid var(--t-section-border)' : 'none' }}>
+            <p className="text-[10px] font-bold" style={{ color: 'var(--t-subtle-text)' }}>
+              Contact {idx + 1} {idx === 0 ? '(required)' : '(optional)'}
+            </p>
+            <Input label="Full Name" value={c.name} onChange={e => updateContact(idx, 'name', e.target.value)}
+              placeholder={idx === 0 ? 'Required' : 'Optional'} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input label="Email" type="email" value={c.email} onChange={e => updateContact(idx, 'email', e.target.value)} placeholder="email@example.com" />
+              <Input label="Phone" type="tel" value={c.phone} onChange={e => updateContact(idx, 'phone', e.target.value)} placeholder="(555) 123-4567" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--t-subtle-text-bright)' }}>Relationship</label>
+              <div className="flex flex-wrap gap-1.5">
+                {RELATIONSHIPS.map(r => (
+                  <button key={r} onClick={() => updateContact(idx, 'relationship', r)}
+                    className="text-[10px] px-2.5 py-1 rounded cursor-pointer"
+                    style={{
+                      background: c.relationship === r ? 'rgba(212,175,55,0.15)' : 'var(--t-subtle-bg)',
+                      color: c.relationship === r ? 'hsl(43,60%,55%)' : 'var(--t-subtle-text)',
+                      border: `1px solid ${c.relationship === r ? 'rgba(212,175,55,0.2)' : 'var(--t-section-border)'}`,
+                    }}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+        {user?.parental_consent && isMinor && (
+          <p className="text-[10px]" style={{ color: 'rgba(100,220,100,0.7)' }}>Parental consent recorded.</p>
+        )}
+        <Button size="sm" onClick={handleContactsSave} isLoading={savingContacts}
+          disabled={!contacts[0].name.trim()}>
+          Save Emergency Contacts
+        </Button>
+      </section>
 
       {/* Change Password */}
       <section className="rounded-sm p-5 mb-6 space-y-4"

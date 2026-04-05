@@ -47,6 +47,7 @@ class User(Base):
     email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
     parental_consent: Mapped[bool] = mapped_column(Boolean, default=False)
     parent_email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
+    parent_phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     token_version: Mapped[int] = mapped_column(Integer, default=0)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
@@ -649,6 +650,27 @@ class TeamMember(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
     team: Mapped["Team"] = relationship("Team", back_populates="members")
+
+
+class EmergencyContact(Base):
+    """Emergency contact for a user — supports 2 contacts (1 required, 1 optional)."""
+    __tablename__ = "emergency_contacts"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    contact_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    relationship: Mapped[str] = mapped_column(String(50), nullable=False, default="parent")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime, default=utcnow, onupdate=utcnow
+    )
 
 
 class AuditLog(Base):

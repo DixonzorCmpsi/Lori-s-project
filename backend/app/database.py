@@ -83,6 +83,7 @@ async def init_db() -> None:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT TRUE",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS parental_consent BOOLEAN DEFAULT FALSE",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_email VARCHAR(320)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_phone VARCHAR(20)",
         ]:
             await conn.execute(text(col_sql))
 

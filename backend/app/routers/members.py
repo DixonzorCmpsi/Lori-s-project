@@ -79,10 +79,13 @@ async def list_members(
                     "id": member.id,
                     "user_id": user.id,
                     "name": user.name,
+                    "email": user.email,
                     "role": member.role,
                     "joined_at": member.joined_at.isoformat(),
                     "conflicts": has_conflicts,
                     "conflicts_submitted": has_conflicts == "Submitted",
+                    "age_range": user.age_range,
+                    "profile_complete": bool(user.age_range),
                 }
             )
 

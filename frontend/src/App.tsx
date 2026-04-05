@@ -66,6 +66,7 @@ export function App() {
           <Route path="conflicts" element={<ConflictsPage />} />
           <Route path="profile" element={<CastProfilePage />} />
           <Route path="settings" element={<ProductionSettingsPage />} />
+          <Route path="account" element={<AccountPage />} />
         </Route>
       </Route>
 

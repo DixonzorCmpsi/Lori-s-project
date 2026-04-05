@@ -309,6 +309,12 @@ export function RosterPage() {
                               {m.conflicts_submitted ? 'Conflicts in' : 'Pending'}
                             </span>
                           )}
+                          {m.profile_complete === false && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-sm"
+                              style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.8)' }}>
+                              No age
+                            </span>
+                          )}
                         </div>
                       </div>
                       {isDirector && m.role !== ROLES.DIRECTOR && (

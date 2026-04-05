@@ -307,6 +307,7 @@ async def get_me(current_user: dict = Depends(get_current_user)) -> dict:
             "email_notifications": user.email_notifications,
             "parental_consent": user.parental_consent,
             "parent_email": user.parent_email,
+            "parent_phone": user.parent_phone,
         }
 
 
@@ -436,6 +437,9 @@ async def update_account(body: dict, current_user: dict = Depends(get_current_us
             user.parent_email = body["parent_email"]
             await log_action(ACTIONS["parent_email_set"], "user", user.id, user_id=user.id, actor_id=user.id)
 
+        if "parent_phone" in body:
+            user.parent_phone = body["parent_phone"]
+
         if "parental_consent" in body and body["parental_consent"]:
             user.parental_consent = True
             await log_action(ACTIONS["parental_consent"], "user", user.id, user_id=user.id, actor_id=user.id)
@@ -450,6 +454,7 @@ async def update_account(body: dict, current_user: dict = Depends(get_current_us
             "age_range": user.age_range,
             "parental_consent": user.parental_consent,
             "parent_email": user.parent_email,
+            "parent_phone": user.parent_phone,
         }
 
 
@@ -481,6 +486,74 @@ async def change_password(body: dict, current_user: dict = Depends(get_current_u
         await session.commit()
         await log_action(ACTIONS["password_change"], "user", user.id, user_id=user.id, actor_id=user.id)
         return {"message": "Password changed"}
+
+
+@router.get("/emergency-contacts")
+async def get_emergency_contacts(current_user: dict = Depends(get_current_user)) -> list[dict]:
+    """Get user's emergency contacts."""
+    from app.models import EmergencyContact
+    async with async_session_maker() as session:
+        stmt = select(EmergencyContact).where(
+            EmergencyContact.user_id == current_user["id"]
+        ).order_by(EmergencyContact.contact_order)
+        result = await session.execute(stmt)
+        contacts = result.scalars().all()
+        return [
+            {"id": c.id, "contact_order": c.contact_order, "name": c.name,
+             "email": c.email, "phone": c.phone, "relationship": c.relationship}
+            for c in contacts
+        ]
+
+
+@router.put("/emergency-contacts")
+async def save_emergency_contacts(body: dict, current_user: dict = Depends(get_current_user)) -> list[dict]:
+    """Save emergency contacts (replaces all). Expects { contacts: [{name, email, phone, relationship}] }."""
+    from app.models import EmergencyContact
+    from app.services.audit import log_action, ACTIONS
+    import uuid as _uuid
+
+    contacts_data = body.get("contacts", [])
+    if not contacts_data or not isinstance(contacts_data, list):
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "At least one emergency contact is required"})
+    if len(contacts_data) > 2:
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Maximum 2 emergency contacts"})
+
+    # Validate first contact is complete
+    first = contacts_data[0]
+    if not first.get("name") or not first.get("relationship"):
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "First emergency contact requires name and relationship"})
+    if not first.get("email") and not first.get("phone"):
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "First emergency contact requires email or phone"})
+
+    async with async_session_maker() as session:
+        # Delete existing
+        stmt = select(EmergencyContact).where(EmergencyContact.user_id == current_user["id"])
+        result = await session.execute(stmt)
+        for old in result.scalars().all():
+            await session.delete(old)
+
+        # Create new
+        saved = []
+        for i, c in enumerate(contacts_data):
+            if not c.get("name"):
+                continue
+            ec = EmergencyContact(
+                id=str(_uuid.uuid4()),
+                user_id=current_user["id"],
+                contact_order=i + 1,
+                name=c["name"][:200],
+                email=c.get("email", "")[:320] if c.get("email") else None,
+                phone=c.get("phone", "")[:20] if c.get("phone") else None,
+                relationship=c.get("relationship", "other")[:50],
+            )
+            session.add(ec)
+            saved.append({"id": ec.id, "contact_order": ec.contact_order, "name": ec.name,
+                         "email": ec.email, "phone": ec.phone, "relationship": ec.relationship})
+
+        await session.commit()
+        await log_action(ACTIONS["profile_update"], "emergency_contacts", current_user["id"],
+                        user_id=current_user["id"], actor_id=current_user["id"])
+        return saved
 
 
 @router.delete("/account")

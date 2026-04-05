@@ -7,6 +7,7 @@ export interface User {
   email_notifications: boolean;
   parental_consent: boolean;
   parent_email: string | null;
+  parent_phone: string | null;
   avatar_url?: string;
   created_at?: string;
 }
@@ -67,6 +68,8 @@ export interface Member {
   name?: string;
   email?: string;
   conflicts_submitted?: boolean;
+  age_range?: string | null;
+  profile_complete?: boolean;
 }
 
 export interface InviteToken {
