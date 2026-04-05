@@ -12,6 +12,19 @@ export function JoinPage() {
   const { toast } = useToast();
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState('');
+  const [productionName, setProductionName] = useState('');
+
+  // Fetch production name from the invite token
+  useEffect(() => {
+    if (!token) return;
+    apiClient<{ production_name?: string }>(`/join?token=${encodeURIComponent(token)}`)
+      .then(data => {
+        if (data.production_name) setProductionName(data.production_name);
+      })
+      .catch(() => {
+        // Token might be invalid — will be handled when they try to join
+      });
+  }, [token]);
 
   // If authenticated, join immediately
   useEffect(() => {
@@ -85,7 +98,10 @@ export function JoinPage() {
         You're Invited!
       </h1>
       <p className="text-muted mb-8">
-        You've been invited to join a production on Digital Call Board. Sign in or create an account to get started.
+        {productionName
+          ? <>You've been invited to join <strong style={{ color: 'hsl(35, 20%, 80%)' }}>{productionName}</strong> on The Call Board. Sign in or create an account to get started.</>
+          : <>You've been invited to join a production on The Call Board. Sign in or create an account to get started.</>
+        }
       </p>
 
       <div className="space-y-3">

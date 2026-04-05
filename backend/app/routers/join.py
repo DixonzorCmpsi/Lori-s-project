@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import ProductionMember, InviteToken, User
+from app.models import Production, ProductionMember, InviteToken, User
 from app.routers.auth import get_current_user
 
 router = APIRouter(tags=["join"])
@@ -55,22 +55,30 @@ async def validate_invite_token(
                 },
             )
 
+        # Fetch the production name for the invite landing page
+        prod_stmt = select(Production.name).where(
+            Production.id == invite.production_id
+        )
+        prod_result = await session.execute(prod_stmt)
+        production_name = prod_result.scalar_one_or_none() or "a production"
+
         # If user is authenticated, they can proceed to join
         if auth_header:
             return {
                 "valid": True,
                 "production_id": invite.production_id,
+                "production_name": production_name,
                 "message": "Token valid, user can join",
             }
 
-        # If not authenticated, return 401 to prompt login
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "error": "UNAUTHORIZED",
-                "message": "Please log in to join this production",
-            },
-        )
+        # If not authenticated, return info for the invite landing page
+        # (no 401 — unauthenticated users need the production name to display)
+        return {
+            "valid": True,
+            "production_id": invite.production_id,
+            "production_name": production_name,
+            "requires_auth": True,
+        }
 
 
 @router.post("/join")
