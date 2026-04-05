@@ -35,7 +35,7 @@ export function Chalkboard({ children, className = '', style }: ChalkboardProps)
       {/* Dark board surface */}
       <div
         data-chalkboard
-        className="rounded-sm relative overflow-hidden flex-1"
+        className="rounded-sm relative flex-1"
         style={{
           background: 'var(--t-chalk-surface)',
           boxShadow: 'var(--t-chalk-surface-shadow)',
