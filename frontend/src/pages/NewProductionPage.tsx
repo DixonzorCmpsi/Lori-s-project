@@ -75,6 +75,10 @@ export function NewProductionPage() {
 
   return (
     <div className="max-w-md mx-auto">
+      <button onClick={() => navigate('/')} className="mb-4 text-[10px] cursor-pointer flex items-center gap-1"
+        style={{ color: 'var(--t-chalk-text)' }}>
+        &larr; <span>Back to Dashboard</span>
+      </button>
       <h1 className="mb-6">Create Production</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Production Name" value={name} onChange={e => setName(e.target.value)} error={errors.name} required placeholder="Into the Woods" maxLength={200} />

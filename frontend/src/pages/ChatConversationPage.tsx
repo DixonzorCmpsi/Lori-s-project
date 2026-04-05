@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,7 @@ import type { Message, Conversation } from '@/types';
 
 export function ChatConversationPage() {
   const { id, convId } = useParams<{ id: string; convId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { members } = useProduction();
   const bp = useBreakpoint();
@@ -77,9 +78,16 @@ export function ChatConversationPage() {
 
   return (
     <div className={`flex flex-col ${isMobile ? 'h-[calc(100dvh-18rem)]' : 'h-[calc(100vh-8rem)]'}`}>
-      <h1 className="text-base font-semibold mb-4" style={{ color: 'var(--t-chalk-text)', fontFamily: '"Playfair Display", serif' }}>
-        {otherParticipant?.name || 'Conversation'}
-      </h1>
+      <div className="flex items-center gap-3 mb-4">
+        <button onClick={() => navigate(`/production/${id}/chat`)}
+          className="text-[10px] cursor-pointer px-2 py-1 rounded"
+          style={{ color: 'var(--t-chalk-text)', background: 'rgba(255,255,255,0.06)' }}>
+          &larr;
+        </button>
+        <h1 className="text-base font-semibold" style={{ color: 'var(--t-chalk-text)', fontFamily: '"Playfair Display", serif' }}>
+          {otherParticipant?.name || 'Conversation'}
+        </h1>
+      </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-1" style={{ scrollbarWidth: 'thin' }}>
         {messages.map((msg: Message) => {

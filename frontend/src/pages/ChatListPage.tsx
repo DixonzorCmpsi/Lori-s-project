@@ -4,7 +4,7 @@ import { useApi } from '@/hooks/useApi';
 import { useProduction } from '@/components/theater/BackstageLayout';
 import { getConversations, getContacts, sendMessage, broadcastMessage } from '@/services/chat';
 import { getTeams } from '@/services/teams';
-import { formatMessageTime } from '@/utils/format';
+import { formatMessageTime, getInitials } from '@/utils/format';
 import { Badge } from '@/components/ui/Badge';
 import { Dialog } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
@@ -25,7 +25,7 @@ function ConversationRow({ conv, productionId, navigate }: { conv: Conversation;
     >
       <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
         style={{ background: 'var(--t-member-avatar-cast)', color: 'var(--t-member-avatar-cast-text)' }}>
-        {(conv.participant_name || '?').charAt(0).toUpperCase()}
+        {getInitials(conv.participant_name)}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

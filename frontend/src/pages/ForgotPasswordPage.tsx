@@ -31,6 +31,7 @@ export function ForgotPasswordPage() {
 
   return (
     <div>
+      <Link to="/login" className="text-accent hover:underline text-sm mb-4 inline-block">&larr; Back to sign in</Link>
       <h2 className="text-xl font-semibold mb-2 text-center">Forgot Password</h2>
       <p className="text-muted text-sm mb-6 text-center">Enter your email and we'll send a reset link.</p>
       <form onSubmit={handleSubmit} className="space-y-4">

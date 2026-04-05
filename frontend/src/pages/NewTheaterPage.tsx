@@ -40,6 +40,10 @@ export function NewTheaterPage() {
 
   return (
     <div className="flex flex-col items-center pt-8">
+      <button onClick={() => navigate('/')} className="self-start mb-4 text-[10px] cursor-pointer flex items-center gap-1"
+        style={{ color: 'var(--t-chalk-text)' }}>
+        &larr; <span>Back to Dashboard</span>
+      </button>
       <ChalkText size="lg" className="mb-6">Add Your Theater</ChalkText>
 
       <StickyNote color="white" rotate={-0.5} className="w-full max-w-sm">

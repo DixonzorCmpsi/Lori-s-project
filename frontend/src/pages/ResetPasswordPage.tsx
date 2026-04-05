@@ -42,6 +42,7 @@ export function ResetPasswordPage() {
 
   return (
     <div>
+      <Link to="/login" className="text-accent hover:underline text-sm mb-4 inline-block">&larr; Back to sign in</Link>
       <h2 className="text-xl font-semibold mb-6 text-center">Set New Password</h2>
       {error && <div className="bg-destructive/10 border border-destructive rounded-md px-4 py-3 mb-4 text-sm text-destructive">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">

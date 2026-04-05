@@ -12,7 +12,7 @@ import { apiClient } from '@/services/api';
 import { Dialog } from '@/components/ui/Dialog';
 import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import { ROLES } from '@/utils/constants';
-import { formatRelativeTime } from '@/utils/format';
+import { formatRelativeTime, getInitials } from '@/utils/format';
 import type { Member, Team } from '@/types';
 import { PageTour } from '@/tours/PageTour';
 import { rosterTourSteps, teamsTourSteps } from '@/tours/pageTours';
@@ -214,18 +214,18 @@ export function RosterPage() {
 
       {/* Tab switcher — Roster / Manage */}
       <div className="flex items-center justify-between mb-6">
-        <ChalkText size="lg">{tab === 'roster' ? 'Company Roster' : 'Manage'}</ChalkText>
+        <ChalkText size="lg">{tab === 'roster' ? 'Production Roster' : 'Manage'}</ChalkText>
         <div className="flex items-center gap-1">
           {isDirectorOrStaff && (
-            <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid var(--t-tab-border)` }}>
+            <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>
               {(['roster', 'manage'] as const).map(t => (
                 <button
                   key={t}
                   onClick={() => { setTab(t); setManageTeamId(null); setShowTeamBuilder(false); }}
-                  className="px-4 py-1.5 text-[10px] uppercase tracking-widest cursor-pointer"
+                  className="px-4 py-1.5 text-[10px] uppercase tracking-widest cursor-pointer font-semibold"
                   style={{
-                    background: tab === t ? 'var(--t-tab-active-bg)' : 'transparent',
-                    color: tab === t ? 'var(--t-tab-active-text)' : 'var(--t-tab-inactive-text)',
+                    background: tab === t ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    color: tab === t ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)',
                   }}
                 >
                   {t}
@@ -295,7 +295,7 @@ export function RosterPage() {
                     >
                       <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold"
                         style={{ background: 'rgba(0,0,0,0.15)', color: rc.text }}>
-                        {(m.name || m.email || '?').charAt(0).toUpperCase()}
+                        {getInitials(m.name || m.email)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{m.name || m.email || 'Member'}</p>
@@ -525,10 +525,10 @@ export function RosterPage() {
                               }
                             }
                           }}
-                          className="px-2 py-0.5 text-[8px] uppercase tracking-widest cursor-pointer"
+                          className="px-3 py-1 text-[9px] uppercase tracking-widest cursor-pointer font-semibold"
                           style={{
-                            background: announceType === t ? 'var(--t-tab-active-bg)' : 'transparent',
-                            color: announceType === t ? 'var(--t-tab-active-text)' : 'var(--t-tab-inactive-text)',
+                            background: announceType === t ? 'rgba(255,255,255,0.12)' : 'transparent',
+                            color: announceType === t ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
                           }}
                         >
                           {t}
@@ -576,7 +576,7 @@ export function RosterPage() {
                         <div className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
                             style={{ background: c.avatarBg, color: c.text }}>
-                            {(m.name || '?').charAt(0).toUpperCase()}
+                            {getInitials(m.name)}
                           </div>
                           <span className="text-xs font-medium" style={{ color: 'var(--t-subtle-text-bright)' }}>
                             {m.name || 'Member'}
@@ -709,7 +709,7 @@ export function RosterPage() {
                           <div className="flex items-center gap-3">
                             <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
                               style={{ background: c ? c.avatarBg : 'var(--t-subtle-bg)', color: c ? c.text : 'var(--t-subtle-text)' }}>
-                              {(m.name || '?').charAt(0).toUpperCase()}
+                              {getInitials(m.name)}
                             </div>
                             <span className="text-xs font-medium" style={{ color: 'var(--t-subtle-text-bright)' }}>
                               {m.name || 'Member'}

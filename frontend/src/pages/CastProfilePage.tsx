@@ -72,6 +72,10 @@ export function CastProfilePage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <button onClick={() => navigate(`/production/${id}`)} className="mb-4 text-[10px] cursor-pointer flex items-center gap-1"
+        style={{ color: 'var(--t-chalk-text)' }}>
+        &larr; <span>Back to Dashboard</span>
+      </button>
       <h1 className="text-2xl font-bold text-foreground mb-6">Cast Profile</h1>
 
       <form onSubmit={e => { e.preventDefault(); handleSubmit(onSubmit); }} className="space-y-4">

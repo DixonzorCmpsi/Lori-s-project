@@ -10,7 +10,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { apiClient } from '@/services/api';
 import { getMemberDetails, type MemberDetails } from '@/services/castAssignments';
 import { getMyTeam } from '@/services/teams';
-import { formatTime, formatDate } from '@/utils/format';
+import { formatTime, formatDate, getInitials } from '@/utils/format';
 import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard, ChalkText } from './Chalkboard';
@@ -641,7 +641,7 @@ export function BackstageLayout() {
                       member.role === 'director' ? 'var(--t-member-avatar-director-text)' : 'var(--t-member-avatar-cast-text)',
                   }}
                 >
-                  {(member.name || member.user_id).charAt(0).toUpperCase()}
+                  {getInitials(member.name || member.user_id)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs truncate" style={{ color: 'var(--t-member-name)' }}>

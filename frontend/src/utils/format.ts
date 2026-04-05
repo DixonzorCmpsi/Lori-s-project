@@ -32,6 +32,14 @@ export function formatMessageTime(dateStr: string): string {
   return format(d, 'MMM d, yyyy');
 }
 
+/** Get initials from a name — "Hannah Johansson" → "HJ", "Dixon" → "D" */
+export function getInitials(name: string | null | undefined): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return parts[0][0]?.toUpperCase() || '?';
+}
+
 export function formatDateFull(dateStr: string): string {
   return format(parseISO(dateStr), 'EEEE, MMMM d, yyyy');
 }
