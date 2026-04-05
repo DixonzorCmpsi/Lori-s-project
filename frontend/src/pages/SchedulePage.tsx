@@ -10,7 +10,8 @@ import { getSchedule, updateDate, cancelDate, deleteDate, bulkSyncSchedule } fro
 import { getPosts } from '@/services/bulletin';
 import { getConflicts } from '@/services/conflicts';
 import { getAssignments, assignCast, unassignCast, type CastAssignment } from '@/services/castAssignments';
-import { useAuth } from '@/hooks/useAuth';
+import { getTeams } from '@/services/teams';
+import type { Team, BulletinPost } from '@/types';
 import { formatTime } from '@/utils/format';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
@@ -38,11 +39,11 @@ const typesCycle = ['', 'regular', 'tech', 'dress', 'performance', 'blocked'] as
 type DayType = typeof typesCycle[number];
 
 const typeConfig: Record<string, { label: string; noteBg: string; noteText: string; chalkBg: string }> = {
-  regular:     { label: 'Rehearsal', noteBg: 'hsl(48, 90%, 85%)', noteText: 'hsl(35, 40%, 20%)', chalkBg: 'rgba(255,255,255,0.08)' },
-  tech:        { label: 'Tech', noteBg: 'hsl(210, 70%, 88%)', noteText: 'hsl(210, 30%, 22%)', chalkBg: 'rgba(100,180,255,0.1)' },
-  dress:       { label: 'Dress', noteBg: 'hsl(280, 60%, 88%)', noteText: 'hsl(280, 30%, 25%)', chalkBg: 'rgba(200,140,255,0.1)' },
+  regular: { label: 'Rehearsal', noteBg: 'hsl(48, 90%, 85%)', noteText: 'hsl(35, 40%, 20%)', chalkBg: 'rgba(255,255,255,0.08)' },
+  tech: { label: 'Tech', noteBg: 'hsl(210, 70%, 88%)', noteText: 'hsl(210, 30%, 22%)', chalkBg: 'rgba(100,180,255,0.1)' },
+  dress: { label: 'Dress', noteBg: 'hsl(280, 60%, 88%)', noteText: 'hsl(280, 30%, 25%)', chalkBg: 'rgba(200,140,255,0.1)' },
   performance: { label: 'Show', noteBg: 'hsl(340, 80%, 88%)', noteText: 'hsl(340, 30%, 25%)', chalkBg: 'rgba(255,140,100,0.1)' },
-  blocked:     { label: 'Blocked', noteBg: 'hsl(0, 0%, 75%)', noteText: 'hsl(0, 0%, 30%)', chalkBg: 'rgba(255,80,80,0.06)' },
+  blocked: { label: 'Blocked', noteBg: 'hsl(0, 0%, 75%)', noteText: 'hsl(0, 0%, 30%)', chalkBg: 'rgba(255,80,80,0.06)' },
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -57,16 +58,9 @@ export function SchedulePage() {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const { toast } = useToast();
-  const { user } = useAuth();
-  const isCast = userRole === 'cast';
   const canEdit = isStaffRole(userRole);
   const { data: dates, refetch } = useApi(() => getSchedule(id!), [id]);
   const { data: bulletinPosts } = useApi(() => getPosts(id!), [id]);
-  const { data: myAssignments } = useApi<CastAssignment[]>(
-    () => isCast && user ? getAssignments(id!, user.id) : Promise.resolve([]),
-    [id, isCast, user?.id],
-  );
-
   // Admin/staff: fetch conflicts and all assignments
   const { data: conflictsData } = useApi<any[]>(
     () => canEdit ? getConflicts(id!) : Promise.resolve([]),
@@ -76,6 +70,14 @@ export function SchedulePage() {
     () => canEdit ? getAssignments(id!) : Promise.resolve([]),
     [id, canEdit],
   );
+  const { data: teams } = useApi<Team[]>(
+    () => canEdit && id ? getTeams(id) : Promise.resolve([]),
+    [id, canEdit],
+  );
+
+  // Assignment panel tab
+  const [assignTab, setAssignTab] = useState<'cast' | 'teams'>('cast');
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
   // Conflict count map: date string -> { count, conflicts[] }
   const conflictMap = useMemo(() => {
@@ -99,26 +101,18 @@ export function SchedulePage() {
     return map;
   }, [allAssignments]);
 
-  // Set of date strings the cast member is assigned to
-  const myAssignedDates = useMemo(() => {
-    const set = new Set<string>();
-    if (!myAssignments) return set;
-    for (const a of myAssignments) {
-      if (a.date) set.add(a.date);
-    }
-    return set;
-  }, [myAssignments]);
-
-  // Map bulletin posts to dates (YYYY-MM-DD) for pulse indicators
-  const bulletinDateSet = useMemo(() => {
-    const set = new Set<string>();
-    if (!bulletinPosts) return set;
-    for (const post of bulletinPosts) {
+  // Map pinned bulletin posts to dates (YYYY-MM-DD) for pulse indicators + quick links
+  const pinnedBulletinByDate = useMemo(() => {
+    const map = new Map<string, BulletinPost[]>();
+    if (!bulletinPosts) return map;
+    for (const post of bulletinPosts.filter(p => p.is_pinned)) {
       const d = new Date(post.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      set.add(key);
+      const list = map.get(key) || [];
+      list.push(post);
+      map.set(key, list);
     }
-    return set;
+    return map;
   }, [bulletinPosts]);
 
   // Calendar state
@@ -611,15 +605,13 @@ export function SchedulePage() {
           const topEvent = events.find(e => !e.is_cancelled) || events[0];
 
           // What to show: edit mode type OR existing event
-          // Cast: only see their assigned dates + blocked dates
-          const isBlockedDate = topEvent && topEvent.type === 'blocked';
-          const isAssignedToMe = !isCast || isBlockedDate || myAssignedDates.has(key);
+          // Cast sees all dates — assigned dates get a highlight
           const displayType = editMode && editType ? editType
-            : (topEvent && !topEvent.is_cancelled && isAssignedToMe ? topEvent.type : null);
+            : (topEvent && !topEvent.is_cancelled ? topEvent.type : null);
           const config = displayType ? typeConfig[displayType] : null;
           const isCancelled = hasEvent && events.every(e => e.is_cancelled);
           const isBlocked = displayType === 'blocked';
-          const hasBulletinPost = bulletinDateSet.has(dateStr(day));
+          const hasBulletinPost = (pinnedBulletinByDate.get(dateStr(day)) || []).length > 0;
 
           return (
             <motion.button
@@ -629,8 +621,8 @@ export function SchedulePage() {
               style={{
                 background: isSelected ? 'rgba(255,255,255,0.06)'
                   : isBlocked ? (typeConfig.blocked?.chalkBg || 'rgba(255,80,80,0.06)')
-                  : editMode && editType ? (typeConfig[editType]?.chalkBg || 'transparent')
-                  : 'transparent',
+                    : editMode && editType ? (typeConfig[editType]?.chalkBg || 'transparent')
+                      : 'transparent',
                 outline: isBlocked ? '1px dashed rgba(255,80,80,0.2)'
                   : editMode && editType ? `1px dashed rgba(255,220,100,0.15)` : 'none',
               }}
@@ -642,9 +634,9 @@ export function SchedulePage() {
               <span style={{
                 color: isCancelled ? 'rgba(255,100,100,0.4)'
                   : isBlocked ? 'rgba(255,100,100,0.5)'
-                  : isToday ? 'rgba(255,220,100,0.9)'
-                  : displayType ? 'rgba(255,255,255,0.75)'
-                  : 'rgba(255,255,255,0.4)',
+                    : isToday ? 'rgba(255,220,100,0.9)'
+                      : displayType ? 'rgba(255,255,255,0.75)'
+                        : 'rgba(255,255,255,0.4)',
                 fontSize: '12px',
                 fontWeight: isToday ? 600 : 300,
                 textDecoration: (isCancelled || isBlocked) ? 'line-through' : 'none',
@@ -690,8 +682,21 @@ export function SchedulePage() {
 
               {/* Bulletin post pulse indicator */}
               {!editMode && hasBulletinPost && (
-                <motion.div
-                  className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                <motion.button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const posts = pinnedBulletinByDate.get(dateStr(day)) || [];
+                    if (posts.length === 0) return;
+                    if (posts.length === 1) {
+                      navigate(`/production/${id}/bulletin?post=${posts[0].id}`);
+                    } else {
+                      navigate(`/production/${id}/bulletin`);
+                    }
+                  }}
+                  aria-label="View pinned bulletin post"
+                  title="View pinned bulletin post"
+                  className="absolute top-1 right-1 w-2 h-2 rounded-full cursor-pointer"
                   style={{ background: 'rgba(255,180,60,0.8)' }}
                   animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -724,6 +729,16 @@ export function SchedulePage() {
               {c.label}
             </GafferTape>
           ))}
+          <div
+            data-tour="schedule-pins"
+            className="flex items-center gap-2 px-3 py-1 rounded-sm"
+            style={{ background: 'rgba(255,180,60,0.08)', border: '1px solid rgba(255,180,60,0.2)' }}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,180,60,0.8)' }} />
+            <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: 'rgba(255,220,100,0.8)' }}>
+              Pinned
+            </span>
+          </div>
         </div>
       )}
 
@@ -732,11 +747,11 @@ export function SchedulePage() {
         <motion.div
           data-tour="schedule-day-detail"
           className="mt-5 rounded-sm overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--t-tab-border)' }}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--t-section-border)' }}>
             <ChalkText size="md">
               {new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDay).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </ChalkText>
@@ -744,21 +759,42 @@ export function SchedulePage() {
           </div>
 
           {/* Bulletin post link */}
-          {bulletinDateSet.has(dateStr(selectedDay)) && (
-            <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,180,60,0.04)' }}>
+          {((pinnedBulletinByDate.get(dateStr(selectedDay)) || []).length > 0) && (
+            <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-section-border)', background: 'rgba(255,180,60,0.04)' }}>
               <motion.div
                 className="w-2 h-2 rounded-full"
                 style={{ background: 'rgba(255,180,60,0.8)' }}
                 animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               />
-              <span className="text-[11px]" style={{ color: 'rgba(255,220,100,0.7)' }}>Bulletin posted this day</span>
+              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-sm"
+                style={{ background: 'rgba(255,220,100,0.15)', color: 'rgba(255,220,100,0.9)' }}>
+                Pinned
+              </span>
+              {(() => {
+                const posts = pinnedBulletinByDate.get(dateStr(selectedDay)) || [];
+                const first = posts[0];
+                if (!first) return null;
+                return (
+                  <span className="text-[11px]" style={{ color: 'rgba(255,220,100,0.7)' }}>
+                    {first.title}{posts.length > 1 ? ` (+${posts.length - 1} more)` : ''}
+                  </span>
+                );
+              })()}
               <button
-                onClick={() => navigate(`/productions/${id}/bulletin`)}
+                onClick={() => {
+                  const posts = pinnedBulletinByDate.get(dateStr(selectedDay)) || [];
+                  if (posts.length === 0) return;
+                  if (posts.length === 1) {
+                    navigate(`/production/${id}/bulletin?post=${posts[0].id}`);
+                  } else {
+                    navigate(`/production/${id}/bulletin`);
+                  }
+                }}
                 className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer ml-auto"
                 style={{ color: 'rgba(255,220,100,0.8)', background: 'rgba(255,220,100,0.08)', border: '1px solid rgba(255,220,100,0.12)' }}
               >
-                View Bulletin
+                {((pinnedBulletinByDate.get(dateStr(selectedDay)) || []).length > 1) ? 'View Pinned Posts' : 'View Pinned Post'}
               </button>
             </div>
           )}
@@ -809,7 +845,7 @@ export function SchedulePage() {
 
           {/* Conflicts for this day — admin/staff only */}
           {canEdit && selectedDay && conflictMap[dateStr(selectedDay)] && (
-            <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,80,80,0.02)' }}>
+            <div className="px-4 py-3" style={{ borderTop: '1px solid var(--t-section-border)', background: 'rgba(255,80,80,0.02)' }}>
               <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,120,120,0.7)' }}>
                 Conflicts ({conflictMap[dateStr(selectedDay)].count})
               </p>
@@ -835,6 +871,7 @@ export function SchedulePage() {
             const castMembers = members.filter(m => m.role === 'cast');
             const assigned = castMembers.filter(m => assignedUserIds.has(m.user_id));
             const unassigned = castMembers.filter(m => !assignedUserIds.has(m.user_id));
+            const hasTeams = teams && teams.length > 0;
 
             async function toggleAssignment(userId: string, isAssigned: boolean) {
               if (!id || !topEvent) return;
@@ -848,48 +885,226 @@ export function SchedulePage() {
               } catch { toast('Failed to update assignment', 'error'); }
             }
 
+            async function bulkAssignTeam(teamUserIds: string[], assign: boolean) {
+              if (!id || !topEvent) return;
+              try {
+                await Promise.all(
+                  teamUserIds
+                    .filter(uid => assign ? !assignedUserIds.has(uid) : assignedUserIds.has(uid))
+                    .map(uid => assign ? assignCast(id!, uid, topEvent!.id) : unassignCast(id!, uid, topEvent!.id))
+                );
+                refetchAssignments();
+              } catch { toast('Failed to update assignments', 'error'); }
+            }
+
             return (
-              <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,220,100,0.6)' }}>
-                  Cast Assigned ({assigned.length}/{castMembers.length})
-                </p>
-                <div className="space-y-0.5 max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                  {assigned.map(m => (
-                    <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
-                      style={{ background: 'rgba(100,200,100,0.06)' }}>
-                      <span style={{ color: 'rgba(150,220,150,0.8)' }}>{m.name || 'Member'}</span>
-                      <button onClick={() => toggleAssignment(m.user_id, true)}
-                        className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
-                        style={{ color: 'rgba(255,150,150,0.6)', background: 'rgba(255,80,80,0.06)' }}>
-                        Remove
-                      </button>
+              <div className="px-4 py-3" style={{ borderTop: '1px solid var(--t-section-border)' }}>
+                {/* Header with tabs */}
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,220,100,0.6)' }}>
+                    Cast Assigned ({assigned.length}/{castMembers.length})
+                  </p>
+                  {hasTeams && (
+                    <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--t-tab-border)' }}>
+                      {(['cast', 'teams'] as const).map(t => (
+                        <button
+                          key={t}
+                          onClick={() => setAssignTab(t)}
+                          className="px-2.5 py-0.5 text-[8px] uppercase tracking-widest cursor-pointer"
+                          style={{
+                            background: assignTab === t ? 'var(--t-tab-active-bg)' : 'transparent',
+                            color: assignTab === t ? 'var(--t-tab-active-text)' : 'var(--t-tab-inactive-text)',
+                          }}
+                        >
+                          {t}
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                  {unassigned.length > 0 && (
-                    <>
-                      <p className="text-[9px] uppercase tracking-wider mt-2 mb-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                        Not assigned
-                      </p>
-                      {unassigned.map(m => {
-                        const hasConflict = conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === m.user_id);
-                        return (
-                          <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
-                            style={{ background: hasConflict ? 'rgba(255,80,80,0.04)' : 'rgba(255,255,255,0.02)' }}>
-                            <span style={{ color: hasConflict ? 'rgba(255,150,150,0.5)' : 'rgba(255,255,255,0.4)' }}>
-                              {m.name || 'Member'}
-                              {hasConflict && <span className="text-[8px] ml-1" style={{ color: 'rgba(255,120,120,0.6)' }}>conflict</span>}
-                            </span>
-                            <button onClick={() => toggleAssignment(m.user_id, false)}
-                              className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
-                              style={{ color: 'rgba(150,220,150,0.6)', background: 'rgba(100,200,100,0.06)' }}>
-                              Assign
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </>
                   )}
                 </div>
+
+                {/* ── Cast tab: individual toggle ── */}
+                {assignTab === 'cast' && (
+                  <div className="space-y-0.5 max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                    {assigned.map(m => (
+                      <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
+                        style={{ background: 'rgba(100,200,100,0.06)' }}>
+                        <span style={{ color: 'rgba(150,220,150,0.8)' }}>{m.name || 'Member'}</span>
+                        <button onClick={() => toggleAssignment(m.user_id, true)}
+                          className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
+                          style={{ color: 'rgba(255,150,150,0.6)', background: 'rgba(255,80,80,0.06)' }}>
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    {unassigned.length > 0 && (
+                      <>
+                        <p className="text-[9px] uppercase tracking-wider mt-2 mb-1" style={{ color: 'var(--t-subtle-text)' }}>
+                          Not assigned
+                        </p>
+                        {unassigned.map(m => {
+                          const hasConflict = conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === m.user_id);
+                          return (
+                            <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
+                              style={{ background: hasConflict ? 'rgba(255,80,80,0.04)' : 'rgba(255,255,255,0.02)' }}>
+                              <span style={{ color: hasConflict ? 'rgba(255,150,150,0.5)' : 'var(--t-subtle-text)' }}>
+                                {m.name || 'Member'}
+                                {hasConflict && <span className="text-[8px] ml-1" style={{ color: 'rgba(255,120,120,0.6)' }}>conflict</span>}
+                              </span>
+                              <button onClick={() => toggleAssignment(m.user_id, false)}
+                                className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
+                                style={{ color: 'rgba(150,220,150,0.6)', background: 'rgba(100,200,100,0.06)' }}>
+                                Assign
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Teams tab: collapsed by default, expand to see members ── */}
+                {assignTab === 'teams' && hasTeams && (
+                  <div className="space-y-1.5 max-h-[250px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                    {teams!.map(team => {
+                      const teamCastIds = team.member_user_ids.filter(uid => castMembers.some(m => m.user_id === uid));
+                      const teamAssignedCount = teamCastIds.filter(uid => assignedUserIds.has(uid)).length;
+                      const allAssigned = teamAssignedCount === teamCastIds.length && teamCastIds.length > 0;
+                      const noneAssigned = teamAssignedCount === 0;
+                      const isExpanded = expandedTeams.has(team.id);
+                      const teamConflicts = teamCastIds.filter(uid =>
+                        conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === uid)
+                      ).length;
+
+                      return (
+                        <div key={team.id} className="rounded" style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-tab-border)' }}>
+                          {/* Team header row — always visible */}
+                          <div className="flex items-center justify-between px-3 py-2">
+                            <button
+                              onClick={() => setExpandedTeams(prev => {
+                                const next = new Set(prev);
+                                if (next.has(team.id)) next.delete(team.id); else next.add(team.id);
+                                return next;
+                              })}
+                              className="flex items-center gap-2 cursor-pointer text-left flex-1 min-w-0"
+                            >
+                              <span className="text-[9px]" style={{ color: 'var(--t-subtle-text)' }}>{isExpanded ? '▾' : '▸'}</span>
+                              <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--t-subtle-text-bright)' }}>
+                                {team.name}
+                              </span>
+                              <span className="text-[9px] font-mono flex-shrink-0" style={{ color: allAssigned ? 'rgba(150,220,150,0.7)' : 'var(--t-subtle-text)' }}>
+                                {teamAssignedCount}/{teamCastIds.length}
+                              </span>
+                              {teamConflicts > 0 && (
+                                <span className="text-[8px] px-1 rounded flex-shrink-0" style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)' }}>
+                                  {teamConflicts}
+                                </span>
+                              )}
+                            </button>
+                            <div className="flex gap-1 flex-shrink-0 ml-2">
+                              {!allAssigned && teamCastIds.length > 0 && (
+                                <button onClick={() => bulkAssignTeam(teamCastIds, true)}
+                                  className="text-[9px] cursor-pointer px-2 py-0.5 rounded"
+                                  style={{ color: 'rgba(150,220,150,0.7)', background: 'rgba(100,200,100,0.08)' }}>
+                                  Assign
+                                </button>
+                              )}
+                              {!noneAssigned && (
+                                <button onClick={() => bulkAssignTeam(teamCastIds, false)}
+                                  className="text-[9px] cursor-pointer px-2 py-0.5 rounded"
+                                  style={{ color: 'rgba(255,150,150,0.6)', background: 'rgba(255,80,80,0.06)' }}>
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expanded: individual members */}
+                          {isExpanded && (
+                            <div className="px-3 pb-2 space-y-0.5" style={{ borderTop: '1px solid var(--t-section-border)' }}>
+                              {teamCastIds.map(uid => {
+                                const m = castMembers.find(c => c.user_id === uid);
+                                if (!m) return null;
+                                const isIn = assignedUserIds.has(uid);
+                                const hasConflict = conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === uid);
+                                return (
+                                  <div key={uid} className="flex items-center justify-between text-[10px] px-1.5 py-1 rounded mt-0.5"
+                                    style={{ background: isIn ? 'rgba(100,200,100,0.04)' : 'transparent' }}>
+                                    <span style={{
+                                      color: hasConflict ? 'rgba(255,150,150,0.5)' : isIn ? 'rgba(150,220,150,0.7)' : 'var(--t-subtle-text)',
+                                    }}>
+                                      {m.name || 'Member'}
+                                      {hasConflict && <span className="text-[7px] ml-1" style={{ color: 'rgba(255,120,120,0.5)' }}>conflict</span>}
+                                    </span>
+                                    <button onClick={() => toggleAssignment(m.user_id, isIn)}
+                                      className="text-[8px] cursor-pointer px-1.5 py-0.5 rounded"
+                                      style={{
+                                        color: isIn ? 'rgba(255,150,150,0.5)' : 'rgba(150,220,150,0.5)',
+                                        background: isIn ? 'rgba(255,80,80,0.04)' : 'rgba(100,200,100,0.04)',
+                                      }}>
+                                      {isIn ? 'Remove' : 'Assign'}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* No-team section — always expanded since these need individual attention */}
+                    {(() => {
+                      const allTeamUserIds = new Set(teams!.flatMap(t => t.member_user_ids));
+                      const unteamed = castMembers.filter(m => !allTeamUserIds.has(m.user_id));
+                      if (unteamed.length === 0) return null;
+                      const isExpanded = expandedTeams.has('__no_team__');
+                      return (
+                        <div className="rounded" style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-tab-border)' }}>
+                          <button
+                            onClick={() => setExpandedTeams(prev => {
+                              const next = new Set(prev);
+                              if (next.has('__no_team__')) next.delete('__no_team__'); else next.add('__no_team__');
+                              return next;
+                            })}
+                            className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer text-left"
+                          >
+                            <span className="text-[9px]" style={{ color: 'var(--t-subtle-text)' }}>{isExpanded ? '▾' : '▸'}</span>
+                            <span className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--t-subtle-text)' }}>
+                              No team
+                            </span>
+                            <span className="text-[9px] font-mono" style={{ color: 'var(--t-subtle-text)' }}>
+                              {unteamed.length}
+                            </span>
+                          </button>
+                          {isExpanded && (
+                            <div className="px-3 pb-2 space-y-0.5" style={{ borderTop: '1px solid var(--t-section-border)' }}>
+                              {unteamed.map(m => {
+                                const isIn = assignedUserIds.has(m.user_id);
+                                return (
+                                  <div key={m.user_id} className="flex items-center justify-between text-[10px] px-1.5 py-1 rounded mt-0.5">
+                                    <span style={{ color: isIn ? 'rgba(150,220,150,0.7)' : 'var(--t-subtle-text)' }}>
+                                      {m.name || 'Member'}
+                                    </span>
+                                    <button onClick={() => toggleAssignment(m.user_id, isIn)}
+                                      className="text-[8px] cursor-pointer px-1.5 py-0.5 rounded"
+                                      style={{
+                                        color: isIn ? 'rgba(255,150,150,0.5)' : 'rgba(150,220,150,0.5)',
+                                        background: isIn ? 'rgba(255,80,80,0.04)' : 'rgba(100,200,100,0.04)',
+                                      }}>
+                                      {isIn ? 'Remove' : 'Assign'}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             );
           })()}

@@ -27,6 +27,8 @@ class CreateProductionRequest(BaseModel):
 
 class UpdateProductionRequest(BaseModel):
     name: Optional[str] = None
+    extra_conflict_windows: Optional[int] = None
+    closing_night: Optional[str] = None
 
 
 @router.post("", status_code=201)
@@ -186,14 +188,22 @@ async def list_productions(
         result = await session.execute(stmt)
         productions = result.scalars().all()
 
+        # Count members per production
+        member_counts: dict[str, int] = {}
+        for m in members:
+            member_counts.setdefault(m.production_id, 0)
+            member_counts[m.production_id] += 1
+
         return [
             {
                 "id": p.id,
                 "name": p.name,
+                "estimated_cast_size": p.estimated_cast_size,
                 "first_rehearsal": p.first_rehearsal.isoformat(),
                 "opening_night": p.opening_night.isoformat(),
                 "closing_night": p.closing_night.isoformat(),
                 "is_archived": p.is_archived,
+                "member_count": member_counts.get(p.id, 0),
             }
             for p in productions
         ]
@@ -239,6 +249,7 @@ async def get_production(
             "first_rehearsal": production.first_rehearsal.isoformat(),
             "opening_night": production.opening_night.isoformat(),
             "closing_night": production.closing_night.isoformat(),
+            "extra_conflict_windows": production.extra_conflict_windows,
             "is_archived": production.is_archived,
             "archived_at": production.archived_at.isoformat()
             if production.archived_at
@@ -288,11 +299,30 @@ async def update_production(
                 )
             production.name = name
 
+        if body.extra_conflict_windows is not None:
+            if body.extra_conflict_windows < 0 or body.extra_conflict_windows > 50:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={"error": "VALIDATION_ERROR", "message": "Extra conflict windows must be 0-50"},
+                )
+            production.extra_conflict_windows = body.extra_conflict_windows
+
+        if body.closing_night is not None:
+            try:
+                new_closing = date.fromisoformat(body.closing_night)
+            except ValueError:
+                raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid date format"})
+            if new_closing < production.opening_night:
+                raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Closing night must be on or after opening night"})
+            production.closing_night = new_closing
+
         await session.commit()
 
         return {
             "id": production.id,
             "name": production.name,
+            "extra_conflict_windows": production.extra_conflict_windows,
+            "closing_night": production.closing_night.isoformat(),
         }
 
 

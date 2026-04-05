@@ -22,6 +22,7 @@ export interface Production {
   theater_id: string;
   name: string;
   estimated_cast_size: number;
+  extra_conflict_windows: number;
   first_rehearsal: string;
   opening_night: string;
   closing_night: string;
@@ -103,6 +104,7 @@ export interface Conversation {
   participant_name: string;
   participant_role: string;
   last_message: string | null;
+  last_message_sender_id: string | null;
   last_message_at: string | null;
   unread_count: number;
 }
@@ -121,6 +123,20 @@ export interface ApiError {
   error: string;
   message: string;
   fields?: { field: string; message: string }[];
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  member_count: number;
+  member_user_ids: string[];
+}
+
+export interface ConflictStatus {
+  submissions_used: number;
+  total_windows: number;
+  remaining_windows: number;
+  has_initial_submission: boolean;
 }
 
 export type Role = 'director' | 'staff' | 'cast';

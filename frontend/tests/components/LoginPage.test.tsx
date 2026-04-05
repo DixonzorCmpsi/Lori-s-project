@@ -67,7 +67,7 @@ describe('LoginPage', () => {
   it('renders email and password fields', () => {
     renderLoginPage();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i, { selector: 'input' })).toBeInTheDocument();
   });
 
   it('renders "Sign in with Google" button', () => {
@@ -80,7 +80,7 @@ describe('LoginPage', () => {
     renderLoginPage();
 
     const emailInput = screen.getByLabelText(/email address/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const passwordInput = screen.getByLabelText(/password/i, { selector: 'input' });
     const submitButton = screen.getByRole('button', { name: /access dashboard/i });
 
     await user.type(emailInput, 'test@example.com');
@@ -126,6 +126,6 @@ describe('LoginPage', () => {
 
   it('password field is type="password"', () => {
     renderLoginPage();
-    expect(screen.getByLabelText(/password/i)).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText(/password/i, { selector: 'input' })).toHaveAttribute('type', 'password');
   });
 });

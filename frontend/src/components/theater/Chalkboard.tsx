@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ChalkboardProps {
   children: ReactNode;
@@ -6,16 +7,16 @@ interface ChalkboardProps {
   style?: React.CSSProperties;
 }
 
-/** A realistic chalkboard with wooden frame, nailed to the stage wall */
+/** Blackboard with wooden frame — dark surface in both light and dark mode */
 export function Chalkboard({ children, className = '', style }: ChalkboardProps) {
+  const { isDark } = useTheme();
   return (
     <div
       className={`rounded-lg flex flex-col ${className}`}
       style={{
-        /* Wooden frame as border + padding */
-        background: 'linear-gradient(145deg, hsl(28, 40%, 25%) 0%, hsl(25, 35%, 20%) 40%, hsl(22, 30%, 16%) 100%)',
+        background: 'var(--t-wood-frame)',
         padding: '10px',
-        boxShadow: '0 12px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,200,120,0.1)',
+        boxShadow: 'var(--t-wood-frame-shadow)',
         position: 'relative',
         ...style,
       }}
@@ -31,12 +32,12 @@ export function Chalkboard({ children, className = '', style }: ChalkboardProps)
       <Nail style={{ position: 'absolute', top: '-2px', left: '14px', zIndex: 20 }} />
       <Nail style={{ position: 'absolute', top: '-2px', right: '14px', zIndex: 20 }} />
 
-      {/* Green chalk surface */}
+      {/* Dark board surface */}
       <div
         className="rounded-sm relative overflow-hidden flex-1"
         style={{
-          background: 'linear-gradient(155deg, hsl(155, 20%, 24%) 0%, hsl(158, 16%, 20%) 30%, hsl(150, 13%, 18%) 70%, hsl(155, 18%, 22%) 100%)',
-          boxShadow: 'inset 2px 2px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(0,0,0,0.2)',
+          background: 'var(--t-chalk-surface)',
+          boxShadow: 'var(--t-chalk-surface-shadow)',
         }}
       >
         {/* Chalk dust smudges */}
@@ -70,7 +71,9 @@ export function Chalkboard({ children, className = '', style }: ChalkboardProps)
       {/* Chalk tray */}
       <div className="relative h-2 mt-[-1px] mx-1 rounded-b-sm"
         style={{
-          background: 'linear-gradient(180deg, hsl(25, 30%, 18%) 0%, hsl(25, 26%, 14%) 100%)',
+          background: isDark
+            ? 'linear-gradient(180deg, hsl(25, 30%, 18%) 0%, hsl(25, 26%, 14%) 100%)'
+            : 'linear-gradient(180deg, hsl(28, 25%, 38%) 0%, hsl(25, 22%, 32%) 100%)',
           boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
         }}
       >
@@ -139,8 +142,8 @@ export function ChalkText({ children, className = '', size = 'md' }: { children:
   return (
     <span className={`${sizes[size]} ${className}`}
       style={{
-        color: 'rgba(255, 255, 255, 0.72)',
-        textShadow: '0 0 6px rgba(255,255,255,0.08)',
+        color: 'var(--t-chalk-text)',
+        textShadow: `0 0 6px var(--t-chalk-glow)`,
         fontFamily: '"Playfair Display", serif',
         fontWeight: 400,
       }}

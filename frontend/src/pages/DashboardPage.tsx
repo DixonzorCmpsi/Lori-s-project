@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApi } from '@/hooks/useApi';
@@ -34,6 +35,26 @@ export function DashboardPage() {
     () => apiClient('/productions')
   );
 
+  const sortedProductions = useMemo(() => {
+    if (!productions) return [];
+    let recents: Record<string, number> = {};
+    try {
+      const raw = window.localStorage.getItem('callboard.productionRecents');
+      recents = raw ? JSON.parse(raw) : {};
+    } catch {
+      recents = {};
+    }
+    return productions
+      .map((p, idx) => ({ p, idx }))
+      .sort((a, b) => {
+        const ta = recents[a.p.id] || 0;
+        const tb = recents[b.p.id] || 0;
+        if (tb !== ta) return tb - ta;
+        return a.idx - b.idx;
+      })
+      .map(({ p }) => p);
+  }, [productions]);
+
   if (theatersLoading || prodsLoading) {
     return (
       <div className="space-y-6">
@@ -60,17 +81,19 @@ export function DashboardPage() {
   const hasTheater = theaters && theaters.length > 0;
   const hasProductions = productions && productions.length > 0;
 
-  if (!hasTheater) {
+  // No theater AND no productions — brand new user, prompt to create a theater
+  if (!hasTheater && !hasProductions) {
     return (
       <EmptyState
         title="Welcome to Digital Call Board"
-        description="Start by adding your theater or school."
+        description="Start by adding your theater or school, or join a production via an invite link."
         action={{ label: 'Add Theater', onClick: () => navigate('/theater/new') }}
       />
     );
   }
 
-  if (!hasProductions) {
+  // Has a theater but no productions yet
+  if (hasTheater && !hasProductions) {
     return (
       <EmptyState
         title="No Productions Yet"
@@ -107,7 +130,7 @@ export function DashboardPage() {
         animate="show"
         className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
       >
-        {productions.map((prod, idx) => (
+        {sortedProductions.map((prod, idx) => (
           <motion.button
             key={prod.id}
             variants={item}

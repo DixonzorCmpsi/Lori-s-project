@@ -1,13 +1,15 @@
 import { useState, useEffect, Component, useMemo } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Joyride } from 'react-joyride';
 import { useAuth } from '@/hooks/useAuth';
 import { useApi } from '@/hooks/useApi';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTheme } from '@/contexts/ThemeContext';
 import { apiClient } from '@/services/api';
 import { getMemberDetails, type MemberDetails } from '@/services/castAssignments';
+import { getMyTeam } from '@/services/teams';
 import { formatTime, formatDate } from '@/utils/format';
 import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
@@ -15,7 +17,7 @@ import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useTour, triggerPageTour } from '@/hooks/useTour';
 import { directorTourSteps, staffTourSteps, castTourSteps } from '@/tours/productionTour';
-import { theaterTourStyles, theaterTourLocale, theaterTourOptions } from '@/tours/tourStyles';
+import { getTheaterTourStyles, theaterTourLocale, theaterTourOptions } from '@/tours/tourStyles';
 import type { Production, Member } from '@/types';
 import { createContext, useContext } from 'react';
 
@@ -75,7 +77,7 @@ interface ProductionContextType {
 }
 
 const ProductionContext = createContext<ProductionContextType>({
-  production: null, members: [], userRole: null, refetch: () => {},
+  production: null, members: [], userRole: null, refetch: () => { },
 });
 
 export function useProduction() {
@@ -85,10 +87,7 @@ export function useProduction() {
 // ── Flight-case panel style ─────────────────────────────────────────
 
 const flightCaseBase = {
-  background: `linear-gradient(180deg,
-    hsl(220, 6%, 11%) 0%,
-    hsl(220, 5%, 8%) 50%,
-    hsl(220, 4%, 6%) 100%)`,
+  background: 'var(--t-panel-bg)',
   backdropFilter: 'blur(16px)',
 };
 
@@ -97,6 +96,8 @@ const flightCaseBase = {
 export function BackstageLayout() {
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme, theme } = useTheme();
+  const tourStyles = useMemo(() => getTheaterTourStyles(), [theme]);
   const navigate = useNavigate();
   const location = useLocation();
   const bp = useBreakpoint();
@@ -105,7 +106,7 @@ export function BackstageLayout() {
   const { unreadMessages, permission, requestPermission } = useNotifications(id);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [panelTab, setPanelTab] = useState<'staff' | 'cast'>('cast');
+  const [panelTab, setPanelTab] = useState<'cast' | 'staff' | 'team'>('cast');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [memberDetails, setMemberDetails] = useState<MemberDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -129,8 +130,29 @@ export function BackstageLayout() {
 
   const currentUser = members?.find(m => m.user_id === user?.id);
   const userRole = currentUser?.role || null;
+  const isCast = userRole === 'cast';
   const isDirectorOrStaff = userRole === 'director' || userRole === 'staff';
   const basePath = id ? `/production/${id}` : '';
+
+  useEffect(() => {
+    if (!id) return;
+    try {
+      const raw = window.localStorage.getItem('callboard.productionRecents');
+      const recents = raw ? JSON.parse(raw) : {};
+      recents[id] = Date.now();
+      window.localStorage.setItem('callboard.productionRecents', JSON.stringify(recents));
+      window.localStorage.setItem('callboard.lastProductionId', id);
+    } catch {
+      // ignore storage errors
+    }
+  }, [id]);
+
+  // Fetch team data for cast users
+  const { data: myTeamData } = useApi(
+    id && isCast ? () => getMyTeam(id) : () => Promise.resolve(null),
+    [id, isCast],
+  );
+  const teammateIds = useMemo(() => new Set(myTeamData?.teammate_user_ids || []), [myTeamData]);
 
   // Tour system — different flows per role
   const tourSteps = useMemo(() => {
@@ -140,7 +162,7 @@ export function BackstageLayout() {
     return castTourSteps;
   }, [id, userRole]);
   const tourId = id && userRole ? `production-${userRole}` : '';
-  const { run: tourRun, handleEvent: tourEvent, startTour } = useTour(tourId, tourSteps, !!id);
+  const { run: tourRun, handleEvent: tourEvent } = useTour(tourId, tourSteps, !!id);
 
   // Navigation config
   const directorNav = [
@@ -152,6 +174,7 @@ export function BackstageLayout() {
     { icon: '◎', label: 'Settings', path: `${basePath}/settings`, tourId: 'nav-settings' },
   ];
   const castNav = [
+    { icon: '◈', label: 'Dashboard', path: basePath || '/', tourId: 'nav-dashboard' },
     { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin`, tourId: 'nav-bulletin' },
     { icon: '◷', label: 'Schedule', path: `${basePath}/schedule`, tourId: 'nav-schedule' },
     { icon: '◆', label: 'Chat', path: `${basePath}/chat`, tourId: 'nav-chat' },
@@ -170,7 +193,7 @@ export function BackstageLayout() {
   const leftPanel = (
     <div
       className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
-      style={{ ...flightCaseBase, borderRight: '1px solid rgba(255,255,255,0.05)' }}
+      style={{ ...flightCaseBase, borderRight: `1px solid var(--t-panel-border)` }}
     >
       {/* Grip tape texture overlay */}
       <div
@@ -207,13 +230,13 @@ export function BackstageLayout() {
         >
           <p
             className="text-[9px] uppercase tracking-[0.25em] mb-1"
-            style={{ color: 'hsl(43, 45%, 42%)' }}
+            style={{ color: 'var(--t-production-label)' }}
           >
             Production
           </p>
           <h3
             className="text-sm font-semibold truncate"
-            style={{ fontFamily: '"Playfair Display", serif', color: 'hsl(35, 20%, 85%)' }}
+            style={{ fontFamily: '"Playfair Display", serif', color: 'var(--t-production-name)' }}
           >
             {production.name}
           </h3>
@@ -231,16 +254,14 @@ export function BackstageLayout() {
               onClick={() => navigate(item.path)}
               className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left cursor-pointer group"
               style={{
-                background: active
-                  ? 'radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.14) 0%, rgba(255,180,80,0.04) 70%, transparent 100%)'
-                  : 'transparent',
-                color: active ? 'hsl(43, 74%, 58%)' : 'hsl(25, 8%, 48%)',
+                background: active ? 'var(--t-nav-active-bg)' : 'transparent',
+                color: active ? 'var(--t-nav-active-text)' : 'var(--t-nav-inactive-text)',
                 boxShadow: active ? '0 0 20px rgba(212,175,55,0.06), inset 0 0 12px rgba(212,175,55,0.04)' : 'none',
               }}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ ...spring, delay: 0.3 + i * 0.05 }}
-              whileHover={{ x: 2, background: 'rgba(255,180,80,0.06)' }}
+              whileHover={{ x: 2, background: 'var(--t-nav-hover)' }}
               whileTap={{ scale: 0.97 }}
             >
               {/* Spotlight glow behind active item */}
@@ -248,7 +269,7 @@ export function BackstageLayout() {
                 <motion.div
                   className="absolute inset-0 rounded-lg pointer-events-none"
                   style={{
-                    background: 'radial-gradient(ellipse at 10% 50%, rgba(212,175,55,0.08) 0%, transparent 70%)',
+                    background: 'var(--t-nav-glow)',
                   }}
                   layoutId="nav-glow"
                   transition={spring}
@@ -266,7 +287,7 @@ export function BackstageLayout() {
               {active && (
                 <motion.div
                   className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 rounded-full"
-                  style={{ background: 'hsl(43, 74%, 49%)' }}
+                  style={{ background: 'var(--t-nav-indicator)' }}
                   layoutId="nav-indicator"
                   transition={spring}
                 />
@@ -278,6 +299,18 @@ export function BackstageLayout() {
 
       {/* Bottom actions */}
       <div className="mt-auto pt-3 border-t relative z-10" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+        {/* Back to productions list */}
+        {id && (
+          <motion.button
+            onClick={() => navigate('/')}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer mb-1"
+            style={{ color: 'hsl(43, 55%, 52%)' }}
+            whileHover={{ background: 'rgba(255,180,80,0.06)' }}
+          >
+            <span className="text-xs opacity-60">&larr;</span>
+            <span className="font-medium">Productions</span>
+          </motion.button>
+        )}
         {/* Drawer toggle for tablet — show Cast & Crew drawer */}
         {!isDesktop && id && (
           <motion.button
@@ -290,17 +323,23 @@ export function BackstageLayout() {
             <span className="font-medium">Cast & Crew</span>
           </motion.button>
         )}
-        {!id && (
-          <motion.button
-            onClick={() => navigate('/production/new')}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
-            style={{ color: 'hsl(43, 60%, 52%)' }}
-            whileHover={{ background: 'rgba(255,180,80,0.06)' }}
-          >
-            <span>+</span>
-            <span className="font-medium">New Production</span>
-          </motion.button>
-        )}
+        {!id && (() => {
+          const isOnDashboard = location.pathname === '/';
+          const label = isOnDashboard ? 'New Production' : 'See Productions';
+          const icon = isOnDashboard ? '+' : '←';
+          const target = isOnDashboard ? '/production/new' : '/';
+          return (
+            <motion.button
+              onClick={() => navigate(target)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+              style={{ color: 'hsl(43, 60%, 52%)' }}
+              whileHover={{ background: 'rgba(255,180,80,0.06)' }}
+            >
+              <span>{icon}</span>
+              <span className="font-medium">{label}</span>
+            </motion.button>
+          );
+        })()}
         <motion.button
           onClick={() => navigate('/account')}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
@@ -322,6 +361,15 @@ export function BackstageLayout() {
           </motion.button>
         )}
         <motion.button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+          style={{ color: 'var(--t-nav-inactive-text)' }}
+          whileHover={{ background: 'var(--t-nav-hover)' }}
+        >
+          <span className="text-xs opacity-60">{isDark ? '☀' : '☽'}</span>
+          <span className="font-medium">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+        </motion.button>
+        <motion.button
           onClick={logout}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
           style={{ color: 'hsl(0, 40%, 52%)' }}
@@ -342,7 +390,7 @@ export function BackstageLayout() {
       className="h-full flex flex-col pt-14 pb-4 px-3 overflow-y-auto relative"
       style={{
         ...flightCaseBase,
-        borderLeft: '1px solid rgba(255,255,255,0.06)',
+        borderLeft: `1px solid var(--t-panel-border)`,
       }}
     >
       {/* Grip tape texture */}
@@ -397,30 +445,39 @@ export function BackstageLayout() {
         )}
       </motion.div>
 
-      {/* Tabs: Cast / Staff — always visible when in a production */}
-      {id && (
-        <div className="flex gap-0 mb-3 mx-2 relative z-10 rounded-md overflow-hidden flex-shrink-0"
-          style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-          {(['cast', 'staff'] as const).map(tab => {
-            const isActive = panelTab === tab;
-            const count = (members || []).filter(m => tab === 'staff' ? (m.role === 'director' || m.role === 'staff') : m.role === 'cast').length;
-            return (
-              <button
-                key={tab}
-                onClick={() => { setPanelTab(tab); setSelectedMemberId(null); }}
-                className="flex-1 py-1.5 text-[9px] uppercase tracking-[0.2em] cursor-pointer transition-colors"
-                style={{
-                  background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
-                  color: isActive ? 'hsl(43,60%,58%)' : 'hsl(25,8%,42%)',
-                  borderRight: tab === 'cast' ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                }}
-              >
-                {tab} ({count})
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Tabs — scrollable horizontally */}
+      {id && (() => {
+        const tabs: { key: typeof panelTab; label: string; count: number }[] = [];
+        tabs.push({ key: 'cast', label: 'Cast', count: (members || []).filter(m => m.role === 'cast').length });
+        if (isCast && myTeamData && myTeamData.teams.length > 0) {
+          tabs.push({ key: 'team', label: 'Team', count: teammateIds.size });
+        }
+        tabs.push({ key: 'staff', label: 'Staff', count: (members || []).filter(m => m.role === 'director' || m.role === 'staff').length });
+        return (
+          <div className="mb-3 mx-2 relative z-10 rounded-md overflow-hidden flex-shrink-0"
+            style={{ border: `1px solid var(--t-tab-border)` }}>
+            <div className="flex overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {tabs.map((tab, i) => {
+                const isActive = panelTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => { setPanelTab(tab.key); setSelectedMemberId(null); }}
+                    className="flex-1 min-w-0 py-1.5 text-[9px] uppercase tracking-[0.2em] cursor-pointer transition-colors whitespace-nowrap"
+                    style={{
+                      background: isActive ? 'var(--t-tab-active-bg)' : 'transparent',
+                      color: isActive ? 'var(--t-tab-active-text)' : 'var(--t-tab-inactive-text)',
+                      borderRight: i < tabs.length - 1 ? `1px solid var(--t-tab-border)` : 'none',
+                    }}
+                  >
+                    {tab.label} ({tab.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Member list or detail view */}
       {id && members && selectedMemberId ? (
@@ -506,53 +563,57 @@ export function BackstageLayout() {
         /* ── Member List (filtered by tab) ── */
         <div className="flex flex-col gap-0.5 relative z-10">
           {members
-            .filter(m => panelTab === 'staff' ? (m.role === 'director' || m.role === 'staff') : m.role === 'cast')
+            .filter(m => {
+              if (panelTab === 'staff') return m.role === 'director' || m.role === 'staff';
+              if (panelTab === 'team') return teammateIds.has(m.user_id);
+              return m.role === 'cast';
+            })
             .map((member, i) => (
-            <motion.div
-              key={member.id}
-              className="flex items-center gap-2.5 px-2 py-2 rounded-lg group cursor-pointer"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ ...spring, delay: 0.4 + i * 0.03 }}
-              whileHover={{ background: 'rgba(255,255,255,0.03)' }}
-              onClick={() => setSelectedMemberId(member.user_id)}
-            >
-              {/* Avatar */}
-              <div
-                className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
-                style={{
-                  background:
-                    member.role === 'director'
-                      ? 'linear-gradient(135deg, hsl(43,60%,35%), hsl(43,50%,25%))'
-                      : member.role === 'staff'
-                      ? 'linear-gradient(135deg, hsl(200,40%,30%), hsl(200,35%,22%))'
-                      : 'linear-gradient(135deg, hsl(25,20%,20%), hsl(25,15%,15%))',
-                  color:
-                    member.role === 'director' ? 'hsl(43,70%,70%)' : 'hsl(25,10%,60%)',
-                }}
+              <motion.div
+                key={member.id}
+                className="flex items-center gap-2.5 px-2 py-2 rounded-lg group cursor-pointer"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ ...spring, delay: 0.4 + i * 0.03 }}
+                whileHover={{ background: 'rgba(255,255,255,0.03)' }}
+                onClick={() => setSelectedMemberId(member.user_id)}
               >
-                {(member.name || member.user_id).charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs truncate" style={{ color: 'hsl(35,15%,75%)' }}>
-                  {member.name || 'Member'}
-                </p>
-                <p
-                  className="text-[10px] capitalize"
+                {/* Avatar */}
+                <div
+                  className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
                   style={{
-                    color:
+                    background:
                       member.role === 'director'
-                        ? 'hsl(43,60%,52%)'
+                        ? 'var(--t-member-avatar-director)'
                         : member.role === 'staff'
-                        ? 'hsl(200,40%,52%)'
-                        : 'hsl(25,8%,42%)',
+                          ? 'var(--t-member-avatar-staff)'
+                          : 'var(--t-member-avatar-cast)',
+                    color:
+                      member.role === 'director' ? 'var(--t-member-avatar-director-text)' : 'var(--t-member-avatar-cast-text)',
                   }}
                 >
-                  {member.role}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+                  {(member.name || member.user_id).charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs truncate" style={{ color: 'var(--t-member-name)' }}>
+                    {member.name || 'Member'}
+                  </p>
+                  <p
+                    className="text-[10px] capitalize"
+                    style={{
+                      color:
+                        member.role === 'director'
+                          ? 'var(--t-member-role-director)'
+                          : member.role === 'staff'
+                            ? 'var(--t-member-role-staff)'
+                            : 'var(--t-member-role-cast)',
+                    }}
+                  >
+                    {member.role}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
         </div>
       ) : !id ? (
         <div className="flex flex-col gap-2 px-2 relative z-10">
@@ -587,16 +648,16 @@ export function BackstageLayout() {
     <div
       className="flex items-center justify-between px-5 py-2.5 relative"
       style={{
-        background: 'rgba(10, 8, 8, 0.8)',
+        background: 'var(--t-topbar-bg)',
         backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(212,175,55,0.08)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+        borderBottom: `1px solid var(--t-topbar-border)`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
       }}
     >
       <div className="flex items-center gap-3">
         <h2
           className="text-xs font-medium tracking-wide"
-          style={{ color: 'hsl(43, 55%, 52%)', fontFamily: '"Playfair Display", serif' }}
+          style={{ color: 'var(--t-topbar-text)', fontFamily: '"Playfair Display", serif' }}
         >
           Digital Call Board
         </h2>
@@ -624,7 +685,7 @@ export function BackstageLayout() {
         )}
         <p
           className="hidden sm:block text-[10px] tracking-widest uppercase truncate max-w-[160px]"
-          style={{ color: 'hsl(25, 8%, 36%)' }}
+          style={{ color: 'var(--t-topbar-subtitle)' }}
         >
           {production?.name || 'Backstage'}
         </p>
@@ -638,8 +699,8 @@ export function BackstageLayout() {
     <div
       className="flex items-stretch"
       style={{
-        background: 'linear-gradient(180deg, hsl(220,6%,10%) 0%, hsl(220,5%,7%) 100%)',
-        borderTop: '1px solid rgba(212,175,55,0.08)',
+        background: 'var(--t-mobile-nav-bg)',
+        borderTop: `1px solid var(--t-topbar-border)`,
         boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
@@ -652,14 +713,14 @@ export function BackstageLayout() {
             onClick={() => navigate(item.path)}
             className="flex-1 flex flex-col items-center gap-1 py-2.5 cursor-pointer relative"
             style={{
-              color: active ? 'hsl(43,74%,55%)' : 'hsl(25,8%,40%)',
+              color: active ? 'var(--t-nav-active-text)' : 'var(--t-nav-inactive-text)',
             }}
           >
             {/* Spotlight glow above active tab */}
             {active && (
               <motion.div
                 className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[2px] rounded-full"
-                style={{ background: 'hsl(43,74%,49%)' }}
+                style={{ background: 'var(--t-nav-indicator)' }}
                 layoutId="mobile-nav-indicator"
                 transition={spring}
               />
@@ -676,14 +737,14 @@ export function BackstageLayout() {
 
   return (
     <ProductionContext.Provider value={{ production, members: members || [], userRole, refetch }}>
-      {id && tourSteps.length > 0 && (
+      {id && tourSteps.length > 0 && tourRun && (
         <Joyride
           steps={tourSteps}
           run={tourRun}
           onEvent={tourEvent}
           continuous
           scrollToFirstStep={false}
-          styles={theaterTourStyles}
+          styles={tourStyles as any}
           locale={theaterTourLocale}
           options={theaterTourOptions}
         />
@@ -700,7 +761,7 @@ export function BackstageLayout() {
       >
         {/* Center stage — chalkboard nailed to the stage */}
         <div
-          className="w-full h-full pt-16 px-2 pb-2 overflow-y-auto"
+          className="w-full h-full pt-[88px] px-2 pb-2 overflow-y-auto"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',

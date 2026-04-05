@@ -35,10 +35,11 @@ export function LoginPage() {
 
   // If already logged in, skip login page entirely
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      navigate('/', { replace: true });
+    if (!authLoading && isAuthenticated && !isLoading) {
+      const inviteToken = sessionStorage.getItem('pendingInviteToken');
+      navigate(inviteToken ? `/join?token=${inviteToken}` : '/', { replace: true });
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, isLoading, navigate]);
 
   const handleSuccess = () => {
     setCurtainsOpen(true);

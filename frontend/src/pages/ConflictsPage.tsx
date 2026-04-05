@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/components/ui/Toast';
 import { getSchedule } from '@/services/schedule';
-import { getConflicts, submitConflicts } from '@/services/conflicts';
+import { getConflicts, getConflictStatus, submitConflicts } from '@/services/conflicts';
 import { formatDate, formatTime } from '@/utils/format';
 import { MAX_LENGTHS, SCHEDULE_COLORS } from '@/utils/constants';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -12,6 +12,7 @@ import { conflictsTourSteps } from '@/tours/pageTours';
 import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText, StickyNote } from '@/components/theater/Chalkboard';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { ConflictStatus } from '@/types';
 
 interface SelectedConflict {
   rehearsal_date_id: string;
@@ -27,7 +28,10 @@ export function ConflictsPage() {
   const { toast } = useToast();
 
   const { data: dates, isLoading: datesLoading } = useApi(() => getSchedule(id!), [id]);
-  const { data: existing, isLoading: conflictsLoading, refetch } = useApi(() => getConflicts(id!), [id]);
+  const { data: existing, isLoading: conflictsLoading, refetch: refetchConflicts } = useApi(() => getConflicts(id!), [id]);
+  const { data: conflictStatus, refetch: refetchStatus } = useApi<ConflictStatus>(
+    () => getConflictStatus(id!), [id],
+  );
 
   const [selected, setSelected] = useState<Record<string, SelectedConflict>>({});
   const [weeklyConflicts, setWeeklyConflicts] = useState<Set<number>>(new Set());
@@ -35,22 +39,36 @@ export function ConflictsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const isSubmitted = existing && existing.length > 0;
+  const hasInitialSubmission = conflictStatus?.has_initial_submission ?? false;
+  const remainingWindows = conflictStatus?.remaining_windows ?? 0;
 
   const activeDates = useMemo(
     () => (dates || []).filter(d => !d.is_deleted && !d.is_cancelled),
     [dates],
   );
 
+  // Dates already submitted as conflicts (to exclude from new submissions)
+  const existingConflictDateIds = useMemo(() => {
+    if (!existing) return new Set<string>();
+    return new Set(existing.map((c: any) => c.rehearsal_date_id));
+  }, [existing]);
+
+  // Dates available for new conflict submission (exclude already-submitted)
+  const availableDates = useMemo(
+    () => activeDates.filter(d => !existingConflictDateIds.has(d.id)),
+    [activeDates, existingConflictDateIds],
+  );
+
   // Group dates by day-of-week for the weekly picker display
   const datesByDow = useMemo(() => {
     const map: Record<number, number> = {};
-    for (const d of activeDates) {
+    const source = hasInitialSubmission ? availableDates : activeDates;
+    for (const d of source) {
       const dow = new Date(d.date + 'T00:00:00').getDay();
       map[dow] = (map[dow] || 0) + 1;
     }
     return map;
-  }, [activeDates]);
+  }, [activeDates, availableDates, hasInitialSubmission]);
 
   // When a weekly day is toggled, auto-select/deselect all matching dates
   const toggleWeekDay = useCallback((dow: number) => {
@@ -63,10 +81,10 @@ export function ConflictsPage() {
         next.add(dow);
       }
 
-      // Sync individual date selections
+      const source = hasInitialSubmission ? availableDates : activeDates;
       setSelected(prevSelected => {
         const updated = { ...prevSelected };
-        for (const d of activeDates) {
+        for (const d of source) {
           const dateDow = new Date(d.date + 'T00:00:00').getDay();
           if (dateDow === dow) {
             if (isRemoving) {
@@ -81,7 +99,7 @@ export function ConflictsPage() {
 
       return next;
     });
-  }, [activeDates]);
+  }, [activeDates, availableDates, hasInitialSubmission]);
 
   const toggleDate = useCallback((dateId: string) => {
     setSelected(prev => {
@@ -112,7 +130,11 @@ export function ConflictsPage() {
       await submitConflicts(id, conflictDates);
       toast('Conflicts submitted');
       setConfirmOpen(false);
-      refetch();
+      setSelected({});
+      setWeeklyConflicts(new Set());
+      setShowSpecificDates(false);
+      refetchConflicts();
+      refetchStatus();
     } catch (err: any) {
       toast(err.message || 'Failed to submit', 'error');
     } finally {
@@ -124,20 +146,24 @@ export function ConflictsPage() {
     return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>;
   }
 
-  // Already submitted view
-  if (isSubmitted) {
+  // Show submitted view + additional submission form if windows remain
+  if (hasInitialSubmission) {
     return (
       <div>
+        <PageTour tourId="page-conflicts" steps={conflictsTourSteps} />
+
         <ChalkText size="lg">Conflicts Submitted</ChalkText>
-        <p className="mt-2 mb-6" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+        <p className="mt-2 mb-4" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
           Your conflicts are locked in. Your director can see which dates you can't make.
         </p>
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+
+        {/* Existing conflicts list */}
+        <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1 mb-6" style={{ scrollbarWidth: 'thin' }}>
           {existing!.map((c: any) => {
             const d = activeDates.find(dt => dt.id === c.rehearsal_date_id);
             if (!d) return null;
             return (
-              <div key={c.id} className="px-4 py-3 rounded-sm flex flex-wrap items-center gap-2"
+              <div key={c.rehearsal_date_id} className="px-4 py-3 rounded-sm flex flex-wrap items-center gap-2"
                 style={{ background: 'rgba(255,80,80,0.06)', border: '1px solid rgba(255,80,80,0.1)' }}>
                 <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{formatDate(d.date)}</span>
                 <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
@@ -149,10 +175,174 @@ export function ConflictsPage() {
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px' }}>No conflicts reported. You're available for all dates.</p>
           )}
         </div>
+
+        {/* Additional submission window */}
+        {remainingWindows > 0 ? (
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <ChalkText size="md">Submit Additional Conflicts</ChalkText>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full"
+                style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
+                {remainingWindows} window{remainingWindows !== 1 ? 's' : ''} left
+              </span>
+            </div>
+            <p className="mb-4" style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>
+              Your director has given you additional conflict submission windows. Select new dates below.
+            </p>
+
+            {/* Weekly picker for additional submission */}
+            <div className="mb-4">
+              <StickyNote color="yellow" rotate={-0.3}>
+                <p className="text-[10px] uppercase tracking-widest font-bold mb-3 opacity-60">
+                  New Conflicts — pick days you can't make
+                </p>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {WEEK_DAYS.map((day, dow) => {
+                    const isConflict = weeklyConflicts.has(dow);
+                    const count = datesByDow[dow] || 0;
+                    if (count === 0) return (
+                      <div key={dow} className="flex flex-col items-center gap-1 py-3 rounded-sm opacity-30">
+                        <span className="text-xs">{day}</span>
+                        <span className="text-[9px]">—</span>
+                      </div>
+                    );
+                    return (
+                      <motion.button
+                        key={dow}
+                        onClick={() => toggleWeekDay(dow)}
+                        className="flex flex-col items-center gap-1 py-3 rounded-sm cursor-pointer"
+                        style={{
+                          background: isConflict ? 'rgba(220,60,60,0.15)' : 'rgba(0,0,0,0.06)',
+                          border: `1.5px solid ${isConflict ? 'rgba(220,60,60,0.4)' : 'rgba(0,0,0,0.08)'}`,
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <span className="text-xs font-semibold" style={{ color: isConflict ? 'rgba(220,80,80,0.9)' : 'rgba(0,0,0,0.5)' }}>
+                          {day}
+                        </span>
+                        <span className="text-[9px]" style={{ color: isConflict ? 'rgba(220,80,80,0.6)' : 'rgba(0,0,0,0.3)' }}>
+                          {count} dates
+                        </span>
+                        {isConflict && (
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-[2px]"
+                            style={{ background: 'rgba(220,60,60,0.2)', color: 'rgba(220,80,80,0.9)' }}>
+                            OUT
+                          </span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </StickyNote>
+            </div>
+
+            {/* Specific dates toggle */}
+            <div className="mb-4 flex items-center gap-3">
+              <button
+                onClick={() => setShowSpecificDates(!showSpecificDates)}
+                className="text-[10px] uppercase tracking-widest px-4 py-2 rounded cursor-pointer"
+                style={{
+                  background: showSpecificDates ? 'rgba(255,220,100,0.12)' : 'rgba(255,255,255,0.04)',
+                  color: showSpecificDates ? 'rgba(255,220,100,0.8)' : 'rgba(255,255,255,0.4)',
+                  border: `1px solid ${showSpecificDates ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                }}
+              >
+                {showSpecificDates ? 'Hide Specific Dates' : 'Pick Specific Dates'}
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {showSpecificDates && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={spring}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-1.5 mb-4 max-h-[50vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                    {availableDates.map(d => {
+                      const isSelected = !!selected[d.id];
+                      const color = SCHEDULE_COLORS[d.type];
+                      return (
+                        <div key={d.id}>
+                          <button
+                            type="button"
+                            onClick={() => toggleDate(d.id)}
+                            className="w-full text-left px-4 py-3 rounded-sm flex flex-wrap items-center gap-2 transition-colors cursor-pointer"
+                            style={{
+                              background: isSelected ? 'rgba(220,60,60,0.08)' : 'rgba(255,255,255,0.02)',
+                              border: `1px solid ${isSelected ? 'rgba(220,60,60,0.2)' : 'rgba(255,255,255,0.04)'}`,
+                            }}
+                          >
+                            <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{formatDate(d.date)}</span>
+                            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[2px]"
+                              style={{ background: isSelected ? 'rgba(220,60,60,0.15)' : 'rgba(255,255,255,0.04)', color: isSelected ? 'rgba(220,80,80,0.8)' : 'rgba(255,255,255,0.3)' }}>
+                              {isSelected ? 'CONFLICT' : color.label}
+                            </span>
+                          </button>
+                          {isSelected && (
+                            <div className="ml-4 mt-1 mb-1">
+                              <input
+                                type="text"
+                                placeholder="Reason (optional)"
+                                value={selected[d.id].reason}
+                                onChange={e => setReason(d.id, e.target.value)}
+                                maxLength={MAX_LENGTHS.conflict_reason}
+                                className="w-full px-3 py-1.5 rounded-sm text-xs outline-none"
+                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--t-tab-border)', color: 'rgba(255,255,255,0.6)' }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Submit button */}
+            <motion.button
+              onClick={() => setConfirmOpen(true)}
+              disabled={Object.keys(selected).length === 0}
+              className="px-6 py-3 rounded-sm text-sm font-semibold cursor-pointer"
+              style={{
+                background: Object.keys(selected).length === 0
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
+                color: Object.keys(selected).length === 0 ? 'rgba(255,255,255,0.25)' : 'hsl(220, 6%, 9%)',
+                boxShadow: Object.keys(selected).length > 0 ? '0 2px 8px rgba(212,175,55,0.2)' : 'none',
+              }}
+              whileHover={Object.keys(selected).length > 0 ? { scale: 1.02 } : {}}
+              whileTap={Object.keys(selected).length > 0 ? { scale: 0.98 } : {}}
+            >
+              Submit New Conflicts ({Object.keys(selected).length})
+            </motion.button>
+          </div>
+        ) : (
+          <p className="mt-4 text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            No additional conflict windows available.
+          </p>
+        )}
+
+        <Dialog
+          open={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          title="Submit Additional Conflicts"
+          confirmLabel="Submit"
+          onConfirm={handleSubmit}
+          isLoading={submitting}
+        >
+          <p>Submit {Object.keys(selected).length} new conflict date{Object.keys(selected).length !== 1 ? 's' : ''}? This will use 1 of your {remainingWindows} remaining window{remainingWindows !== 1 ? 's' : ''}.</p>
+        </Dialog>
       </div>
     );
   }
 
+  // Initial submission flow (unchanged)
   const selectedCount = Object.keys(selected).length;
 
   return (
@@ -279,7 +469,7 @@ export function ConflictsPage() {
                           className="w-full px-3 py-1.5 rounded-sm text-xs outline-none"
                           style={{
                             background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.06)',
+                            border: '1px solid var(--t-tab-border)',
                             color: 'rgba(255,255,255,0.6)',
                           }}
                         />

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { useApi } from '@/hooks/useApi';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProduction } from '@/components/theater/BackstageLayout';
@@ -7,8 +7,6 @@ import { useToast } from '@/components/ui/Toast';
 import { getPosts, createPost, updatePost, deletePost, pinPost } from '@/services/bulletin';
 import { formatRelativeTime } from '@/utils/format';
 import { MAX_LENGTHS } from '@/utils/constants';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
 import { Dialog } from '@/components/ui/Dialog';
 import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import type { BulletinPost } from '@/types';
@@ -30,6 +28,7 @@ const fadeIn = { hidden: { opacity: 0, scale: 0.95, y: 8 }, show: { opacity: 1, 
 export function BulletinPage() {
   usePageTitle('Bulletin Board');
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { userRole, members } = useProduction();
   const { toast } = useToast();
   const canEdit = isStaff(userRole);
@@ -42,6 +41,7 @@ export function BulletinPage() {
   const [body, setBody] = useState('');
   const [notifyMembers, setNotifyMembers] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [highlightPostId, setHighlightPostId] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     if (!posts) return [];
@@ -50,6 +50,20 @@ export function BulletinPage() {
       return (b.created_at || '').localeCompare(a.created_at || '');
     });
   }, [posts]);
+
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const target = search.get('post');
+    if (target) setHighlightPostId(target);
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!highlightPostId || sorted.length === 0) return;
+    const el = document.getElementById(`post-${highlightPostId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const timer = window.setTimeout(() => setHighlightPostId(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [highlightPostId, sorted.length]);
 
   function authorName(authorId: string) {
     return members.find(m => m.user_id === authorId)?.name || 'Director';
@@ -193,7 +207,16 @@ export function BulletinPage() {
           animate="show"
         >
           {sorted.map((post, i) => (
-            <motion.div key={post.id} variants={fadeIn}>
+            <motion.div
+              key={post.id}
+              id={`post-${post.id}`}
+              variants={fadeIn}
+              style={post.id === highlightPostId ? {
+                boxShadow: '0 0 0 2px rgba(212,175,55,0.55), 0 0 24px rgba(212,175,55,0.25)',
+                borderRadius: '6px',
+                padding: '2px',
+              } : undefined}
+            >
               <StickyNote
                 color={post.is_pinned ? 'yellow' : noteColorCycle[i % noteColorCycle.length]}
                 rotate={rotations[i % rotations.length]}

@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -13,6 +13,7 @@ from app.models import (
     ConflictSubmission,
     CastConflict,
     BulletinPost,
+    BlockedMember,
     User,
 )
 from app.routers.auth import get_current_user
@@ -86,6 +87,8 @@ async def list_members(
             )
 
         return member_list
+
+
 
 
 @router.get("/{production_id}/members/{user_id}")
@@ -356,3 +359,170 @@ async def reset_conflicts(
         await session.commit()
 
         return {"message": "Conflicts reset"}
+
+
+from pydantic import BaseModel as _BM
+
+class _ConflictWindowsBody(_BM):
+    windows: int
+
+
+@router.put("/{production_id}/members/{user_id}/conflict-windows")
+async def update_member_conflict_windows(
+    production_id: str,
+    user_id: str,
+    body: _ConflictWindowsBody,
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Set per-member extra conflict window override."""
+    async with async_session_maker() as session:
+        # Director only
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        caller = result.scalar_one_or_none()
+        if not caller or caller.role != "director":
+            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Director only"})
+
+        # Find target member
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == user_id,
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        member = result.scalar_one_or_none()
+        if not member:
+            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Member not found"})
+
+        if body.windows < 0 or body.windows > 50:
+            raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Must be 0-50"})
+
+        member.extra_conflict_windows = body.windows
+        await session.commit()
+
+        return {"user_id": user_id, "extra_conflict_windows": body.windows}
+
+
+class _BlockBody(_BM):
+    reason: Optional[str] = None
+
+
+@router.post("/{production_id}/members/{user_id}/block")
+async def block_member(
+    production_id: str,
+    user_id: str,
+    body: _BlockBody,
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Block a user from the production. Director only. Cannot block the director."""
+    async with async_session_maker() as session:
+        # Must be director
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        caller = result.scalar_one_or_none()
+        if not caller or caller.role != "director":
+            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Only the director can block members"})
+
+        # Can't block yourself
+        if user_id == current_user["id"]:
+            raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Cannot block yourself"})
+
+        # Can't block another director
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == user_id,
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        target = result.scalar_one_or_none()
+        if target and target.role == "director":
+            raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Cannot block a director"})
+
+        # Check not already blocked
+        stmt = select(BlockedMember).where(
+            BlockedMember.production_id == production_id,
+            BlockedMember.user_id == user_id,
+        )
+        result = await session.execute(stmt)
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail={"error": "CONFLICT", "message": "User already blocked"})
+
+        # Block the user
+        block = BlockedMember(
+            id=str(uuid.uuid4()),
+            production_id=production_id,
+            user_id=user_id,
+            blocked_by=current_user["id"],
+            reason=body.reason,
+        )
+        session.add(block)
+
+        # Also remove them from the production if they're a member
+        if target:
+            await session.delete(target)
+
+        await session.commit()
+        return {"message": "Member blocked", "user_id": user_id}
+
+
+@router.post("/{production_id}/members/{user_id}/unblock")
+async def unblock_member(
+    production_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Unblock a user. Director only."""
+    async with async_session_maker() as session:
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        caller = result.scalar_one_or_none()
+        if not caller or caller.role != "director":
+            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Director only"})
+
+        stmt = select(BlockedMember).where(
+            BlockedMember.production_id == production_id,
+            BlockedMember.user_id == user_id,
+        )
+        result = await session.execute(stmt)
+        block = result.scalar_one_or_none()
+        if not block:
+            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "User not blocked"})
+
+        await session.delete(block)
+        await session.commit()
+        return {"message": "Member unblocked", "user_id": user_id}
+
+
+@router.get("/{production_id}/members/blocked")
+async def get_blocked_members(
+    production_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> list[dict]:
+    """List blocked members. Director only."""
+    async with async_session_maker() as session:
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        caller = result.scalar_one_or_none()
+        if not caller or caller.role != "director":
+            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Director only"})
+
+        stmt = select(BlockedMember, User).join(User, BlockedMember.user_id == User.id).where(
+            BlockedMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        blocked = result.all()
+
+        return [
+            {"user_id": b.user_id, "name": u.name, "email": u.email, "reason": b.reason, "blocked_at": b.blocked_at.isoformat()}
+            for b, u in blocked
+        ]

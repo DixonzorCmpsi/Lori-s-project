@@ -289,17 +289,6 @@ async def pin_bulletin_post(
                 detail={"error": "NOT_FOUND", "message": "Post not found"},
             )
 
-        # Unpin previous pinned post
-        stmt = select(BulletinPost).where(
-            BulletinPost.production_id == production_id,
-            BulletinPost.is_pinned == True,
-        )
-        result = await session.execute(stmt)
-        prev_pinned = result.scalar_one_or_none()
-
-        if prev_pinned:
-            prev_pinned.is_pinned = False
-
         # Toggle pin
         post.is_pinned = not post.is_pinned
         await session.commit()

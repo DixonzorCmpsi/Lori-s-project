@@ -49,8 +49,9 @@ export function Pelmet() {
         />
       </div>
 
-      {/* Fringe tassels */}
-      <div className="flex">
+      {/* Fringe tassels — solid fill behind the gaps so content can't peek through */}
+      <div className="flex relative">
+        <div className="absolute inset-0" style={{ background: 'var(--t-topbar-bg)' }} />
         {Array.from({ length: 50 }, (_, i) => (
           <motion.div
             key={i}

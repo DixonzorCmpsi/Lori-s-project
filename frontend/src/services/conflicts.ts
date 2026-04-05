@@ -1,4 +1,5 @@
 import { apiClient } from './api';
+import type { ConflictStatus } from '@/types';
 
 export interface ConflictDate {
   rehearsal_date_id: string;
@@ -11,4 +12,8 @@ export async function submitConflicts(productionId: string, dates: ConflictDate[
 
 export async function getConflicts(productionId: string) {
   return apiClient<any[]>(`/productions/${productionId}/conflicts`);
+}
+
+export async function getConflictStatus(productionId: string) {
+  return apiClient<ConflictStatus>(`/productions/${productionId}/conflicts/status`);
 }

@@ -143,6 +143,22 @@ async def join_production(
                 "message": "Already a member",
             }
 
+        # Check if user is blocked from this production
+        from app.models import BlockedMember
+        stmt = select(BlockedMember).where(
+            BlockedMember.production_id == invite.production_id,
+            BlockedMember.user_id == current_user["id"],
+        )
+        result = await session.execute(stmt)
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "FORBIDDEN",
+                    "message": "You have been blocked from this production",
+                },
+            )
+
         member = ProductionMember(
             id=str(uuid.uuid4()),
             production_id=invite.production_id,

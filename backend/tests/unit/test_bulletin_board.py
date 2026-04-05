@@ -151,8 +151,8 @@ class TestPinning:
         assert response.status_code == 200
         assert response.json()["is_pinned"] is True
 
-    async def test_pinning_unpins_previous(self, client, auth_headers):
-        """Only one post can be pinned. Pinning a new post unpins the old one."""
+    async def test_multiple_pins_allowed(self, client, auth_headers):
+        """Multiple posts can be pinned."""
         headers = auth_headers("director-id")
         # Pin first post
         await client.post("/api/productions/prod-id/bulletin/post-1/pin", headers=headers)
@@ -163,7 +163,7 @@ class TestPinning:
         response = await client.get("/api/productions/prod-id/bulletin", headers=headers)
         posts = response.json()
         pinned = [p for p in posts if p.get("is_pinned")]
-        assert len(pinned) == 1
+        assert len(pinned) >= 2
 
     async def test_staff_can_pin(self, client, auth_headers):
         """Staff can pin posts."""

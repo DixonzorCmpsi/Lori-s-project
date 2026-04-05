@@ -59,9 +59,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Create all tables. Use Alembic for migrations in production."""
+    """Create all tables and run lightweight migrations."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Lightweight migrations — safe to re-run (idempotent)
+        from sqlalchemy import text
+
+        # Drop old unique constraint on conflict_submissions (allows multiple submissions)
+        await conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE conflict_submissions DROP CONSTRAINT IF EXISTS uq_conflict_submission;
+            EXCEPTION WHEN undefined_table THEN NULL;
+            END $$;
+        """))
+
+        # Add new columns if missing (create_all won't add to existing tables)
+        for col_sql in [
+            "ALTER TABLE productions ADD COLUMN IF NOT EXISTS extra_conflict_windows INTEGER DEFAULT 0",
+            "ALTER TABLE production_members ADD COLUMN IF NOT EXISTS extra_conflict_windows INTEGER",
+            "ALTER TABLE production_members ADD COLUMN IF NOT EXISTS conflicts_used INTEGER DEFAULT 0",
+            "ALTER TABLE conflict_submissions ADD COLUMN IF NOT EXISTS window_index INTEGER DEFAULT 0",
+        ]:
+            await conn.execute(text(col_sql))
 
 
 async def close_db() -> None:

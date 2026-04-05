@@ -107,6 +107,7 @@ class Production(Base):
     first_rehearsal: Mapped[dt.date] = mapped_column(Date, nullable=False)
     opening_night: Mapped[dt.date] = mapped_column(Date, nullable=False)
     closing_night: Mapped[dt.date] = mapped_column(Date, nullable=False)
+    extra_conflict_windows: Mapped[int] = mapped_column(Integer, default=0)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
     archived_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
@@ -139,6 +140,9 @@ class Production(Base):
     scenes: Mapped[List["Scene"]] = relationship(
         "Scene", back_populates="production", cascade="all, delete-orphan"
     )
+    teams: Mapped[List["Team"]] = relationship(
+        "Team", back_populates="production", cascade="all, delete-orphan"
+    )
 
 
 class ProductionMember(Base):
@@ -159,6 +163,8 @@ class ProductionMember(Base):
         UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="cast")
+    extra_conflict_windows: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    conflicts_used: Mapped[int] = mapped_column(Integer, default=0)
     joined_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
     production: Mapped["Production"] = relationship(
@@ -258,9 +264,6 @@ class CastProfile(Base):
 
 class ConflictSubmission(Base):
     __tablename__ = "conflict_submissions"
-    __table_args__ = (
-        UniqueConstraint("production_id", "user_id", name="uq_conflict_submission"),
-    )
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), primary_key=True, default=uuid_default
@@ -273,6 +276,7 @@ class ConflictSubmission(Base):
     user_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    window_index: Mapped[int] = mapped_column(Integer, default=0)
     submitted_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
     production: Mapped["Production"] = relationship(
@@ -573,3 +577,72 @@ class ChatRateLimit(Base):
     )
     window_start: Mapped[dt.datetime] = mapped_column(DateTime, nullable=False)
     message_count: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class BlockedMember(Base):
+    """Blocked users cannot rejoin a production via invite link."""
+    __tablename__ = "blocked_members"
+    __table_args__ = (
+        UniqueConstraint("production_id", "user_id", name="uq_blocked_member"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    production_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("productions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    blocked_by: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    blocked_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Team(Base):
+    """A named group within a production. Cast in the same team can message each other."""
+    __tablename__ = "teams"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    production_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("productions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    production: Mapped["Production"] = relationship("Production", back_populates="teams")
+    members: Mapped[List["TeamMember"]] = relationship(
+        "TeamMember", back_populates="team", cascade="all, delete-orphan"
+    )
+
+
+class TeamMember(Base):
+    """Links a user to a team within a production."""
+    __tablename__ = "team_members"
+    __table_args__ = (
+        UniqueConstraint("team_id", "user_id", name="uq_team_member"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    team_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    team: Mapped["Team"] = relationship("Team", back_populates="members")

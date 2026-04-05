@@ -6,6 +6,10 @@ import hashlib
 import asyncio
 from datetime import date, datetime, time, timedelta
 from typing import Any, AsyncGenerator, Generator, Callable
+import os
+
+# Ensure tests don't inherit non-boolean DEBUG values from the environment
+os.environ["DEBUG"] = "false"
 
 import pytest
 import pytest_asyncio
@@ -66,7 +70,9 @@ NON_MEMBERS = {"outsider-id", "non-member-id", "other-user-id", "prod-a-member",
 # ---------------------------------------------------------------------------
 
 from dotenv import load_dotenv as _load_dotenv
-_load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+_env_test = os.path.join(os.path.dirname(__file__), '..', '..', '.env.test')
+_env_default = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+_load_dotenv(_env_test if os.path.exists(_env_test) else _env_default, override=True)
 
 _raw_url = os.environ.get("DATABASE_URL", "")
 if _raw_url.startswith("postgresql://"):
@@ -106,7 +112,13 @@ def reseed_after_tests():
 
 async def _create_app_instance():
     """Core setup: create test app with clean DB."""
-    engine = create_async_engine(_db_url, pool_pre_ping=True, pool_size=5, max_overflow=10)
+    engine = create_async_engine(
+        _db_url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        connect_args={"statement_cache_size": 0},
+    )
     session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     # Patch all modules that use the DB engine/session

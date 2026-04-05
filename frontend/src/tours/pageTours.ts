@@ -1,53 +1,44 @@
 import type { Step } from 'react-joyride';
 
 /** Per-step defaults — all visual styling comes from tourStyles.ts */
-const s = {
-  skipBeacon: true,
-};
+const s = {};
 
 // ── Dashboard Tour ─────────────────────────────────────────────────
 
 export const dashboardTourSteps: Step[] = [
   {
-    target: '[data-tour="dashboard-schedule-card"]',
-    title: 'Upcoming Rehearsals',
-    content: 'Your next rehearsals at a glance. Click to jump to the full calendar. Colors tell you the type: gold for rehearsal, blue for tech, purple for dress, red for performance.',
+    target: '[data-tour="dashboard-cards"]',
+    title: 'Your Call Board',
+    content: 'Everything you need at a glance. Each card is a sticky note pinned to the board. Click any card to jump into that section.',
     placement: 'bottom',
     skipBeacon: true,
     ...s,
   },
   {
+    target: '[data-tour="dashboard-week-card"]',
+    title: 'This Week',
+    content: 'Your week at a glance — each day shows the rehearsal type and call time. Today is highlighted.',
+    placement: 'bottom',
+    ...s,
+  },
+  {
     target: '[data-tour="dashboard-status-card"]',
-    title: 'Production Status',
-    content: 'How many cast have joined, how many submitted conflicts, your next call, and opening night. Updates in real time as people join.',
+    title: 'Status & Conflicts',
+    content: 'Key numbers: cast joined, conflicts submitted, next call, and opening night. For cast, this shows your info and lets you submit conflicts.',
     placement: 'bottom',
     ...s,
   },
   {
     target: '[data-tour="dashboard-announcements-card"]',
-    title: 'Latest Announcements',
-    content: 'Recent bulletin posts show up here. Click through to see the full board and post new ones.',
+    title: 'Announcements',
+    content: 'Recent bulletin posts from your director and stage manager. Click through to see the full board.',
     placement: 'bottom',
     ...s,
   },
   {
-    target: '[data-tour="dashboard-invite-card"]',
-    title: 'Invite Link',
-    content: 'Share this link with your cast to get them on the Call Board. They\'ll create an account, join the production, and submit their conflicts. Click "Copy Link" to grab it.',
-    placement: 'bottom',
-    ...s,
-  },
-  {
-    target: '[data-tour="dashboard-week-card"]',
-    title: 'This Week',
-    content: 'A quick look at what\'s happening this week. Colored squares mean there\'s a call that day.',
-    placement: 'bottom',
-    ...s,
-  },
-  {
-    target: '[data-tour="dashboard-quickactions-card"]',
-    title: 'Quick Actions',
-    content: 'Jump to any part of the Call Board from here. Schedule, bulletin, roster, or chat.',
+    target: '[data-tour="dashboard-schedule-card"]',
+    title: 'Upcoming Rehearsals',
+    content: 'Your next rehearsals with type and time. Click to jump to the full calendar.',
     placement: 'bottom',
     ...s,
   },
@@ -78,6 +69,13 @@ export const scheduleTourSteps: Step[] = [
     placement: 'top',
     ...s,
   },
+  {
+    target: '[data-tour="schedule-pins"]',
+    title: 'Pinned Announcements',
+    content: 'Pinned bulletin posts show a pulsing dot on the day they were posted. Click the dot to jump straight to the pinned post.',
+    placement: 'top',
+    ...s,
+  },
 ];
 
 // ── Schedule Tour (Cast) ────────────────────────────────────────────
@@ -98,6 +96,13 @@ export const scheduleCastTourSteps: Step[] = [
     placement: 'top',
     ...s,
   },
+  {
+    target: '[data-tour="schedule-pins"]',
+    title: 'Pinned Announcements',
+    content: 'A pulsing dot means a pinned bulletin post was added that day. Tap it to open the announcement.',
+    placement: 'top',
+    ...s,
+  },
 ];
 
 // ── Bulletin Tour ───────────────────────────────────────────────────
@@ -114,7 +119,7 @@ export const bulletinTourSteps: Step[] = [
   {
     target: '[data-tour="bulletin-posts"]',
     title: 'The Board',
-    content: 'Pinned posts stay at the top. You can pin, edit, or delete any post from the controls at the bottom of each note.',
+    content: 'Pinned posts stay at the top. You can pin multiple notes, edit, or delete any post from the controls at the bottom of each note.',
     placement: 'top',
     ...s,
   },
@@ -126,7 +131,7 @@ export const bulletinCastTourSteps: Step[] = [
   {
     target: '[data-tour="bulletin-posts"]',
     title: 'Announcements',
-    content: 'Your director and stage manager post here. Pinned notes are the most important. Check back often for schedule changes and updates.',
+    content: 'Your director and stage manager post here. Pinned notes are the most important and pulse on the schedule.',
     placement: 'top',
     skipBeacon: true,
     ...s,
@@ -147,7 +152,7 @@ export const chatTourSteps: Step[] = [
   {
     target: '[data-tour="chat-conversations"]',
     title: 'Your Conversations',
-    content: 'All your threads, sorted by most recent. Unread messages show a red badge. Click to open.',
+    content: 'All your threads, sorted by most recent. Team messages group together at the top, direct messages sit below. Unread messages show a red badge.',
     placement: 'top',
     ...s,
   },
@@ -194,7 +199,68 @@ export const conflictsTourSteps: Step[] = [
   {
     target: '[data-tour="conflicts-submit"]',
     title: 'Submit Once',
-    content: 'When you\'re done, hit Submit. This is a one-time submission, you can\'t change it after, so double-check everything first.',
+    content: 'When you\'re done, hit Submit. Your director may give you extra submission windows if your schedule changes later.',
+    placement: 'top',
+    ...s,
+  },
+];
+
+// ── Settings Tour (Director) ───────────────────────────────────────
+
+export const settingsTourSteps: Step[] = [
+  {
+    target: '[data-tour="settings-conflict-windows"]',
+    title: 'Conflict Windows',
+    content: 'Set how many extra times cast can submit conflicts after their initial submission. 0 means one-and-done. Useful when the schedule changes mid-production.',
+    placement: 'bottom',
+    skipBeacon: true,
+    ...s,
+  },
+  {
+    target: '[data-tour="settings-danger"]',
+    title: 'Danger Zone',
+    content: 'Archive or delete the production. Archiving hides it from the dashboard but keeps the data. Deletion is permanent.',
+    placement: 'top',
+    ...s,
+  },
+];
+
+// ── Teams Tour (Director/Staff) ────────────────────────────────────
+
+export const teamsTourSteps: Step[] = [
+  {
+    target: '[data-tour="teams-create"]',
+    title: 'Create a Team',
+    content: 'Type a name and hit Create. You can make as many teams as you need — dancers, leads, ensemble, whatever fits your production.',
+    placement: 'bottom',
+    skipBeacon: true,
+    ...s,
+  },
+  {
+    target: '[data-tour="teams-list"]',
+    title: 'Your Teams',
+    content: 'All your teams show here with their member counts. Click the X to delete a team — members will just become unassigned.',
+    placement: 'bottom',
+    ...s,
+  },
+  {
+    target: '[data-tour="teams-assign"]',
+    title: 'Assign Cast to Teams',
+    content: 'Click any cast member to cycle them through your teams. No team → first team → second team → no team, and so on. Changes are local until you hit Save.',
+    placement: 'top',
+    ...s,
+  },
+  {
+    target: '[data-tour="teams-send-panel"]',
+    title: 'Send to a Team',
+    content: 'Inside a team, you can send a direct message to every member or post a bulletin announcement.',
+    placement: 'top',
+    ...s,
+  },
+  {
+    target: '[data-tour="teams-send-toggle"]',
+    title: 'Message vs Announcement',
+    content: 'Choose Message to DM each member, or Announcement to post a bulletin visible to all.',
     placement: 'top',
     ...s,
   },

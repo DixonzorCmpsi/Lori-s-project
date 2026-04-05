@@ -9,6 +9,7 @@ import { validateName, validatePassword } from '@/utils/validation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
+import { ChalkText } from '@/components/theater/Chalkboard';
 
 export function AccountPage() {
   usePageTitle('Account');
@@ -86,11 +87,15 @@ export function AccountPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Account Settings</h1>
+    <div className="max-w-2xl mx-auto">
+      <ChalkText size="lg">Account Settings</ChalkText>
+      <div className="h-4" />
 
-      <section className="bg-surface-raised border border-border rounded-lg p-5 mb-6 space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Profile</h2>
+      <section
+        className="rounded-sm p-5 mb-6 space-y-4"
+        style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}
+      >
+        <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Profile</p>
         <Input
           label="Name"
           value={name}
@@ -108,8 +113,11 @@ export function AccountPage() {
         </Button>
       </section>
 
-      <section className="bg-surface-raised border border-border rounded-lg p-5 mb-6 space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Change Password</h2>
+      <section
+        className="rounded-sm p-5 mb-6 space-y-4"
+        style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}
+      >
+        <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Change Password</p>
         <Input
           label="Current Password"
           type="password"
@@ -134,12 +142,15 @@ export function AccountPage() {
         </Button>
       </section>
 
-      <section className="border border-destructive/30 rounded-lg p-5">
-        <h2 className="text-lg font-semibold text-destructive mb-3">Danger Zone</h2>
+      <section
+        className="rounded-sm p-5"
+        style={{ background: 'rgba(255,80,80,0.04)', border: '1px solid rgba(255,80,80,0.2)' }}
+      >
+        <p className="text-[10px] uppercase tracking-widest font-bold mb-3" style={{ color: 'rgba(255,120,120,0.8)' }}>Danger Zone</p>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-foreground font-medium">Delete Account</p>
-            <p className="text-xs text-muted">Permanently delete your account and all data.</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--t-subtle-text-bright)' }}>Delete Account</p>
+            <p className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>Permanently delete your account and all data.</p>
           </div>
           <Button variant="destructive" onClick={() => setDeleteOpen(true)}>Delete Account</Button>
         </div>

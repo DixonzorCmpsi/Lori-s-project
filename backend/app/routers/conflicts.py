@@ -6,15 +6,15 @@ from typing import Any, Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.database import async_session_maker
 from app.models import (
+    Production,
     ProductionMember,
     ConflictSubmission,
     CastConflict,
     RehearsalDate,
-    BulletinPost,
 )
 from app.routers.auth import get_current_user
 from app.services.business_logic import FIELD_MAX_LENGTHS
@@ -52,13 +52,19 @@ async def check_production_member(production_id: str, user_id: str) -> Productio
         return member
 
 
+def _get_total_windows(production: Production, member: ProductionMember) -> int:
+    """Total conflict submission windows for a member (1 initial + extras)."""
+    extra = member.extra_conflict_windows if member.extra_conflict_windows is not None else production.extra_conflict_windows
+    return 1 + extra
+
+
 @router.post("/{production_id}/conflicts", status_code=201)
 async def submit_conflicts(
     production_id: str,
     body: SubmitConflictsRequest,
     current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Submit conflict dates."""
+    """Submit conflict dates. Supports multiple submission windows."""
     member = await check_production_member(production_id, current_user["id"])
 
     if member.role != "cast":
@@ -71,25 +77,45 @@ async def submit_conflicts(
         )
 
     async with async_session_maker() as session:
-        # Check if already submitted
-        stmt = select(ConflictSubmission).where(
+        # Get production for window config
+        stmt = select(Production).where(Production.id == production_id)
+        result = await session.execute(stmt)
+        production = result.scalar_one_or_none()
+        if not production:
+            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Production not found"})
+
+        # Re-fetch member inside this session for updates
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        db_member = result.scalar_one()
+
+        # Count existing submissions
+        stmt = select(func.count()).select_from(ConflictSubmission).where(
             ConflictSubmission.production_id == production_id,
             ConflictSubmission.user_id == current_user["id"],
         )
         result = await session.execute(stmt)
-        existing = result.scalar_one_or_none()
+        submission_count = result.scalar() or 0
 
-        if existing:
+        total_windows = _get_total_windows(production, db_member)
+        if submission_count >= total_windows:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail={"error": "CONFLICT", "message": "Conflicts already submitted"},
+                detail={
+                    "error": "CONFLICT",
+                    "message": "No conflict submission windows remaining",
+                },
             )
 
-        # Create submission
+        # Create submission with window index
         submission = ConflictSubmission(
             id=str(uuid.uuid4()),
             production_id=production_id,
             user_id=current_user["id"],
+            window_index=submission_count,
         )
         session.add(submission)
 
@@ -123,6 +149,15 @@ async def submit_conflicts(
                     detail={"error": "VALIDATION_ERROR", "message": "Reason too long"},
                 )
 
+            # Skip duplicates — same user + same rehearsal date
+            stmt = select(CastConflict).where(
+                CastConflict.user_id == current_user["id"],
+                CastConflict.rehearsal_date_id == rehearsal_date_id,
+            )
+            result = await session.execute(stmt)
+            if result.scalar_one_or_none():
+                continue
+
             conflict = CastConflict(
                 id=str(uuid.uuid4()),
                 production_id=production_id,
@@ -134,10 +169,15 @@ async def submit_conflicts(
             session.add(conflict)
             conflicts.append(conflict)
 
+        # Increment conflicts_used on member
+        if submission_count > 0:
+            db_member.conflicts_used = (db_member.conflicts_used or 0) + 1
+
         await session.commit()
 
         return {
             "id": submission.id,
+            "window_index": submission.window_index,
             "submitted_at": submission.submitted_at.isoformat(),
             "conflicts": [
                 {
@@ -147,6 +187,46 @@ async def submit_conflicts(
                 }
                 for c in conflicts
             ],
+        }
+
+
+@router.get("/{production_id}/conflicts/status")
+async def get_conflict_status(
+    production_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get the current user's conflict submission status and remaining windows."""
+    member = await check_production_member(production_id, current_user["id"])
+
+    async with async_session_maker() as session:
+        stmt = select(Production).where(Production.id == production_id)
+        result = await session.execute(stmt)
+        production = result.scalar_one_or_none()
+        if not production:
+            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Production not found"})
+
+        # Re-fetch member in this session
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        db_member = result.scalar_one()
+
+        stmt = select(func.count()).select_from(ConflictSubmission).where(
+            ConflictSubmission.production_id == production_id,
+            ConflictSubmission.user_id == current_user["id"],
+        )
+        result = await session.execute(stmt)
+        submission_count = result.scalar() or 0
+
+        total_windows = _get_total_windows(production, db_member)
+
+        return {
+            "submissions_used": submission_count,
+            "total_windows": total_windows,
+            "remaining_windows": max(0, total_windows - submission_count),
+            "has_initial_submission": submission_count > 0,
         }
 
 

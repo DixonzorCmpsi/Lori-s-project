@@ -54,9 +54,27 @@ async def check_production_member(production_id: str, user_id: str) -> Productio
         return member
 
 
-def check_chat_permission(sender_role: str, recipient_role: str) -> bool:
-    """Check if sender can message recipient based on roles."""
-    return can_send_message(sender_role, recipient_role)
+async def check_chat_permission_with_teams(
+    sender_role: str, recipient_role: str,
+    production_id: str, sender_id: str, recipient_id: str,
+) -> bool:
+    """Check if sender can message recipient (role-based + team-based)."""
+    if can_send_message(sender_role, recipient_role):
+        return True
+    # Cast-to-cast: allow if they share a team
+    if sender_role == "cast" and recipient_role == "cast":
+        from app.models import Team, TeamMember
+        async with async_session_maker() as session:
+            stmt = select(Team).where(Team.production_id == production_id)
+            result = await session.execute(stmt)
+            teams = result.scalars().all()
+            for team in teams:
+                stmt = select(TeamMember.user_id).where(TeamMember.team_id == team.id)
+                result = await session.execute(stmt)
+                member_ids = {r[0] for r in result.all()}
+                if sender_id in member_ids and recipient_id in member_ids:
+                    return True
+    return False
 
 
 @router.get("/{production_id}/contacts")
@@ -69,7 +87,8 @@ async def get_contacts(
 
     async with async_session_maker() as session:
         if member.role == "cast":
-            # Cast can only see director and staff
+            # Cast can see director, staff, and teammates
+            # First get director/staff
             stmt = (
                 select(ProductionMember, User)
                 .join(User)
@@ -78,6 +97,36 @@ async def get_contacts(
                     ProductionMember.role.in_(["director", "staff"]),
                 )
             )
+            result = await session.execute(stmt)
+            contacts = list(result.all())
+            seen_ids = {u.id for _, u in contacts}
+
+            # Then add teammates
+            from app.models import Team, TeamMember
+            stmt = select(Team).where(Team.production_id == production_id)
+            result = await session.execute(stmt)
+            teams = result.scalars().all()
+            teammate_ids: set[str] = set()
+            for team in teams:
+                stmt = select(TeamMember.user_id).where(TeamMember.team_id == team.id)
+                result = await session.execute(stmt)
+                member_ids = [r[0] for r in result.all()]
+                if current_user["id"] in member_ids:
+                    teammate_ids.update(member_ids)
+            teammate_ids.discard(current_user["id"])
+            teammate_ids -= seen_ids
+
+            if teammate_ids:
+                stmt = (
+                    select(ProductionMember, User)
+                    .join(User)
+                    .where(
+                        ProductionMember.production_id == production_id,
+                        ProductionMember.user_id.in_(teammate_ids),
+                    )
+                )
+                result = await session.execute(stmt)
+                contacts.extend(result.all())
         else:
             # Director/Staff can see everyone
             stmt = (
@@ -88,9 +137,8 @@ async def get_contacts(
                     ProductionMember.user_id != current_user["id"],
                 )
             )
-
-        result = await session.execute(stmt)
-        contacts = result.all()
+            result = await session.execute(stmt)
+            contacts = list(result.all())
 
         return [
             {
@@ -178,6 +226,7 @@ async def list_conversations(
                             "participant_name": user.name,
                             "participant_role": pm.role if pm else "cast",
                             "last_message": last_msg.body if last_msg else None,
+                            "last_message_sender_id": last_msg.sender_id if last_msg else None,
                             "last_message_at": last_msg.created_at.isoformat()
                             if last_msg
                             else None,
@@ -231,8 +280,12 @@ async def send_message(
                 detail={"error": "NOT_FOUND", "message": "Recipient not found"},
             )
 
-        # Check chat permission
-        if not check_chat_permission(member.role, recipient_member.role):
+        # Check chat permission (role-based + team-based)
+        allowed = await check_chat_permission_with_teams(
+            member.role, recipient_member.role,
+            production_id, current_user["id"], recipient_id,
+        )
+        if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"error": "FORBIDDEN", "message": "Cannot message this user"},
@@ -553,18 +606,35 @@ async def broadcast_message(
                 ProductionMember.role == "staff",
             )
         else:
-            # Scene-specific broadcast — get users assigned to this scene
-            from app.models import SceneRole
-            scene_roles = (await session.execute(
-                select(SceneRole).where(SceneRole.scene_id == body.target)
-            )).scalars().all()
-            scene_user_ids = [r.user_id for r in scene_roles]
-            if not scene_user_ids:
-                raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No cast in this scene"})
-            stmt = select(ProductionMember).where(
-                ProductionMember.production_id == production_id,
-                ProductionMember.user_id.in_(scene_user_ids),
-            )
+            # Try team first, then scene
+            from app.models import Team, TeamMember, SceneRole
+            team = (await session.execute(
+                select(Team).where(Team.id == body.target, Team.production_id == production_id)
+            )).scalar_one_or_none()
+
+            if team:
+                team_members = (await session.execute(
+                    select(TeamMember).where(TeamMember.team_id == team.id)
+                )).scalars().all()
+                team_user_ids = [m.user_id for m in team_members]
+                if not team_user_ids:
+                    raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No members in this team"})
+                stmt = select(ProductionMember).where(
+                    ProductionMember.production_id == production_id,
+                    ProductionMember.user_id.in_(team_user_ids),
+                )
+            else:
+                # Scene-specific broadcast
+                scene_roles = (await session.execute(
+                    select(SceneRole).where(SceneRole.scene_id == body.target)
+                )).scalars().all()
+                scene_user_ids = [r.user_id for r in scene_roles]
+                if not scene_user_ids:
+                    raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No members found for this target"})
+                stmt = select(ProductionMember).where(
+                    ProductionMember.production_id == production_id,
+                    ProductionMember.user_id.in_(scene_user_ids),
+                )
 
         recipients = (await session.execute(stmt)).scalars().all()
         sent_count = 0
@@ -613,7 +683,7 @@ async def broadcast_message(
 
         await session.commit()
 
-    return {"sent_to": sent_count, "target": body.target}
+    return {"sent_count": sent_count, "target": body.target}
 
 
 # --- Report Delay (one-way cast -> director) ---

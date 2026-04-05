@@ -1,9 +1,7 @@
 import type { Step } from 'react-joyride';
 
 /** Per-step defaults — all visual styling comes from tourStyles.ts */
-const theaterStep = {
-  skipBeacon: true,
-};
+const theaterStep = {};
 
 /** Tour for directors/staff when they first enter a production */
 export const directorTourSteps: Step[] = [
@@ -31,8 +29,8 @@ export const directorTourSteps: Step[] = [
   },
   {
     target: '[data-tour="nav-members"]',
-    title: 'The Roster',
-    content: 'Everyone in the production lives here. See who\'s submitted conflicts, generate invite links for new cast, promote people to staff, or remove them.',
+    title: 'Members & Teams',
+    content: 'Everyone in the production lives here. See who\'s submitted conflicts, promote people to staff, or organize cast into teams. Cast in the same team can message each other.',
     placement: 'right',
     ...theaterStep,
   },
@@ -46,7 +44,7 @@ export const directorTourSteps: Step[] = [
   {
     target: '[data-tour="nav-settings"]',
     title: 'Settings',
-    content: 'Update the production name, rehearsal dates, opening and closing nights. Manage your invite links here too.',
+    content: 'Production settings, conflict window management, and member role changes. Set how many times cast can re-submit conflicts here.',
     placement: 'right',
     ...theaterStep,
   },
@@ -102,11 +100,18 @@ export const staffTourSteps: Step[] = [
 /** Tour for cast members when they first enter a production */
 export const castTourSteps: Step[] = [
   {
-    target: '[data-tour="nav-bulletin"]',
+    target: '[data-tour="nav-dashboard"]',
     title: 'Welcome to the Call Board',
-    content: 'This is your bulletin board. Your director posts announcements here, pinned notes are the ones to read first. Check back often.',
+    content: 'Your personal dashboard. See this week\'s schedule, your info, latest announcements, and upcoming rehearsals all in one place.',
     placement: 'right',
     skipBeacon: true,
+    ...theaterStep,
+  },
+  {
+    target: '[data-tour="nav-bulletin"]',
+    title: 'Bulletin Board',
+    content: 'Your director posts announcements here. Pinned notes are the ones to read first. Check back often for schedule changes.',
+    placement: 'right',
     ...theaterStep,
   },
   {
@@ -119,7 +124,7 @@ export const castTourSteps: Step[] = [
   {
     target: '[data-tour="nav-chat"]',
     title: 'Messages',
-    content: 'Message your director or stage manager directly. Questions, schedule concerns, anything. Note: cast-to-cast messaging isn\'t available.',
+    content: 'Message your director, stage manager, or teammates directly. If you\'ve been assigned to a team, you can also chat with other cast in your group.',
     placement: 'right',
     ...theaterStep,
   },

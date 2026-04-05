@@ -20,3 +20,19 @@ export async function removeMember(productionId: string, userId: string) {
 export async function resetConflicts(productionId: string, userId: string) {
   return apiClient(`/productions/${productionId}/members/${userId}/reset-conflicts`, { method: 'POST' });
 }
+
+export async function blockMember(productionId: string, userId: string, reason?: string) {
+  return apiClient(`/productions/${productionId}/members/${userId}/block`, {
+    method: 'POST', body: JSON.stringify({ reason: reason || null }),
+  });
+}
+
+export async function unblockMember(productionId: string, userId: string) {
+  return apiClient(`/productions/${productionId}/members/${userId}/unblock`, { method: 'POST' });
+}
+
+export async function getBlockedMembers(productionId: string) {
+  return apiClient<{ user_id: string; name: string; email: string; reason: string | null; blocked_at: string }[]>(
+    `/productions/${productionId}/members/blocked`
+  );
+}

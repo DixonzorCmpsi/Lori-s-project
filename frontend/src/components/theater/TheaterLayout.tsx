@@ -80,10 +80,7 @@ export function TheaterLayout({
     <div
       className="relative w-screen min-h-[100dvh] overflow-hidden"
       style={{
-        background: `radial-gradient(ellipse at 50% 30%,
-          hsl(350, 10%, 8%) 0%,
-          hsl(350, 7%, 5%) 40%,
-          hsl(240, 6%, 3%) 100%)`,
+        background: 'var(--t-stage-bg)',
       }}
     >
       <Spotlight />
@@ -98,13 +95,13 @@ export function TheaterLayout({
 
       <Pelmet />
 
-      {/* Top bar */}
+      {/* Top bar — flush under the pelmet fringe (32px bar + 11px fringe = 43px) */}
       <AnimatePresence>
         {curtainsOpen && topBar && (
           <motion.div
             className="absolute z-[55]"
             style={{
-              top: isMobile ? '40px' : '46px',
+              top: isMobile ? '38px' : '43px',
               left: isMobile ? '0' : `${leftW}px`,
               right: isMobile ? '0' : (isDesktop ? `${rightW}px` : '0'),
             }}

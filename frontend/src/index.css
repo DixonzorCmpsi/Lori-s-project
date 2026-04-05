@@ -1,31 +1,165 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
-/* Cinematic Backstage Dark Theme — Midnight Charcoal + Brushed Gold */
+/* ══ Shared tokens (unchanged by theme) ══ */
 @theme {
-  --color-background: hsl(350, 6%, 4%);          /* Midnight charcoal with burgundy hint */
-  --color-surface: hsl(350, 5%, 7%);
-  --color-surface-raised: hsl(350, 4%, 12%);
-  --color-board: hsl(350, 3%, 15%);
-  --color-board-paper: hsl(35, 30%, 94%);
-  --color-board-paper-text: hsl(240, 20%, 12%);
-  --color-border: hsl(350, 4%, 18%);
-  --color-foreground: hsl(0, 0%, 94%);
-  --color-muted: hsl(25, 6%, 52%);
-  --color-accent: hsl(43, 74%, 49%);              /* Brushed Gold #D4AF37 */
+  --color-accent: hsl(43, 74%, 49%);
   --color-accent-hover: hsl(43, 74%, 42%);
   --color-destructive: hsl(0, 84%, 60%);
   --color-success: hsl(150, 80%, 35%);
   --color-warning: hsl(45, 90%, 50%);
-  --color-curtain: hsl(350, 50%, 14%);            /* Deep Stage Burgundy */
 
   --font-body: "Outfit", system-ui, sans-serif;
   --font-heading: "Playfair Display", serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Custom Materiality Tokens */
   --shadow-liquid-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
   --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+
+  /* Palette colors that Tailwind classes need */
+  --color-background: var(--t-background);
+  --color-surface: var(--t-surface);
+  --color-surface-raised: var(--t-surface-raised);
+  --color-board: var(--t-board);
+  --color-board-paper: var(--t-board-paper);
+  --color-board-paper-text: var(--t-board-paper-text);
+  --color-border: var(--t-border);
+  --color-foreground: var(--t-foreground);
+  --color-muted: var(--t-muted);
+  --color-curtain: var(--t-curtain);
+}
+
+/* ══ Dark theme (default) ══ */
+:root {
+  --t-background: hsl(350, 6%, 4%);
+  --t-surface: hsl(350, 5%, 7%);
+  --t-surface-raised: hsl(350, 4%, 12%);
+  --t-board: hsl(350, 3%, 15%);
+  --t-board-paper: hsl(35, 30%, 94%);
+  --t-board-paper-text: hsl(240, 20%, 12%);
+  --t-border: hsl(350, 4%, 18%);
+  --t-foreground: hsl(0, 0%, 94%);
+  --t-muted: hsl(25, 6%, 52%);
+  --t-curtain: hsl(350, 50%, 14%);
+
+  /* Theater-specific tokens for inline styles */
+  --t-panel-bg: linear-gradient(180deg, hsl(220, 6%, 11%) 0%, hsl(220, 5%, 8%) 50%, hsl(220, 4%, 6%) 100%);
+  --t-panel-border: rgba(255,255,255,0.05);
+  --t-panel-grip: rgba(255,255,255,0.12);
+  --t-panel-shadow: rgba(0,0,0,0.35);
+  --t-panel-rivet: radial-gradient(circle at 35% 35%, hsl(220,5%,30%), hsl(220,4%,16%));
+  --t-panel-rivet-shadow: inset 0 1px 1px rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4);
+  --t-nav-active-bg: radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.14) 0%, rgba(255,180,80,0.04) 70%, transparent 100%);
+  --t-nav-active-text: hsl(43, 74%, 58%);
+  --t-nav-inactive-text: hsl(25, 8%, 48%);
+  --t-nav-hover: rgba(255,180,80,0.06);
+  --t-nav-indicator: hsl(43, 74%, 49%);
+  --t-nav-glow: radial-gradient(ellipse at 10% 50%, rgba(212,175,55,0.08) 0%, transparent 70%);
+  --t-production-label: hsl(43, 45%, 42%);
+  --t-production-name: hsl(35, 20%, 85%);
+  --t-topbar-bg: hsl(350, 6%, 5%);
+  --t-topbar-border: rgba(212,175,55,0.08);
+  --t-topbar-text: hsl(43, 55%, 52%);
+  --t-topbar-subtitle: hsl(25, 8%, 36%);
+  --t-mobile-nav-bg: linear-gradient(180deg, hsl(220,6%,10%) 0%, hsl(220,5%,7%) 100%);
+  --t-chalk-text: rgba(255, 255, 255, 0.72);
+  --t-chalk-glow: rgba(255,255,255,0.08);
+  --t-chalk-surface: linear-gradient(155deg, hsl(155, 20%, 24%) 0%, hsl(158, 16%, 20%) 30%, hsl(150, 13%, 18%) 70%, hsl(155, 18%, 22%) 100%);
+  --t-chalk-surface-shadow: inset 2px 2px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(0,0,0,0.2);
+  --t-wood-frame: linear-gradient(145deg, hsl(28, 40%, 25%) 0%, hsl(25, 35%, 20%) 40%, hsl(22, 30%, 16%) 100%);
+  --t-wood-frame-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,200,120,0.1);
+  --t-stage-bg: radial-gradient(ellipse at center 40%, hsl(350, 6%, 6%) 0%, hsl(350, 6%, 3%) 100%);
+  --t-content-scroll: rgba(255,255,255,0.06);
+  --t-onair-bg: rgba(220, 40, 40, 0.08);
+  --t-onair-border: rgba(220, 40, 40, 0.15);
+  --t-drawer-backdrop: rgba(0,0,0,0.5);
+  --t-member-avatar-cast: linear-gradient(135deg, hsl(25,20%,20%), hsl(25,15%,15%));
+  --t-member-avatar-cast-text: hsl(25,10%,60%);
+  --t-member-avatar-staff: linear-gradient(135deg, hsl(200,40%,30%), hsl(200,35%,22%));
+  --t-member-avatar-director: linear-gradient(135deg, hsl(43,60%,35%), hsl(43,50%,25%));
+  --t-member-avatar-director-text: hsl(43,70%,70%);
+  --t-member-name: hsl(35,15%,75%);
+  --t-member-role-director: hsl(43,60%,52%);
+  --t-member-role-staff: hsl(200,40%,52%);
+  --t-member-role-cast: hsl(25,8%,42%);
+  --t-tab-active-bg: rgba(255,255,255,0.1);
+  --t-tab-active-text: hsl(43,60%,58%);
+  --t-tab-inactive-text: hsl(25,8%,42%);
+  --t-tab-border: rgba(255,255,255,0.14);
+  --t-section-border: rgba(255,255,255,0.12);
+  --t-subtle-bg: rgba(255,255,255,0.07);
+  --t-subtle-text: rgba(255,255,255,0.5);
+  --t-subtle-text-bright: rgba(255,255,255,0.88);
+}
+
+/* ══ Light theme ══ */
+.light {
+  --t-background: hsl(40, 18%, 94%);
+  --t-surface: hsl(40, 16%, 92%);
+  --t-surface-raised: hsl(40, 14%, 88%);
+  --t-board: hsl(36, 18%, 86%);
+  --t-board-paper: hsl(38, 28%, 96%);
+  --t-board-paper-text: hsl(220, 18%, 12%);
+  --t-border: hsl(35, 12%, 80%);
+  --t-foreground: hsl(220, 18%, 12%);
+  --t-muted: hsl(215, 10%, 36%);
+  --t-curtain: hsl(12, 35%, 88%);
+
+  --t-panel-bg: linear-gradient(180deg, hsl(40, 20%, 96%) 0%, hsl(40, 16%, 93%) 55%, hsl(40, 14%, 90%) 100%);
+  --t-panel-border: rgba(0,0,0,0.08);
+  --t-panel-grip: rgba(0,0,0,0.06);
+  --t-panel-shadow: rgba(0,0,0,0.1);
+  --t-panel-rivet: radial-gradient(circle at 35% 35%, hsl(35,14%,78%), hsl(35,10%,62%));
+  --t-panel-rivet-shadow: inset 0 1px 1px rgba(255,255,255,0.5), 0 1px 2px rgba(0,0,0,0.16);
+  --t-nav-active-bg: radial-gradient(ellipse at 15% 50%, rgba(180,120,40,0.14) 0%, rgba(210,160,70,0.06) 70%, transparent 100%);
+  --t-nav-active-text: hsl(26, 55%, 28%);
+  --t-nav-inactive-text: hsl(215, 10%, 45%);
+  --t-nav-hover: rgba(180,120,40,0.08);
+  --t-nav-indicator: hsl(26, 60%, 32%);
+  --t-nav-glow: radial-gradient(ellipse at 10% 50%, rgba(180,120,40,0.07) 0%, transparent 70%);
+  --t-production-label: hsl(26, 35%, 38%);
+  --t-production-name: hsl(220, 16%, 14%);
+  --t-topbar-bg: hsl(40, 18%, 94%);
+  --t-topbar-border: rgba(180,120,40,0.18);
+  --t-topbar-text: hsl(26, 50%, 30%);
+  --t-topbar-subtitle: hsl(215, 10%, 50%);
+  --t-mobile-nav-bg: linear-gradient(180deg, hsl(40,18%,96%) 0%, hsl(40,16%,93%) 100%);
+  /* Blackboard stays dark in light mode for contrast */
+  --t-chalk-text: rgba(255, 255, 255, 0.96);
+  --t-chalk-glow: rgba(255,255,255,0.18);
+  --t-chalk-surface: linear-gradient(155deg, hsl(160, 18%, 16%) 0%, hsl(160, 14%, 13%) 35%, hsl(155, 12%, 11%) 70%, hsl(160, 16%, 15%) 100%);
+  --t-chalk-surface-shadow: inset 3px 3px 10px rgba(0,0,0,0.45), inset -2px -2px 6px rgba(0,0,0,0.25);
+  /* Rich wood frame */
+  --t-wood-frame: linear-gradient(145deg, hsl(28, 38%, 52%) 0%, hsl(26, 34%, 44%) 45%, hsl(24, 30%, 38%) 100%);
+  --t-wood-frame-shadow: 0 12px 28px rgba(0,0,0,0.18), 0 4px 10px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2);
+  --t-stage-bg: radial-gradient(ellipse at center 40%, hsl(40, 18%, 94%) 0%, hsl(40, 14%, 88%) 100%);
+  --t-content-scroll: rgba(0,0,0,0.12);
+  --t-onair-bg: rgba(220, 40, 40, 0.06);
+  --t-onair-border: rgba(220, 40, 40, 0.14);
+  --t-drawer-backdrop: rgba(0,0,0,0.22);
+  --t-member-avatar-cast: linear-gradient(135deg, hsl(35,16%,86%), hsl(35,12%,78%));
+  --t-member-avatar-cast-text: hsl(26, 20%, 30%);
+  --t-member-avatar-staff: linear-gradient(135deg, hsl(210,28%,82%), hsl(210,22%,74%));
+  --t-member-avatar-director: linear-gradient(135deg, hsl(40,42%,78%), hsl(40,36%,70%));
+  --t-member-avatar-director-text: hsl(26, 45%, 30%);
+  --t-member-name: hsl(220, 16%, 12%);
+  --t-member-role-director: hsl(26,55%,32%);
+  --t-member-role-staff: hsl(210,35%,38%);
+  --t-member-role-cast: hsl(215, 10%, 50%);
+  --t-tab-active-bg: rgba(0,0,0,0.08);
+  --t-tab-active-text: hsl(26,55%,30%);
+  --t-tab-inactive-text: hsl(215,10%,45%);
+  --t-tab-border: rgba(0,0,0,0.12);
+  --t-section-border: rgba(0,0,0,0.12);
+  --t-subtle-bg: rgba(0,0,0,0.05);
+  --t-subtle-text: rgba(0,0,0,0.58);
+  --t-subtle-text-bright: rgba(0,0,0,0.9);
+}
+
+/* Override shadows for light mode */
+.light {
+  --shadow-liquid-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+  --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
 }
 
 @layer base {
@@ -49,6 +183,9 @@
   .liquid-glass {
     @apply backdrop-blur-xl bg-surface/40 border border-white/10 ring-1 ring-white/5;
     box-shadow: var(--shadow-liquid-inner), var(--shadow-premium);
+  }
+  .light .liquid-glass {
+    @apply border-black/8 ring-black/3;
   }
 
   .text-balance {

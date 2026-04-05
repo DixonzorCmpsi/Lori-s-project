@@ -30,3 +30,9 @@ export async function getUnreadCount(productionId: string) {
 export async function deleteMessage(productionId: string, messageId: string) {
   return apiClient<Message>(`/productions/${productionId}/messages/${messageId}`, { method: 'DELETE' });
 }
+
+export async function broadcastMessage(productionId: string, body: string, target: string) {
+  return apiClient<{ sent_count: number }>(`/productions/${productionId}/broadcast`, {
+    method: 'POST', body: JSON.stringify({ body, target }),
+  });
+}
