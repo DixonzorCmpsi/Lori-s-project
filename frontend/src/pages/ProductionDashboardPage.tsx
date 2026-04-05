@@ -329,6 +329,14 @@ export function ProductionDashboardPage() {
             <span className="text-[11px]">Upcoming Calls</span>
             <span className="font-mono text-sm font-bold">{upcoming.length}</span>
           </div>
+          {conflictStatus && (
+            <div className="flex justify-between items-baseline">
+              <span className="text-[11px]">Conflict Windows</span>
+              <span className="font-mono text-xs font-bold">
+                {conflictStatus.remaining_windows} / {conflictStatus.total_windows}
+              </span>
+            </div>
+          )}
           {production?.opening_night && (
             <div className="flex justify-between items-baseline pt-1 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
               <span className="text-[11px]">Opening Night</span>
