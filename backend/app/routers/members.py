@@ -89,6 +89,32 @@ async def list_members(
         return member_list
 
 
+@router.get("/{production_id}/members/blocked")
+async def get_blocked_members_route(
+    production_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> list[dict]:
+    """List blocked members. Director only. Must be before /{user_id} route."""
+    async with async_session_maker() as session:
+        stmt = select(ProductionMember).where(
+            ProductionMember.user_id == current_user["id"],
+            ProductionMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        caller = result.scalar_one_or_none()
+        if not caller or caller.role != "director":
+            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Director only"})
+
+        stmt = select(BlockedMember, User).join(User, BlockedMember.user_id == User.id).where(
+            BlockedMember.production_id == production_id,
+        )
+        result = await session.execute(stmt)
+        blocked = result.all()
+
+        return [
+            {"user_id": b.user_id, "name": u.name, "email": u.email, "reason": b.reason, "blocked_at": b.blocked_at.isoformat()}
+            for b, u in blocked
+        ]
 
 
 @router.get("/{production_id}/members/{user_id}")
@@ -500,29 +526,3 @@ async def unblock_member(
         return {"message": "Member unblocked", "user_id": user_id}
 
 
-@router.get("/{production_id}/members/blocked")
-async def get_blocked_members(
-    production_id: str,
-    current_user: dict = Depends(get_current_user),
-) -> list[dict]:
-    """List blocked members. Director only."""
-    async with async_session_maker() as session:
-        stmt = select(ProductionMember).where(
-            ProductionMember.user_id == current_user["id"],
-            ProductionMember.production_id == production_id,
-        )
-        result = await session.execute(stmt)
-        caller = result.scalar_one_or_none()
-        if not caller or caller.role != "director":
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Director only"})
-
-        stmt = select(BlockedMember, User).join(User, BlockedMember.user_id == User.id).where(
-            BlockedMember.production_id == production_id,
-        )
-        result = await session.execute(stmt)
-        blocked = result.all()
-
-        return [
-            {"user_id": b.user_id, "name": u.name, "email": u.email, "reason": b.reason, "blocked_at": b.blocked_at.isoformat()}
-            for b, u in blocked
-        ]
