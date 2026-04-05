@@ -516,19 +516,24 @@ export function BackstageLayout() {
                 </p>
               )}
 
-              {/* Age range — only shown if returned (director or self) */}
-              {memberDetails.age_range && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] uppercase tracking-widest" style={{ color: 'hsl(25,8%,40%)' }}>Age</span>
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                    style={{
-                      background: memberDetails.age_range === '13-17' ? 'rgba(255,180,50,0.1)' : 'rgba(100,200,100,0.1)',
-                      color: memberDetails.age_range === '13-17' ? 'rgba(255,200,80,0.8)' : 'rgba(100,220,100,0.8)',
-                    }}>
-                    {memberDetails.age_range}
-                  </span>
-                </div>
+              {/* Message button */}
+              {memberDetails.user_id !== user?.id && (
+                <button
+                  onClick={() => {
+                    setSelectedMemberId(null);
+                    navigate(`/production/${id}/chat`);
+                    // Small delay then trigger new message to this person
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('open-chat-to', { detail: { id: memberDetails.user_id, name: memberDetails.display_name || memberDetails.name || 'Member', role: memberDetails.role } }));
+                    }, 300);
+                  }}
+                  className="w-full text-[10px] uppercase tracking-widest font-bold py-1.5 rounded cursor-pointer"
+                  style={{ background: 'rgba(212,175,55,0.12)', color: 'hsl(43,60%,55%)', border: '1px solid rgba(212,175,55,0.15)' }}
+                >
+                  Message
+                </button>
               )}
+
               {!memberDetails.profile_complete && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded inline-block"
                   style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.8)' }}>

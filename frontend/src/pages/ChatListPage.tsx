@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApi } from '@/hooks/useApi';
 import { useProduction } from '@/components/theater/BackstageLayout';
@@ -63,6 +63,21 @@ export function ChatListPage() {
   const isDirectorOrStaff = userRole === 'director' || userRole === 'staff';
 
   const { data: conversations, isLoading, refetch } = useApi(() => getConversations(id!), [id]);
+
+  // Listen for "open-chat-to" event from the right panel Message button
+  useEffect(() => {
+    function handleOpenChatTo(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.id) {
+        setSelectedContact({ id: detail.id, name: detail.name, role: detail.role });
+        setSelectedTeam(null);
+        setMessageBody('');
+        setShowPicker(true);
+      }
+    }
+    window.addEventListener('open-chat-to', handleOpenChatTo);
+    return () => window.removeEventListener('open-chat-to', handleOpenChatTo);
+  }, []);
   const [expandedChatTeams, setExpandedChatTeams] = useState<Set<string>>(new Set());
   const { data: persistentTeams } = useApi<Team[]>(
     () => isDirectorOrStaff && id ? getTeams(id) : Promise.resolve([]), [id, isDirectorOrStaff],
