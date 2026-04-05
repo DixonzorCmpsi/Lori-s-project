@@ -110,7 +110,7 @@ export function DashboardPage() {
       transition={{ duration: 0.5 }}
       className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-12"
     >
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-16 border-b border-white/5 pb-6 sm:pb-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-16 border-b border-border pb-6 sm:pb-8">
         <div className="max-w-xl">
           <h1 className="text-4xl md:text-6xl font-bold font-heading text-foreground mb-4 tracking-tighter leading-[0.9]">
             Current <span className="text-accent">Productions</span>
@@ -163,7 +163,7 @@ export function DashboardPage() {
                     <p className="text-[10px] uppercase tracking-widest text-muted">Cast Size</p>
                     <p className="font-mono text-lg text-foreground/80">{prod.estimated_cast_size}</p>
                   </div>
-                  <div className="w-px h-8 bg-white/5 mx-2" />
+                  <div className="w-px h-8 bg-surface-raised mx-2" />
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase tracking-widest text-muted">Opening Night</p>
                     <p className="font-mono text-lg text-foreground/80">{formatDate(prod.opening_night)}</p>
@@ -171,7 +171,7 @@ export function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-white/5 pt-6">
+              <div className="flex items-center justify-between border-t border-border pt-6">
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="w-7 h-7 rounded-full border-2 border-background bg-surface-raised flex items-center justify-center overflow-hidden">
@@ -194,9 +194,9 @@ export function DashboardPage() {
         <motion.button
           variants={item}
           onClick={() => navigate('/production/new')}
-          className="group relative border-2 border-dashed border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-accent/40 hover:bg-accent/5 transition-all min-h-[220px]"
+          className="group relative border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-accent/40 hover:bg-accent/5 transition-all min-h-[220px]"
         >
-          <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform bg-white/5">
+          <div className="w-12 h-12 rounded-full border border-border flex items-center justify-center group-hover:scale-110 transition-transform bg-surface-raised">
             <span className="text-2xl text-muted group-hover:text-accent">+</span>
           </div>
           <p className="text-xs uppercase tracking-widest text-muted group-hover:text-accent font-medium">New Production</p>
