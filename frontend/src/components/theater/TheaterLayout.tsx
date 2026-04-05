@@ -23,6 +23,7 @@ interface TheaterLayoutProps {
   drawerOpen?: boolean;
   drawerContent?: ReactNode;
   onDrawerClose?: () => void;
+  focusMode?: boolean;
 }
 
 export function TheaterLayout({
@@ -35,6 +36,7 @@ export function TheaterLayout({
   drawerOpen,
   drawerContent,
   onDrawerClose,
+  focusMode,
 }: TheaterLayoutProps) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
@@ -47,6 +49,10 @@ export function TheaterLayout({
 
   const [leftW, setLeftW] = useState(DEFAULT_PANEL_PX);
   const [rightW, setRightW] = useState(DEFAULT_PANEL_PX);
+
+  // Focus mode overrides panel widths
+  const effectiveLeftW = focusMode ? COLLAPSED_PX : leftW;
+  const effectiveRightW = focusMode ? COLLAPSED_PX : rightW;
   const dragging = useRef<'left' | 'right' | null>(null);
 
   const onMouseDown = useCallback((side: 'left' | 'right') => (e: React.MouseEvent) => {
@@ -102,8 +108,8 @@ export function TheaterLayout({
             className="absolute z-[55]"
             style={{
               top: isMobile ? '38px' : '43px',
-              left: isMobile ? '0' : `${leftW}px`,
-              right: isMobile ? '0' : (isDesktop ? `${rightW}px` : '0'),
+              left: isMobile ? '0' : `${effectiveLeftW}px`,
+              right: isMobile ? '0' : (isDesktop ? `${effectiveRightW}px` : '0'),
             }}
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -119,8 +125,8 @@ export function TheaterLayout({
       <div className="relative z-[35] flex h-[100dvh]">
         {/* Left panel */}
         {!isMobile && (
-          <div className="flex-shrink-0 relative overflow-hidden cursor-col-resize" style={{ width: `${leftW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }} onMouseDown={leftW <= COLLAPSED_PX ? onMouseDown('left') : undefined}>
-            {leftW > COLLAPSED_PX && (
+          <div className="flex-shrink-0 relative overflow-hidden cursor-col-resize" style={{ width: `${effectiveLeftW}px`, transition: dragging.current && !focusMode ? 'none' : 'width 0.3s ease' }} onMouseDown={effectiveLeftW <= COLLAPSED_PX ? onMouseDown('left') : undefined}>
+            {effectiveLeftW > COLLAPSED_PX && (
               <AnimatePresence>
                 {curtainsOpen && leftPanel && (
                   <motion.div
@@ -151,13 +157,13 @@ export function TheaterLayout({
 
         {/* Right panel — desktop only */}
         {isDesktop && (
-          <div className="flex-shrink-0 relative overflow-hidden cursor-col-resize" style={{ width: `${rightW}px`, transition: dragging.current ? 'none' : 'width 0.2s ease' }} onMouseDown={rightW <= COLLAPSED_PX ? onMouseDown('right') : undefined}>
+          <div className="flex-shrink-0 relative overflow-hidden cursor-col-resize" style={{ width: `${effectiveRightW}px`, transition: dragging.current && !focusMode ? 'none' : 'width 0.3s ease' }} onMouseDown={effectiveRightW <= COLLAPSED_PX ? onMouseDown('right') : undefined}>
             {/* Drag handle — left edge */}
             <div
               className="absolute top-0 left-0 w-1.5 h-full cursor-col-resize z-10 hover:bg-[rgba(212,175,55,0.2)] transition-colors"
               onMouseDown={onMouseDown('right')}
             />
-            {rightW > COLLAPSED_PX && (
+            {effectiveRightW > COLLAPSED_PX && (
               <AnimatePresence>
                 {curtainsOpen && rightPanel && (
                   <motion.div

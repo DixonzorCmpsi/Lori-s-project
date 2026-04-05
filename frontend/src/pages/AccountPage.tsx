@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText } from '@/components/theater/Chalkboard';
 import { AvatarPicker, AvatarDisplay } from '@/components/ui/AvatarPicker';
+import { PageTour } from '@/tours/PageTour';
+import { accountTourSteps } from '@/tours/pageTours';
 
 interface EmergencyContact {
   name: string;
@@ -195,6 +197,7 @@ export function AccountPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <PageTour tourId="page-account" steps={accountTourSteps} />
       <ChalkText size="lg">Account Settings</ChalkText>
       <div className="h-4" />
 
@@ -250,7 +253,7 @@ export function AccountPage() {
       </section>
 
       {/* Avatar */}
-      <section className="rounded-sm p-5 mb-6 space-y-4"
+      <section data-tour="account-avatar" className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <div className="flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Avatar</p>
@@ -268,7 +271,7 @@ export function AccountPage() {
       </section>
 
       {/* Email Notifications */}
-      <section className="rounded-sm p-5 mb-6 space-y-4"
+      <section data-tour="account-notifications" className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Notifications</p>
         <div className="flex items-center justify-between">
@@ -294,7 +297,7 @@ export function AccountPage() {
       </section>
 
       {/* Emergency Contacts */}
-      <section className="rounded-sm p-5 mb-6 space-y-4"
+      <section data-tour="account-emergency" className="rounded-sm p-5 mb-6 space-y-4"
         style={{
           background: isMinor ? 'rgba(255,180,50,0.04)' : 'var(--t-subtle-bg)',
           border: `1px solid ${isMinor ? 'rgba(255,180,50,0.15)' : 'var(--t-section-border)'}`,

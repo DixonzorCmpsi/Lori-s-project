@@ -119,6 +119,7 @@ export function BackstageLayout() {
   }, [id, permission, requestPermission]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [panelTab, setPanelTab] = useState<'cast' | 'staff' | 'team'>('cast');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [memberDetails, setMemberDetails] = useState<MemberDetails | null>(null);
@@ -720,6 +721,22 @@ export function BackstageLayout() {
         )}
       </div>
       <div className="flex items-center gap-3">
+        {/* Focus mode toggle — desktop only, inside production */}
+        {isDesktop && id && (
+          <button
+            onClick={() => setFocusMode(f => !f)}
+            className="text-[10px] uppercase tracking-widest cursor-pointer px-3 py-1 rounded font-semibold flex items-center gap-1.5"
+            style={{
+              color: focusMode ? 'var(--color-accent)' : 'var(--t-topbar-subtitle)',
+              background: focusMode ? 'rgba(212,175,55,0.1)' : 'rgba(0,0,0,0.03)',
+              border: focusMode ? '1px solid rgba(212,175,55,0.15)' : '1px solid rgba(0,0,0,0.06)',
+            }}
+            title={focusMode ? 'Exit focus mode' : 'Focus mode — expand the board'}
+          >
+            <span style={{ fontSize: '12px' }}>{focusMode ? '⊟' : '⊞'}</span>
+            <span className="hidden lg:inline">{focusMode ? 'Exit Focus' : 'Focus'}</span>
+          </button>
+        )}
         {/* Tablet/mobile drawer toggle */}
         {!isDesktop && id && (
           <button
@@ -805,6 +822,7 @@ export function BackstageLayout() {
         drawerOpen={drawerOpen}
         drawerContent={castPanel}
         onDrawerClose={() => setDrawerOpen(false)}
+        focusMode={focusMode}
       >
         {/* Center stage — chalkboard nailed to the stage */}
         <div

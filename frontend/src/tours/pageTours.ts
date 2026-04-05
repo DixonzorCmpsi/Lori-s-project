@@ -172,7 +172,34 @@ export const rosterTourSteps: Step[] = [
   {
     target: '[data-tour="roster-members"]',
     title: 'The Roster',
-    content: 'Everyone listed by role. Each card shows conflict status. You can promote, demote, or remove people from here.',
+    content: 'Everyone listed by role. Each card shows conflict status and profile completion. Promote, demote, remove, or ban members from each card.',
+    placement: 'top',
+    ...s,
+  },
+];
+
+// ── Account Tour ───────────────────────────────────────────────────
+
+export const accountTourSteps: Step[] = [
+  {
+    target: '[data-tour="account-avatar"]',
+    title: 'Choose Your Avatar',
+    content: 'Pick a theater-themed icon or keep your initials. Your avatar shows up next to your name everywhere in the app.',
+    placement: 'bottom',
+    skipBeacon: true,
+    ...s,
+  },
+  {
+    target: '[data-tour="account-emergency"]',
+    title: 'Emergency Contacts',
+    content: 'Add at least one emergency contact. If you\'re under 18, this is required by law. Your director and staff can see these in case of an emergency.',
+    placement: 'top',
+    ...s,
+  },
+  {
+    target: '[data-tour="account-notifications"]',
+    title: 'Email Notifications',
+    content: 'Toggle this to receive email updates for announcements, team messages, and conflict reminders. You can turn it off anytime.',
     placement: 'top',
     ...s,
   },
