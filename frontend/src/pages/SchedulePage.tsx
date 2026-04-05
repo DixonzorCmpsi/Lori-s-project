@@ -682,8 +682,9 @@ export function SchedulePage() {
 
               {/* Bulletin post pulse indicator */}
               {!editMode && hasBulletinPost && (
-                <motion.button
-                  type="button"
+                <motion.div
+                  role="link"
+                  tabIndex={-1}
                   onClick={(e) => {
                     e.stopPropagation();
                     const posts = pinnedBulletinByDate.get(dateStr(day)) || [];
