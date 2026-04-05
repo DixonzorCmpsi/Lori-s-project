@@ -10,7 +10,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { apiClient } from '@/services/api';
 import { getMemberDetails, type MemberDetails } from '@/services/castAssignments';
 import { getMyTeam } from '@/services/teams';
-import { formatTime, formatDate, getInitials } from '@/utils/format';
+import { formatTime, formatDate } from '@/utils/format';
+import { AvatarDisplay } from '@/components/ui/AvatarPicker';
 import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
 import { Chalkboard, ChalkText } from './Chalkboard';
@@ -628,21 +629,7 @@ export function BackstageLayout() {
                 onClick={() => setSelectedMemberId(member.user_id)}
               >
                 {/* Avatar */}
-                <div
-                  className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
-                  style={{
-                    background:
-                      member.role === 'director'
-                        ? 'var(--t-member-avatar-director)'
-                        : member.role === 'staff'
-                          ? 'var(--t-member-avatar-staff)'
-                          : 'var(--t-member-avatar-cast)',
-                    color:
-                      member.role === 'director' ? 'var(--t-member-avatar-director-text)' : 'var(--t-member-avatar-cast-text)',
-                  }}
-                >
-                  {getInitials(member.name || member.user_id)}
-                </div>
+                <AvatarDisplay avatarId={member.avatar_url} name={member.name || member.user_id} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs truncate" style={{ color: 'var(--t-member-name)' }}>
                     {member.name || 'Member'}

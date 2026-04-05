@@ -86,6 +86,7 @@ async def list_members(
                     "conflicts_submitted": has_conflicts == "Submitted",
                     "age_range": user.age_range,
                     "profile_complete": bool(user.age_range),
+                    "avatar_url": user.avatar_url,
                 }
             )
 

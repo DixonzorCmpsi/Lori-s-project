@@ -297,6 +297,7 @@ async def get_member_details(
             "conflicts": conflicts if (is_director_or_staff or is_self) else [],
             "assigned_dates": assigned_dates,
             "profile_complete": bool(user.age_range) if user else False,
+            "avatar_url": user.avatar_url if user else None,
         }
 
         # Age range — director only or self (COPPA PII)

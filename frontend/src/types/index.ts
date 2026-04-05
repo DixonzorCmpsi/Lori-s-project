@@ -70,6 +70,7 @@ export interface Member {
   conflicts_submitted?: boolean;
   age_range?: string | null;
   profile_complete?: boolean;
+  avatar_url?: string | null;
 }
 
 export interface InviteToken {

@@ -331,6 +331,7 @@ async def get_me(current_user: dict = Depends(get_current_user)) -> dict:
             "parental_consent": user.parental_consent,
             "parent_email": user.parent_email,
             "parent_phone": user.parent_phone,
+            "avatar_url": user.avatar_url,
         }
 
 
@@ -517,6 +518,9 @@ async def update_account(body: dict, current_user: dict = Depends(get_current_us
         if "parent_phone" in body:
             user.parent_phone = body["parent_phone"]
 
+        if "avatar_url" in body:
+            user.avatar_url = body["avatar_url"][:500] if body["avatar_url"] else None
+
         if "parental_consent" in body and body["parental_consent"]:
             user.parental_consent = True
             await log_action(ACTIONS["parental_consent"], "user", user.id, user_id=user.id, actor_id=user.id)
@@ -532,6 +536,7 @@ async def update_account(body: dict, current_user: dict = Depends(get_current_us
             "parental_consent": user.parental_consent,
             "parent_email": user.parent_email,
             "parent_phone": user.parent_phone,
+            "avatar_url": user.avatar_url,
         }
 
 

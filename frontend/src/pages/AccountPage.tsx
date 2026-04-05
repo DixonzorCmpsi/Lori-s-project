@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText } from '@/components/theater/Chalkboard';
+import { AvatarPicker, AvatarDisplay } from '@/components/ui/AvatarPicker';
 
 interface EmergencyContact {
   name: string;
@@ -39,6 +40,9 @@ export function AccountPage() {
 
   const [emailNotifs, setEmailNotifs] = useState(user?.email_notifications ?? true);
   const [savingPrefs, setSavingPrefs] = useState(false);
+
+  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar_url || 'initials');
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   const [contacts, setContacts] = useState<EmergencyContact[]>([emptyContact(), emptyContact()]);
   const [savingContacts, setSavingContacts] = useState(false);
@@ -102,6 +106,20 @@ export function AccountPage() {
       setPwError(e.message || 'Failed to change password');
     } finally {
       setSavingPw(false);
+    }
+  }
+
+  async function handleAvatarSave(id: string) {
+    setSelectedAvatar(id);
+    setSavingAvatar(true);
+    try {
+      const avatarValue = id === 'initials' ? null : id;
+      await apiClient('/auth/account', { method: 'PATCH', body: JSON.stringify({ avatar_url: avatarValue }) });
+      setUser({ ...user!, avatar_url: avatarValue || undefined });
+    } catch (e: any) {
+      toast(e.message || 'Failed', 'error');
+    } finally {
+      setSavingAvatar(false);
     }
   }
 
@@ -229,6 +247,24 @@ export function AccountPage() {
           </div>
         )}
         <Button onClick={handleNameSave} isLoading={savingName} disabled={name === user?.name}>Save Name</Button>
+      </section>
+
+      {/* Avatar */}
+      <section className="rounded-sm p-5 mb-6 space-y-4"
+        style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Avatar</p>
+          <AvatarDisplay avatarId={selectedAvatar} name={user?.name} size="lg" />
+        </div>
+        <p className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>
+          Choose an icon or keep your initials as your avatar.
+        </p>
+        <AvatarPicker
+          selected={selectedAvatar}
+          name={user?.name}
+          onSelect={handleAvatarSave}
+        />
+        {savingAvatar && <p className="text-[10px]" style={{ color: 'var(--t-subtle-text)' }}>Saving...</p>}
       </section>
 
       {/* Email Notifications */}
