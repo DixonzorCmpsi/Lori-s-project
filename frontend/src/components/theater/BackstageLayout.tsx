@@ -721,8 +721,8 @@ export function BackstageLayout() {
         )}
       </div>
       <div className="flex items-center gap-3">
-        {/* Focus mode toggle — desktop only, inside production */}
-        {isDesktop && id && (
+        {/* Focus mode toggle — tablet + desktop, inside production */}
+        {!isMobile && id && (
           <button
             onClick={() => setFocusMode(f => !f)}
             className="text-[10px] uppercase tracking-widest cursor-pointer px-3 py-1 rounded font-semibold flex items-center gap-1.5"

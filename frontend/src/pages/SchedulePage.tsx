@@ -537,11 +537,11 @@ export function SchedulePage() {
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Default time:</span>
               <div className="flex items-center gap-2">
                 <input type="time" value={defaultTime.start} onChange={e => setDefaultTime(p => ({ ...p, start: e.target.value }))}
-                  className="px-2 py-1 rounded-sm text-xs outline-none w-24"
+                  className="px-2 py-1 rounded-sm text-xs outline-none w-full sm:w-24"
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
                 <span style={{ color: 'rgba(255,255,255,0.25)' }}>to</span>
                 <input type="time" value={defaultTime.end} onChange={e => setDefaultTime(p => ({ ...p, end: e.target.value }))}
-                  className="px-2 py-1 rounded-sm text-xs outline-none w-24"
+                  className="px-2 py-1 rounded-sm text-xs outline-none w-full sm:w-24"
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
               </div>
             </div>

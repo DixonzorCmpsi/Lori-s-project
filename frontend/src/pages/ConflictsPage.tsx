@@ -158,7 +158,7 @@ export function ConflictsPage() {
         </p>
 
         {/* Existing conflicts list */}
-        <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1 mb-6" style={{ scrollbarWidth: 'thin' }}>
+        <div className="space-y-2 max-h-[55vh] sm:max-h-[40vh] overflow-y-auto pr-1 mb-6" style={{ scrollbarWidth: 'thin' }}>
           {existing!.map((c: any) => {
             const d = activeDates.find(dt => dt.id === c.rehearsal_date_id);
             if (!d) return null;
@@ -167,7 +167,7 @@ export function ConflictsPage() {
                 style={{ background: 'rgba(255,80,80,0.06)', border: '1px solid rgba(255,80,80,0.1)' }}>
                 <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{formatDate(d.date)}</span>
                 <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
-                {c.reason && <span className="text-xs truncate max-w-[250px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{c.reason}</span>}
+                {c.reason && <span className="text-xs truncate max-w-[120px] sm:max-w-[250px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{c.reason}</span>}
               </div>
             );
           })}

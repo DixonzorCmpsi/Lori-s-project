@@ -96,7 +96,7 @@ export function ChatConversationPage() {
 
           return (
             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className="max-w-[75%] px-3 py-2 rounded-lg"
+              <div className="max-w-[88%] sm:max-w-[75%] px-3 py-2 rounded-lg"
                 style={{
                   background: isMine ? 'rgba(212,175,55,0.1)' : 'var(--t-subtle-bg)',
                   border: isMine ? '1px solid rgba(212,175,55,0.12)' : `1px solid var(--t-section-border)`,
