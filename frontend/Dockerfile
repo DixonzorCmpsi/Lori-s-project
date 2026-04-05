@@ -7,9 +7,8 @@ RUN npm ci
 
 COPY frontend/ .
 
-# Pass build-time env vars
-ARG VITE_GOOGLE_CLIENT_ID
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+# Copy .env.production so Vite picks up VITE_* vars at build time
+COPY .env.production .env.production
 
 RUN npx vite build
 
