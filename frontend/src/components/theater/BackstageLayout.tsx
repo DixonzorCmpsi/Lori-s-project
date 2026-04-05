@@ -106,6 +106,18 @@ export function BackstageLayout() {
   const isDesktop = bp === 'desktop';
   const { unreadMessages, permission, requestPermission } = useNotifications(id);
 
+  // Auto-prompt for notification permission on first production entry
+  useEffect(() => {
+    if (id && permission === 'default' && 'Notification' in window) {
+      const key = 'dcb-notif-prompted';
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        const timer = setTimeout(() => requestPermission(), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [id, permission, requestPermission]);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [panelTab, setPanelTab] = useState<'cast' | 'staff' | 'team'>('cast');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -700,8 +712,7 @@ export function BackstageLayout() {
         {permission === 'default' && id && (
           <button
             onClick={requestPermission}
-            className="text-[9px] uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
-            style={{ color: 'hsl(38,70%,55%)', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.12)' }}
+            className="text-[9px] uppercase tracking-wider px-2.5 py-1 rounded cursor-pointer font-bold bg-accent/15 text-accent border border-accent/25"
           >
             <span className="hidden sm:inline">Enable Notifications</span>
             <span className="sm:hidden">🔔</span>

@@ -113,17 +113,17 @@
   --t-panel-rivet: radial-gradient(circle at 35% 35%, hsl(220,5%,78%), hsl(220,4%,60%));
   --t-panel-rivet-shadow: inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 2px rgba(0,0,0,0.2);
   --t-nav-active-bg: radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.04) 70%, transparent 100%);
-  --t-nav-active-text: hsl(220, 15%, 15%);
-  --t-nav-inactive-text: hsl(220, 6%, 45%);
-  --t-nav-hover: rgba(212,175,55,0.06);
-  --t-nav-indicator: hsl(43, 74%, 42%);
+  --t-nav-active-text: hsl(35, 60%, 25%);
+  --t-nav-inactive-text: hsl(220, 6%, 42%);
+  --t-nav-hover: rgba(160,120,30,0.08);
+  --t-nav-indicator: hsl(35, 70%, 35%);
   --t-nav-glow: radial-gradient(ellipse at 10% 50%, rgba(212,175,55,0.06) 0%, transparent 70%);
-  --t-production-label: hsl(220, 8%, 40%);
-  --t-production-name: hsl(220, 16%, 14%);
+  --t-production-label: hsl(35, 45%, 35%);
+  --t-production-name: hsl(220, 16%, 12%);
   --t-topbar-bg: hsl(220, 5%, 86%);
-  --t-topbar-border: rgba(0,0,0,0.1);
-  --t-topbar-text: hsl(220, 15%, 18%);
-  --t-topbar-subtitle: hsl(220, 6%, 45%);
+  --t-topbar-border: rgba(0,0,0,0.12);
+  --t-topbar-text: hsl(35, 60%, 30%);
+  --t-topbar-subtitle: hsl(220, 8%, 38%);
   --t-mobile-nav-bg: linear-gradient(180deg, hsl(220,5%,88%) 0%, hsl(220,4%,84%) 100%);
   /* Blackboard stays dark in light mode for contrast */
   --t-chalk-text: rgba(255, 255, 255, 0.96);
@@ -148,8 +148,8 @@
   --t-member-role-staff: hsl(210,35%,38%);
   --t-member-role-cast: hsl(220, 6%, 45%);
   --t-tab-active-bg: rgba(0,0,0,0.08);
-  --t-tab-active-text: hsl(220, 15%, 15%);
-  --t-tab-inactive-text: hsl(220, 6%, 48%);
+  --t-tab-active-text: hsl(35, 60%, 28%);
+  --t-tab-inactive-text: hsl(220, 6%, 45%);
   --t-tab-border: rgba(0,0,0,0.12);
   --t-section-border: rgba(0,0,0,0.1);
   --t-subtle-bg: rgba(0,0,0,0.04);
@@ -157,10 +157,12 @@
   --t-subtle-text-bright: rgba(0,0,0,0.88);
 }
 
-/* Override shadows for light mode */
+/* Override shadows and accent for light mode */
 .light {
   --shadow-liquid-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
   --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+  --color-accent: hsl(35, 75%, 38%);
+  --color-accent-hover: hsl(35, 75%, 30%);
 }
 
 /* Inside the chalkboard, always use light-on-dark even in light mode */
