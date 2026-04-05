@@ -177,11 +177,18 @@ export const rosterTourSteps: Step[] = [
 
 export const conflictsTourSteps: Step[] = [
   {
-    target: '[data-tour="conflicts-date-list"]',
-    title: 'Mark Your Conflicts',
-    content: 'Click any date you can\'t make. It turns red. Add a reason if you want (like "work" or "family"). Only mark dates you truly cannot attend.',
-    placement: 'top',
+    target: '[data-tour="conflicts-weekly"]',
+    title: 'Start With Your Week',
+    content: 'Tap any day of the week you\'re generally unavailable. Every rehearsal on that day gets marked as a conflict automatically. Most people start here.',
+    placement: 'bottom',
     skipBeacon: true,
+    ...s,
+  },
+  {
+    target: '[data-tour="conflicts-specific-toggle"]',
+    title: 'Fine-Tune Specific Dates',
+    content: 'Have a one-off conflict? Click here to see every scheduled date and toggle individual ones on or off.',
+    placement: 'bottom',
     ...s,
   },
   {

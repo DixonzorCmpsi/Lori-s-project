@@ -42,7 +42,12 @@ cloudflared tunnel run callboard               # Tunnel to callboard.deetalk.win
 - All API errors return `{"error": "CODE", "message": "..."}`
 - PgBouncer requires `statement_cache_size=0` in asyncpg connection
 - Error boundary wraps all page content — crashes show "Something went wrong" not black screen
-- Guided tour system (react-joyride) for onboarding — different flows for director vs cast
+- Guided tour system (react-joyride v3) for onboarding — different flows for director vs staff vs cast
+- Tour styles defined in `frontend/src/tours/tourStyles.ts` — theater-themed tooltips with Playfair titles, gold buttons
+- Tour close button uses `closeButtonAction: 'skip'` (v3 quirk — 'close' doesn't fire tour:end)
+- Tour IDs must not depend on async data (userRole) until it's resolved — guard with `{userRole && <PageTour />}`
+- Conflicts use two-step input: weekly pattern picker first (bulk), then specific dates (fine-tune)
+- Invite landing page (`/join`) fetches production name from token and displays it
 
 ## UI Theme
 
