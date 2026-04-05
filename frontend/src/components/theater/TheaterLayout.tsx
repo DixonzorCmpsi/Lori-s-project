@@ -195,7 +195,7 @@ export function TheaterLayout({
               onClick={onDrawerClose}
             />
             <motion.div
-              className="fixed top-0 right-0 bottom-0 z-[75] w-80 max-w-[85vw] overflow-hidden"
+              className="fixed top-0 right-0 bottom-0 z-[75] w-80 max-w-[92vw] overflow-hidden"
               initial={{ x: '100%', clipPath: 'inset(0 0 0 100%)' }}
               animate={{ x: 0, clipPath: 'inset(0 0 0 0%)' }}
               exit={{ x: '100%', clipPath: 'inset(0 0 0 100%)' }}

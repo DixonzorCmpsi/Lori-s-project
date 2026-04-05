@@ -637,7 +637,7 @@ export function SchedulePage() {
                     : isToday ? 'rgba(255,220,100,0.9)'
                       : displayType ? 'rgba(255,255,255,0.75)'
                         : 'rgba(255,255,255,0.4)',
-                fontSize: '12px',
+                fontSize: isMobile ? '10px' : '12px',
                 fontWeight: isToday ? 600 : 300,
                 textDecoration: (isCancelled || isBlocked) ? 'line-through' : 'none',
               }}>
@@ -659,10 +659,10 @@ export function SchedulePage() {
                   layout
                 >
                   <span className="font-bold block truncate">{config.label}</span>
-                  {!editMode && topEvent && (
+                  {!isMobile && !editMode && topEvent && (
                     <span className="opacity-60 block truncate">{formatTime(topEvent.start_time)}-{formatTime(topEvent.end_time)}</span>
                   )}
-                  {editMode && <span className="opacity-50 block">{defaultTime.start}-{defaultTime.end}</span>}
+                  {!isMobile && editMode && <span className="opacity-50 block">{defaultTime.start}-{defaultTime.end}</span>}
                 </motion.div>
               )}
 

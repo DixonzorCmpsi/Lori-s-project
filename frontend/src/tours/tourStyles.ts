@@ -15,8 +15,8 @@ export function getTheaterTourStyles() {
       boxShadow: isDark
         ? '0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)'
         : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.5)',
-      padding: '20px 24px',
-      maxWidth: '360px',
+      padding: window.innerWidth < 640 ? '14px 16px' : '20px 24px',
+      maxWidth: window.innerWidth < 640 ? 'calc(100vw - 2rem)' : '360px',
       fontFamily: '"Inter", system-ui, sans-serif',
     },
     tooltipContainer: {
@@ -25,16 +25,16 @@ export function getTheaterTourStyles() {
     tooltipTitle: {
       fontFamily: '"Playfair Display", serif',
       color: isDark ? 'hsl(43, 74%, 55%)' : 'hsl(38, 60%, 35%)',
-      fontSize: '16px',
+      fontSize: window.innerWidth < 640 ? '14px' : '16px',
       fontWeight: 600,
       letterSpacing: '0.01em',
       marginBottom: '4px',
     },
     tooltipContent: {
       color: isDark ? 'hsl(25, 8%, 65%)' : 'hsl(25, 10%, 40%)',
-      fontSize: '13px',
+      fontSize: window.innerWidth < 640 ? '12px' : '13px',
       lineHeight: '1.6',
-      padding: '4px 0 12px',
+      padding: '4px 0 8px',
     },
     tooltipFooter: {
       marginTop: '0',

@@ -29,7 +29,7 @@ export function Dialog({
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="bg-surface border border-border rounded-lg p-6 max-w-md w-full
+      className="bg-surface border border-border rounded-lg p-4 sm:p-6 w-[calc(100vw-2rem)] sm:w-full sm:max-w-md
         text-foreground backdrop:bg-black/60 backdrop:backdrop-blur-sm
         fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
     >

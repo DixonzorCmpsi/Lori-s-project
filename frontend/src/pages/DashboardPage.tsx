@@ -108,9 +108,9 @@ export function DashboardPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="max-w-[1400px] mx-auto px-6 py-12"
+      className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-12"
     >
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-white/5 pb-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-16 border-b border-white/5 pb-6 sm:pb-8">
         <div className="max-w-xl">
           <h1 className="text-4xl md:text-6xl font-bold font-heading text-foreground mb-4 tracking-tighter leading-[0.9]">
             Current <span className="text-accent">Productions</span>
@@ -128,7 +128,7 @@ export function DashboardPage() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
       >
         {sortedProductions.map((prod, idx) => (
           <motion.button
