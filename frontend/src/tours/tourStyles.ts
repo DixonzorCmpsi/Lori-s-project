@@ -75,9 +75,7 @@ export function getTheaterTourStyles() {
     arrow: {
       color: isDark ? 'hsl(220, 6%, 13%)' : 'hsl(40, 15%, 97%)',
     },
-    spotlight: {
-      borderRadius: '8px',
-    },
+    spotlight: {},
     overlay: {
       backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.3)',
     },
@@ -128,7 +126,7 @@ export const theaterTourStyles = {
   buttonClose: { top: '8px', right: '8px', width: '24px', height: '24px', color: 'hsl(25, 8%, 35%)', padding: '0' },
   buttonSkip: { color: 'hsl(25, 8%, 45%)', fontSize: '11px' },
   arrow: { color: 'hsl(220, 6%, 13%)' },
-  spotlight: { borderRadius: '8px' },
+  spotlight: {},
   overlay: { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
 };
 
