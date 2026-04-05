@@ -80,6 +80,9 @@ async def init_db() -> None:
             "ALTER TABLE production_members ADD COLUMN IF NOT EXISTS extra_conflict_windows INTEGER",
             "ALTER TABLE production_members ADD COLUMN IF NOT EXISTS conflicts_used INTEGER DEFAULT 0",
             "ALTER TABLE conflict_submissions ADD COLUMN IF NOT EXISTS window_index INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT TRUE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS parental_consent BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_email VARCHAR(320)",
         ]:
             await conn.execute(text(col_sql))
 

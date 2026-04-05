@@ -298,7 +298,16 @@ async def get_me(current_user: dict = Depends(get_current_user)) -> dict:
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "User not found"})
-        return {"id": user.id, "email": user.email, "name": user.name, "age_range": user.age_range, "email_verified": user.email_verified}
+        return {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "age_range": user.age_range,
+            "email_verified": user.email_verified,
+            "email_notifications": user.email_notifications,
+            "parental_consent": user.parental_consent,
+            "parent_email": user.parent_email,
+        }
 
 
 import time as _time_mod
@@ -402,8 +411,82 @@ async def complete_profile(body: CompleteProfileRequest, current_user: dict = De
         return {"age_range": age_range}
 
 
+@router.patch("/account")
+async def update_account(body: dict, current_user: dict = Depends(get_current_user)) -> dict:
+    """Update user profile fields."""
+    from app.services.audit import log_action, ACTIONS
+
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.id == current_user["id"]))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "User not found"})
+
+        if "name" in body:
+            if not body["name"] or len(body["name"]) > 200:
+                raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid name"})
+            user.name = body["name"].strip()
+
+        if "email_notifications" in body:
+            user.email_notifications = bool(body["email_notifications"])
+            await log_action(ACTIONS["email_pref_change"], "user", user.id, user_id=user.id, actor_id=user.id,
+                           details=f"email_notifications={user.email_notifications}")
+
+        if "parent_email" in body:
+            user.parent_email = body["parent_email"]
+            await log_action(ACTIONS["parent_email_set"], "user", user.id, user_id=user.id, actor_id=user.id)
+
+        if "parental_consent" in body and body["parental_consent"]:
+            user.parental_consent = True
+            await log_action(ACTIONS["parental_consent"], "user", user.id, user_id=user.id, actor_id=user.id)
+
+        await session.commit()
+        await log_action(ACTIONS["profile_update"], "user", user.id, user_id=user.id, actor_id=user.id)
+
+        return {
+            "name": user.name,
+            "email": user.email,
+            "email_notifications": user.email_notifications,
+            "age_range": user.age_range,
+            "parental_consent": user.parental_consent,
+            "parent_email": user.parent_email,
+        }
+
+
+@router.post("/change-password")
+async def change_password(body: dict, current_user: dict = Depends(get_current_user)) -> dict:
+    """Change password with current password verification."""
+    from app.services.audit import log_action, ACTIONS
+
+    current_password = body.get("current_password")
+    new_password = body.get("new_password")
+
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Both passwords required"})
+
+    pw_check = validate_password(new_password)
+    if not pw_check["valid"]:
+        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": pw_check["reason"]})
+
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.id == current_user["id"]))
+        user = result.scalar_one_or_none()
+        if not user or not user.password_hash:
+            raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Cannot change password for this account"})
+
+        if not pwd_context.verify(current_password, user.password_hash):
+            raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Current password is incorrect"})
+
+        user.password_hash = pwd_context.hash(new_password)
+        await session.commit()
+        await log_action(ACTIONS["password_change"], "user", user.id, user_id=user.id, actor_id=user.id)
+        return {"message": "Password changed"}
+
+
 @router.delete("/account")
 async def delete_account(current_user: dict = Depends(get_current_user)) -> dict:
+    from app.services.audit import log_action, ACTIONS
+    await log_action(ACTIONS["account_delete"], "user", current_user["id"], user_id=current_user["id"], actor_id=current_user["id"])
     async with async_session_maker() as session:
         result = await session.execute(select(User).where(User.id == current_user["id"]))
         user = result.scalar_one_or_none()

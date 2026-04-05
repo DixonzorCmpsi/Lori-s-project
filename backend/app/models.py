@@ -44,6 +44,9 @@ class User(Base):
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     age_range: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
+    parental_consent: Mapped[bool] = mapped_column(Boolean, default=False)
+    parent_email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
     token_version: Mapped[int] = mapped_column(Integer, default=0)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
@@ -646,3 +649,24 @@ class TeamMember(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
     team: Mapped["Team"] = relationship("Team", back_populates="members")
+
+
+class AuditLog(Base):
+    """COPPA audit trail — logs data access, changes, consent, and deletions."""
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, default=uuid_default
+    )
+    user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False), nullable=True
+    )
+    actor_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False), nullable=True
+    )
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    resource_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)

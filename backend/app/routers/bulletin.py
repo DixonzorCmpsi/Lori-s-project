@@ -145,6 +145,29 @@ async def create_bulletin_post(
         session.add(post)
         await session.commit()
 
+        # Send email notifications to members who have them enabled
+        if body.notify_members:
+            try:
+                from app.services.email import send_announcement_email
+                from app.models import ProductionMember, User as UserModel
+                stmt = (
+                    select(UserModel)
+                    .join(ProductionMember, ProductionMember.user_id == UserModel.id)
+                    .where(
+                        ProductionMember.production_id == production_id,
+                        ProductionMember.user_id != current_user["id"],
+                        UserModel.email_notifications == True,
+                    )
+                )
+                result = await session.execute(stmt)
+                users = result.scalars().all()
+                author_name = current_user.get("name", "Director")
+                prod_name = production.name if production else "Production"
+                for u in users:
+                    send_announcement_email(u.email, prod_name, title, sanitized_body, author_name)
+            except Exception:
+                pass  # Email failure should never block the post
+
         return {
             "id": post.id,
             "title": post.title,

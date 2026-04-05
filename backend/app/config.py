@@ -28,12 +28,9 @@ class Settings(BaseSettings):
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
 
-    # Email/SMTP
-    smtp_host: Optional[str] = None
-    smtp_port: int = 587
-    smtp_user: Optional[str] = None
-    smtp_password: Optional[str] = None
-    email_from: str = "noreply@digitalcallboard.com"
+    # Email (Resend)
+    resend_api_key: Optional[str] = None
+    email_from: str = "noreply@callboard.deetalk.win"
 
     # Supabase (production)
     supabase_url: Optional[str] = None

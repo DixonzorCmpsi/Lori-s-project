@@ -4,6 +4,9 @@ export interface User {
   name: string;
   age_range: string | null;
   email_verified: boolean;
+  email_notifications: boolean;
+  parental_consent: boolean;
+  parent_email: string | null;
   avatar_url?: string;
   created_at?: string;
 }
