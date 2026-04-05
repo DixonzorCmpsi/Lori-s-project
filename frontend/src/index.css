@@ -175,6 +175,19 @@
   --color-accent: hsl(43, 74%, 49%);
   --color-destructive: hsl(0, 84%, 60%);
   --color-success: hsl(150, 80%, 45%);
+  /* Override theme tokens so inline var() references also work */
+  --t-subtle-bg: rgba(255,255,255,0.07);
+  --t-subtle-text: rgba(255,255,255,0.5);
+  --t-subtle-text-bright: rgba(255,255,255,0.88);
+  --t-section-border: rgba(255,255,255,0.12);
+  --t-tab-border: rgba(255,255,255,0.14);
+  --t-tab-active-bg: rgba(255,255,255,0.1);
+  --t-tab-active-text: hsl(43,60%,58%);
+  --t-tab-inactive-text: hsl(25,8%,42%);
+  --t-chalk-text: rgba(255, 255, 255, 0.96);
+  --t-member-name: hsl(35,15%,75%);
+  --t-member-avatar-cast: linear-gradient(135deg, hsl(25,20%,20%), hsl(25,15%,15%));
+  --t-member-avatar-cast-text: hsl(25,10%,60%);
   color: hsl(0, 0%, 94%);
 }
 

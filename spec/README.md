@@ -22,6 +22,7 @@ Specs are the **source of truth**. Code implements specs, not the other way arou
 | [SPEC-008](SPEC-008-tdd.md) | TDD Strategy & Test Plan |
 | [SPEC-009](SPEC-009-frontend-architecture.md) | Frontend Architecture & Theater Design System |
 | [SPEC-010](SPEC-010-pages-and-screens.md) | Pages & Screens |
+| [SPEC-011](SPEC-011-new-features.md) | New Features (April 2026): Teams, Conflict Windows, Email, COPPA, Block/Ban, Dark/Light Mode, Avatars, Responsive, Chat Enhancements |
 
 ## Key Files
 
