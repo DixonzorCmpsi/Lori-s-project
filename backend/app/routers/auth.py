@@ -182,7 +182,30 @@ async def register(body: RegisterRequest) -> dict[str, Any]:
             email_verified=False,
         )
         session.add(user)
+
+        # Create verification token and send email
+        import secrets, hashlib
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        verify_token = EmailVerificationToken(
+            id=str(uuid.uuid4()),
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=datetime.utcnow() + timedelta(hours=24),
+        )
+        session.add(verify_token)
         await session.commit()
+
+        # Send verification email
+        try:
+            from app.services.email import send_email_verification
+            from app.config import get_settings
+            settings = get_settings()
+            base_url = settings.nextauth_url or "http://localhost:5173"
+            verify_url = f"{base_url}/verify-email?token={raw_token}"
+            send_email_verification(email, name, verify_url)
+        except Exception:
+            pass  # Email failure should not block registration
 
         return {
             "id": user.id,
@@ -326,6 +349,34 @@ async def forgot_password(body: ForgotPasswordRequest) -> dict:
     if len(_forgot_pw_limits[email]) >= 3:
         raise HTTPException(status_code=429, detail={"error": "RATE_LIMITED", "message": "Too many requests"})
     _forgot_pw_limits[email].append(now)
+
+    # Create reset token and send email (anti-enumeration: always return success)
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if user:
+            import secrets, hashlib
+            raw_token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+            reset_token = PasswordResetToken(
+                id=str(uuid.uuid4()),
+                user_id=user.id,
+                token_hash=token_hash,
+                expires_at=datetime.utcnow() + timedelta(hours=1),
+            )
+            session.add(reset_token)
+            await session.commit()
+
+            try:
+                from app.services.email import send_password_reset
+                from app.config import get_settings
+                settings = get_settings()
+                base_url = settings.nextauth_url or "http://localhost:5173"
+                reset_url = f"{base_url}/reset-password?token={raw_token}"
+                send_password_reset(user.email, user.name, reset_url)
+            except Exception:
+                pass
+
     return {"message": "Check your email for a reset link"}
 
 
@@ -387,6 +438,32 @@ async def resend_verification(body: ResendVerificationRequest) -> dict:
     if len(_resend_limits[email]) >= 3:
         raise HTTPException(status_code=429, detail={"error": "RATE_LIMITED", "message": "Too many requests"})
     _resend_limits[email].append(now)
+
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if user and not user.email_verified:
+            import secrets, hashlib
+            raw_token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+            token = EmailVerificationToken(
+                id=str(uuid.uuid4()),
+                user_id=user.id,
+                token_hash=token_hash,
+                expires_at=datetime.utcnow() + timedelta(hours=24),
+            )
+            session.add(token)
+            await session.commit()
+            try:
+                from app.services.email import send_email_verification
+                from app.config import get_settings
+                settings = get_settings()
+                base_url = settings.nextauth_url or "http://localhost:5173"
+                verify_url = f"{base_url}/verify-email?token={raw_token}"
+                send_email_verification(user.email, user.name, verify_url)
+            except Exception:
+                pass
+
     return {"message": "Verification email sent"}
 
 
