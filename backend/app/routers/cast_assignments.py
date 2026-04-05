@@ -279,16 +279,46 @@ async def get_member_details(
                     "end_time": d.end_time.strftime("%H:%M"),
                 })
 
-        return {
+        is_self = current_user["id"] == user_id
+        is_director = caller.role == "director"
+        is_staff = caller.role == "staff"
+        is_director_or_staff = is_director or is_staff
+
+        result_data: dict[str, Any] = {
             "user_id": user_id,
             "name": user.name if user else None,
-            "email": user.email if user else None,
+            "email": user.email if (is_director_or_staff or is_self) else None,
             "role": member.role,
             "display_name": profile.display_name if profile else None,
             "character": profile.role_character if profile else None,
             "phone": profile.phone if profile else None,
             "headshot_url": profile.headshot_url if profile else None,
             "conflicts_submitted": submission is not None,
-            "conflicts": conflicts,
+            "conflicts": conflicts if (is_director_or_staff or is_self) else [],
             "assigned_dates": assigned_dates,
+            "profile_complete": bool(user.age_range) if user else False,
         }
+
+        # Age range — director only or self (COPPA PII)
+        if is_director or is_self:
+            result_data["age_range"] = user.age_range if user else None
+        else:
+            result_data["age_range"] = None
+
+        # Emergency contacts — director + staff can see, cast sees own only
+        if is_director_or_staff or is_self:
+            from app.models import EmergencyContact
+            stmt = select(EmergencyContact).where(
+                EmergencyContact.user_id == user_id
+            ).order_by(EmergencyContact.contact_order)
+            ec_result = await session.execute(stmt)
+            ec_list = ec_result.scalars().all()
+            result_data["emergency_contacts"] = [
+                {"name": c.name, "email": c.email, "phone": c.phone,
+                 "relationship": c.relationship, "contact_order": c.contact_order}
+                for c in ec_list
+            ]
+        else:
+            result_data["emergency_contacts"] = []
+
+        return result_data

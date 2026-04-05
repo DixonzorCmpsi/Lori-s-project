@@ -509,11 +509,55 @@ export function BackstageLayout() {
                 </p>
               </div>
 
-              {/* Contact */}
+              {/* Contact info */}
               {memberDetails.email && (
                 <p className="text-[10px] truncate" style={{ color: 'hsl(25,8%,45%)' }}>
                   {memberDetails.email}
                 </p>
+              )}
+
+              {/* Age range — only shown if returned (director or self) */}
+              {memberDetails.age_range && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] uppercase tracking-widest" style={{ color: 'hsl(25,8%,40%)' }}>Age</span>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                    style={{
+                      background: memberDetails.age_range === '13-17' ? 'rgba(255,180,50,0.1)' : 'rgba(100,200,100,0.1)',
+                      color: memberDetails.age_range === '13-17' ? 'rgba(255,200,80,0.8)' : 'rgba(100,220,100,0.8)',
+                    }}>
+                    {memberDetails.age_range}
+                  </span>
+                </div>
+              )}
+              {!memberDetails.profile_complete && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded inline-block"
+                  style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.8)' }}>
+                  Incomplete profile
+                </span>
+              )}
+
+              {/* Emergency Contacts */}
+              {memberDetails.emergency_contacts && memberDetails.emergency_contacts.length > 0 && (
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: 'hsl(25,8%,40%)' }}>
+                    Emergency Contacts
+                  </p>
+                  <div className="space-y-1.5">
+                    {memberDetails.emergency_contacts.map((ec, i) => (
+                      <div key={i} className="text-[10px] px-1.5 py-1 rounded"
+                        style={{ background: 'rgba(255,220,100,0.04)', border: '1px solid rgba(255,220,100,0.08)' }}>
+                        <div className="flex items-center gap-1.5">
+                          <span style={{ color: 'hsl(35,15%,65%)' }}>{ec.name}</span>
+                          <span className="text-[8px] px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.04)', color: 'hsl(25,8%,50%)' }}>
+                            {ec.relationship}
+                          </span>
+                        </div>
+                        {ec.phone && <p style={{ color: 'hsl(25,8%,45%)' }}>{ec.phone}</p>}
+                        {ec.email && <p className="truncate" style={{ color: 'hsl(25,8%,45%)' }}>{ec.email}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Conflicts */}

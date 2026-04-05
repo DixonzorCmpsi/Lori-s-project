@@ -12,6 +12,9 @@ export interface MemberDetails {
   conflicts_submitted: boolean;
   conflicts: { date: string | null; reason: string | null }[];
   assigned_dates: { id: string; date: string; type: string; start_time: string; end_time: string }[];
+  age_range: string | null;
+  profile_complete: boolean;
+  emergency_contacts: { name: string; email: string | null; phone: string | null; relationship: string; contact_order: number }[];
 }
 
 export interface CastAssignment {

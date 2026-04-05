@@ -126,8 +126,12 @@ async def get_member(
     user_id: str,
     current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Get a specific member."""
-    await check_production_member(production_id, current_user["id"])
+    """Get a specific member with role-based field visibility.
+    Director: sees everything (age_range, emergency contacts, email)
+    Staff: sees emergency contacts + profile, NOT age_range
+    Cast: can only view their own full profile, sees basic info for others
+    """
+    caller = await check_production_member(production_id, current_user["id"])
 
     async with async_session_maker() as session:
         stmt = (
@@ -148,14 +152,61 @@ async def get_member(
             )
 
         member, user = member_data
+        is_self = current_user["id"] == user_id
+        is_director = caller.role == "director"
+        is_staff = caller.role == "staff"
+        is_director_or_staff = is_director or is_staff
 
-        return {
+        # Base profile — everyone can see this
+        profile: dict[str, Any] = {
             "id": member.id,
             "user_id": user.id,
             "name": user.name,
+            "email": user.email if (is_director_or_staff or is_self) else None,
             "role": member.role,
             "joined_at": member.joined_at.isoformat(),
+            "profile_complete": bool(user.age_range),
         }
+
+        # Age range — director only (PII for COPPA), or self
+        if is_director or is_self:
+            profile["age_range"] = user.age_range
+        else:
+            profile["age_range"] = None
+
+        # Emergency contacts — director and staff can see, cast can only see their own
+        if is_director_or_staff or is_self:
+            from app.models import EmergencyContact
+            stmt = select(EmergencyContact).where(
+                EmergencyContact.user_id == user_id
+            ).order_by(EmergencyContact.contact_order)
+            result = await session.execute(stmt)
+            contacts = result.scalars().all()
+            profile["emergency_contacts"] = [
+                {
+                    "name": c.name,
+                    "email": c.email,
+                    "phone": c.phone,
+                    "relationship": c.relationship,
+                    "contact_order": c.contact_order,
+                }
+                for c in contacts
+            ]
+        else:
+            profile["emergency_contacts"] = []
+
+        # Conflict info — director/staff can see for cast members
+        if is_director_or_staff and member.role == "cast":
+            sub_stmt = select(ConflictSubmission).where(
+                ConflictSubmission.production_id == production_id,
+                ConflictSubmission.user_id == user_id,
+            )
+            result = await session.execute(sub_stmt)
+            submissions = result.scalars().all()
+            profile["conflicts_submitted"] = len(submissions) > 0
+            profile["conflict_submissions_count"] = len(submissions)
+
+        return profile
 
 
 @router.post("/{production_id}/members/{user_id}/promote")
