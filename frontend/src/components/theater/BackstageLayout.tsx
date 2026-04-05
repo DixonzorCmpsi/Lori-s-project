@@ -826,7 +826,7 @@ export function BackstageLayout() {
       >
         {/* Center stage — chalkboard nailed to the stage */}
         <div
-          className={`w-full h-full pt-[78px] sm:pt-[88px] px-1 sm:px-2 overflow-y-auto ${isMobile ? 'pb-20' : 'pb-2'}`}
+          className={`w-full h-full pt-[90px] sm:pt-[100px] px-1 sm:px-2 overflow-y-auto ${isMobile ? 'pb-20' : 'pb-2'}`}
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
