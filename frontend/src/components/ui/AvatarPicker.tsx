@@ -70,8 +70,8 @@ export function AvatarPicker({ selected, name, onSelect }: AvatarPickerProps) {
             onClick={() => onSelect(opt.id)}
             className="flex flex-col items-center gap-1 p-2 rounded-lg cursor-pointer transition-colors"
             style={{
-              background: isSelected ? 'rgba(212,175,55,0.15)' : 'var(--t-subtle-bg)',
-              border: `2px solid ${isSelected ? 'hsl(43,74%,49%)' : 'transparent'}`,
+              background: isSelected ? 'rgb(var(--c-212-175-55) / 0.15)' : 'var(--t-subtle-bg)',
+              border: `2px solid ${isSelected ? 'hsl(var(--h-43-74-49))' : 'transparent'}`,
             }}
           >
             {opt.icon ? (
@@ -82,7 +82,7 @@ export function AvatarPicker({ selected, name, onSelect }: AvatarPickerProps) {
                 {getInitials(name)}
               </div>
             )}
-            <span className="text-[8px] uppercase tracking-wider" style={{ color: isSelected ? 'hsl(43,60%,55%)' : 'var(--t-subtle-text)' }}>
+            <span className="text-[8px] uppercase tracking-wider" style={{ color: isSelected ? 'hsl(var(--h-43-60-55))' : 'var(--t-subtle-text)' }}>
               {opt.label}
             </span>
           </button>

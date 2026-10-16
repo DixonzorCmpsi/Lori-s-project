@@ -27,11 +27,11 @@ export async function bulkSyncSchedule(productionId: string, dates: { date: stri
   });
 }
 
-export async function addDate(productionId: string, data: { date: string; start_time: string; end_time: string; type: string }) {
+export async function addDate(productionId: string, data: { date: string; start_time: string; end_time: string; type: string; location?: string; note?: string }) {
   return apiClient<RehearsalDate>(`/productions/${productionId}/schedule`, { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updateDate(productionId: string, dateId: string, data: { start_time?: string; end_time?: string; note?: string }) {
+export async function updateDate(productionId: string, dateId: string, data: { start_time?: string; end_time?: string; note?: string; location?: string }) {
   return apiClient<RehearsalDate>(`/productions/${productionId}/schedule/${dateId}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 

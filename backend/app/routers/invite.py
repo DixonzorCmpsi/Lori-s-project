@@ -1,7 +1,7 @@
 """Invite router."""
 
-import uuid
 import secrets
+import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import ProductionMember, InviteToken
+from app.models import InviteToken, ProductionMember
 from app.routers.auth import get_current_user
 
 router = APIRouter()

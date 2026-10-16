@@ -1,15 +1,14 @@
 """Cast profile router."""
 
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import ProductionMember, CastProfile
+from app.models import CastProfile, ProductionMember
 from app.routers.auth import get_current_user
 from app.services.business_logic import FIELD_MAX_LENGTHS
 
@@ -18,8 +17,8 @@ router = APIRouter()
 
 class CreateProfileRequest(BaseModel):
     display_name: str
-    phone: Optional[str] = None
-    role_character: Optional[str] = None
+    phone: str | None = None
+    role_character: str | None = None
 
 
 async def check_production_member(production_id: str, user_id: str) -> ProductionMember:
@@ -109,9 +108,7 @@ async def create_profile(
             detail={"error": "VALIDATION_ERROR", "message": "Phone too long"},
         )
 
-    if role_character and len(role_character) > FIELD_MAX_LENGTHS.get(
-        "role_character", 200
-    ):
+    if role_character and len(role_character) > FIELD_MAX_LENGTHS.get("role_character", 200):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "VALIDATION_ERROR", "message": "Role too long"},

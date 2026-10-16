@@ -32,7 +32,6 @@ This is the "golden path" — every step the Director takes from first visit
 to full production lifecycle, tested as one continuous session.
 """
 
-import pytest
 from datetime import date, timedelta
 
 
@@ -45,12 +44,15 @@ class TestDirectorFullFlow:
 
     async def test_step_01_register(self, client):
         """Director registers with email/password."""
-        response = await client.post("/api/auth/register", json={
-            "email": "director@example.com",
-            "name": "Jane Director",
-            "password": "SecureD1rector!",
-            "date_of_birth": "1985-03-15",
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "director@example.com",
+                "name": "Jane Director",
+                "password": "SecureD1rector!",
+                "date_of_birth": "1985-03-15",
+            },
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["age_range"] == "18+"
@@ -60,28 +62,38 @@ class TestDirectorFullFlow:
     async def test_step_02_cannot_access_dashboard_unverified(self, client, auth_headers):
         """Unverified director can log in but cannot create theater/production."""
         headers = auth_headers(self.__class__.director_id)
-        response = await client.post("/api/theaters", json={
-            "name": "Test Theater",
-            "city": "Springfield",
-            "state": "IL",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Test Theater",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         # Unverified users cannot create theaters
         assert response.status_code == 403
 
     async def test_step_03_verify_email(self, client):
         """Director verifies their email."""
         # In real flow: extract token from email mock
-        response = await client.post("/api/auth/verify-email", json={
-            "token": "director-verification-token",
-        })
+        response = await client.post(
+            "/api/auth/verify-email",
+            json={
+                "token": "director-verification-token",
+            },
+        )
         assert response.status_code == 200
 
     async def test_step_04_login(self, client):
         """Director logs in with verified account."""
-        response = await client.post("/api/auth/login", json={
-            "email": "director@example.com",
-            "password": "SecureD1rector!",
-        })
+        response = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "director@example.com",
+                "password": "SecureD1rector!",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -94,11 +106,15 @@ class TestDirectorFullFlow:
     async def test_step_05_create_theater(self, client, auth_headers):
         """Director creates their theater."""
         headers = auth_headers(self.__class__.director_id)
-        response = await client.post("/api/theaters", json={
-            "name": "Lincoln High School",
-            "city": "Springfield",
-            "state": "Illinois",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Lincoln High School",
+                "city": "Springfield",
+                "state": "Illinois",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Lincoln High School"
@@ -107,11 +123,15 @@ class TestDirectorFullFlow:
     async def test_step_06_cannot_create_second_theater(self, client, auth_headers):
         """V1 constraint: one theater per director."""
         headers = auth_headers(self.__class__.director_id)
-        response = await client.post("/api/theaters", json={
-            "name": "Another Theater",
-            "city": "Chicago",
-            "state": "Illinois",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Another Theater",
+                "city": "Chicago",
+                "state": "Illinois",
+            },
+            headers=headers,
+        )
         assert response.status_code == 409
         assert "already have a theater" in response.json()["message"].lower()
 
@@ -119,14 +139,18 @@ class TestDirectorFullFlow:
         """Director creates a production within their theater."""
         headers = auth_headers(self.__class__.director_id)
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": self.__class__.theater_id,
-            "name": "Into the Woods",
-            "estimated_cast_size": 35,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": self.__class__.theater_id,
+                "name": "Into the Woods",
+                "estimated_cast_size": 35,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Into the Woods"
@@ -149,14 +173,18 @@ class TestDirectorFullFlow:
         """V1 constraint: one active production per director."""
         headers = auth_headers(self.__class__.director_id)
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": self.__class__.theater_id,
-            "name": "Second Show",
-            "estimated_cast_size": 20,
-            "first_rehearsal": (today + timedelta(days=60)).isoformat(),
-            "opening_night": (today + timedelta(days=120)).isoformat(),
-            "closing_night": (today + timedelta(days=127)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": self.__class__.theater_id,
+                "name": "Second Show",
+                "estimated_cast_size": 20,
+                "first_rehearsal": (today + timedelta(days=60)).isoformat(),
+                "opening_night": (today + timedelta(days=120)).isoformat(),
+                "closing_night": (today + timedelta(days=127)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 409
 
     # ------------------------------------------------------------------ #
@@ -518,8 +546,11 @@ class TestDirectorFullFlow:
 
     async def test_step_38_deleted_account_cannot_login(self, client):
         """Deleted account can no longer log in."""
-        response = await client.post("/api/auth/login", json={
-            "email": "director@example.com",
-            "password": "SecureD1rector!",
-        })
+        response = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "director@example.com",
+                "password": "SecureD1rector!",
+            },
+        )
         assert response.status_code == 401

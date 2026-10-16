@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
 /* ══ Shared tokens (unchanged by theme) ══ */
 @theme {
@@ -11,6 +11,7 @@
 
   --font-body: "Outfit", system-ui, sans-serif;
   --font-heading: "Playfair Display", serif;
+  --t-heading-font: "Playfair Display", serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --shadow-liquid-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
@@ -190,6 +191,907 @@
   --t-member-avatar-cast-text: hsl(25,10%,60%);
   color: hsl(0, 0%, 94%);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   "Default" UI style — clean app look. Fancy (theater) is the
+   unprefixed token sets above. Remaps the same --t-* tokens so
+   pages that use tokens adapt without changes.
+   ══════════════════════════════════════════════════════════════════ */
+.ui-default {
+  --font-body: "Geist", system-ui, sans-serif;
+  --font-heading: "Geist", system-ui, sans-serif;
+  --t-heading-font: "Geist", system-ui, sans-serif;
+  --shadow-liquid-inner: none;
+  --shadow-premium: 0 1px 2px rgba(0,0,0,0.4);
+  --color-accent: #7b93ff;
+  --color-accent-hover: #9db0ff;
+  --color-destructive: #f87171;
+  --color-success: #4ade80;
+  --color-warning: #f5b84b;
+
+  --t-background: #0e1116;
+  --t-surface: #161a21;
+  --t-surface-raised: #1d222b;
+  --t-board: #1d222b;
+  --t-board-paper: #ffffff;
+  --t-board-paper-text: #14181f;
+  --t-border: #262c37;
+  --t-foreground: #eceff4;
+  --t-muted: #8a93a3;
+  --t-curtain: #0e1116;
+
+  --t-panel-bg: #161a21;
+  --t-panel-border: #262c37;
+  --t-nav-active-bg: rgba(123,147,255,0.14);
+  --t-nav-active-text: #a5b4ff;
+  --t-nav-inactive-text: #9aa3b2;
+  --t-nav-hover: rgba(255,255,255,0.05);
+  --t-nav-indicator: #7b93ff;
+  --t-nav-glow: none;
+  --t-production-label: #7c8596;
+  --t-production-name: #eceff4;
+  --t-topbar-bg: #161a21;
+  --t-topbar-border: #262c37;
+  --t-topbar-text: #eceff4;
+  --t-topbar-subtitle: #8a93a3;
+  --t-mobile-nav-bg: #161a21;
+  --t-chalk-text: #eceff4;
+  --t-chalk-glow: transparent;
+  --t-stage-bg: #0e1116;
+  --t-content-scroll: rgba(255,255,255,0.08);
+  --t-drawer-backdrop: rgba(0,0,0,0.5);
+  --t-member-avatar-cast-text: #aab2c0;
+  --t-member-name: #eceff4;
+  --t-member-role-director: #a5b4ff;
+  --t-member-role-staff: #5eead4;
+  --t-member-role-cast: #8a93a3;
+  --t-tab-active-bg: rgba(123,147,255,0.16);
+  --t-tab-active-text: #a5b4ff;
+  --t-tab-inactive-text: #8a93a3;
+  --t-tab-border: #262c37;
+  --t-section-border: #262c37;
+  --t-subtle-bg: rgba(255,255,255,0.04);
+  --t-subtle-text: #8a93a3;
+  --t-subtle-text-bright: #eceff4;
+  color-scheme: dark;
+}
+
+.ui-default.light {
+  --shadow-premium: 0 1px 2px rgba(16,24,40,0.08);
+  --color-accent: #3b5bdb;
+  --color-accent-hover: #2f4ac0;
+  --color-destructive: #b42318;
+  --color-success: #14804a;
+  --color-warning: #a15c07;
+
+  --t-background: #f6f7f9;
+  --t-surface: #ffffff;
+  --t-surface-raised: #f0f2f5;
+  --t-board: #f0f2f5;
+  --t-border: #e3e6eb;
+  --t-foreground: #14181f;
+  --t-muted: #6b7384;
+  --t-curtain: #f6f7f9;
+
+  --t-panel-bg: #ffffff;
+  --t-panel-border: #e3e6eb;
+  --t-nav-active-bg: #e8edff;
+  --t-nav-active-text: #3b5bdb;
+  --t-nav-inactive-text: #4b5563;
+  --t-nav-hover: #f0f2f5;
+  --t-nav-indicator: #3b5bdb;
+  --t-production-label: #7b8494;
+  --t-production-name: #14181f;
+  --t-topbar-bg: #ffffff;
+  --t-topbar-border: #e3e6eb;
+  --t-topbar-text: #14181f;
+  --t-topbar-subtitle: #6b7384;
+  --t-mobile-nav-bg: #ffffff;
+  --t-chalk-text: #14181f;
+  --t-stage-bg: #f6f7f9;
+  --t-content-scroll: rgba(0,0,0,0.12);
+  --t-drawer-backdrop: rgba(0,0,0,0.25);
+  --t-member-avatar-cast-text: #4b5563;
+  --t-member-name: #14181f;
+  --t-member-role-director: #3b5bdb;
+  --t-member-role-staff: #0e7490;
+  --t-member-role-cast: #6b7384;
+  --t-tab-active-bg: #e8edff;
+  --t-tab-active-text: #3b5bdb;
+  --t-tab-inactive-text: #6b7384;
+  --t-tab-border: #e3e6eb;
+  --t-section-border: #e3e6eb;
+  --t-subtle-bg: rgba(15,23,42,0.04);
+  --t-subtle-text: rgba(15,23,42,0.62);
+  --t-subtle-text-bright: rgba(15,23,42,0.92);
+  color-scheme: light;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   "Calendar" UI style — Default layout rules (.ui-default is also set)
+   with Schibsted Grotesk + Plex Mono. Colours come from the palettes
+   at the end of the colour-vars block (html.ui-calendar[data-palette]).
+   ══════════════════════════════════════════════════════════════════ */
+.ui-calendar {
+  --font-body: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-heading: "Schibsted Grotesk", system-ui, sans-serif;
+  --t-heading-font: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+.ui-calendar .mono, .ui-calendar .cal-mono { font-family: var(--font-mono); }
+
+/* The app panel holds page content in the Default style */
+.ui-default [data-app-panel] { color: var(--t-foreground); }
+
+/* @@color-vars-start (generated by frontend/scripts/gen_color_vars.py — page inline-style colour channels) */
+:root {
+  --c-0-0-0: 0 0 0;
+  --c-80-200-80: 80 200 80;
+  --c-80-200-220: 80 200 220;
+  --c-80-220-140: 80 220 140;
+  --c-100-180-255: 100 180 255;
+  --c-100-200-100: 100 200 100;
+  --c-100-220-100: 100 220 100;
+  --c-150-220-150: 150 220 150;
+  --c-160-120-255: 160 120 255;
+  --c-200-140-255: 200 140 255;
+  --c-212-175-55: 212 175 55;
+  --c-220-60-60: 220 60 60;
+  --c-220-80-80: 220 80 80;
+  --c-220-180-80: 220 180 80;
+  --c-251-191-36: 251 191 36;
+  --c-255-80-80: 255 80 80;
+  --c-255-100-100: 255 100 100;
+  --c-255-120-120: 255 120 120;
+  --c-255-120-140: 255 120 140;
+  --c-255-140-100: 255 140 100;
+  --c-255-150-150: 255 150 150;
+  --c-255-160-80: 255 160 80;
+  --c-255-180-50: 255 180 50;
+  --c-255-180-60: 255 180 60;
+  --c-255-200-80: 255 200 80;
+  --c-255-220-100: 255 220 100;
+  --c-255-255-255: 255 255 255;
+  --h-0-50-45: 0 50% 45%;
+  --h-0-60-45: 0 60% 45%;
+  --h-0-70-50: 0 70% 50%;
+  --h-25-85-62: 25 85% 62%;
+  --h-38-70-50: 38 70% 50%;
+  --h-38-70-55: 38 70% 55%;
+  --h-38-85-62: 38 85% 62%;
+  --h-43-55-55: 43 55% 55%;
+  --h-43-60-55: 43 60% 55%;
+  --h-43-60-58: 43 60% 58%;
+  --h-43-74-49: 43 74% 49%;
+  --h-45-70-58: 45 70% 58%;
+  --h-155-65-55: 155 65% 55%;
+  --h-188-65-58: 188 65% 58%;
+  --h-210-60-60: 210 60% 60%;
+  --h-210-80-68: 210 80% 68%;
+  --h-265-75-72: 265 75% 72%;
+  --h-350-80-70: 350 80% 70%;
+  --btn-primary-bg: linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%);
+  --btn-primary-bg-diag: linear-gradient(135deg, hsl(38, 70%, 50%) 0%, hsl(32, 65%, 42%) 100%);
+  --btn-primary-text: hsl(220, 6%, 9%);
+}
+.ui-default {
+  --c-0-0-0: 255 255 255;
+  --c-80-200-80: 74 222 128;
+  --c-80-200-220: 56 189 248;
+  --c-80-220-140: 74 222 128;
+  --c-100-180-255: 56 189 248;
+  --c-100-200-100: 74 222 128;
+  --c-100-220-100: 74 222 128;
+  --c-150-220-150: 74 222 128;
+  --c-212-175-55: 123 147 255;
+  --c-220-60-60: 248 113 113;
+  --c-220-80-80: 248 113 113;
+  --c-220-180-80: 123 147 255;
+  --c-251-191-36: 251 191 36;
+  --c-255-80-80: 248 113 113;
+  --c-255-100-100: 248 113 113;
+  --c-255-120-120: 123 147 255;
+  --c-255-120-140: 248 113 113;
+  --c-255-140-100: 123 147 255;
+  --c-255-150-150: 248 113 113;
+  --c-255-160-80: 123 147 255;
+  --c-255-180-50: 123 147 255;
+  --c-255-180-60: 123 147 255;
+  --c-255-200-80: 123 147 255;
+  --c-255-220-100: 123 147 255;
+  --c-255-255-255: 255 255 255;
+  --h-0-50-45: 0 50% 62%;
+  --h-0-60-45: 0 60% 62%;
+  --h-0-70-50: 0 70% 62%;
+  --h-25-85-62: 25 85% 62%;
+  --h-38-70-50: 228 100% 74%;
+  --h-38-70-55: 228 100% 74%;
+  --h-38-85-62: 228 100% 74%;
+  --h-43-55-55: 228 100% 74%;
+  --h-43-60-55: 228 100% 74%;
+  --h-43-60-58: 228 100% 74%;
+  --h-43-74-49: 228 100% 74%;
+  --h-45-70-58: 228 100% 74%;
+  --h-155-65-55: 155 65% 62%;
+  --h-188-65-58: 188 65% 62%;
+  --h-210-60-60: 210 60% 62%;
+  --h-210-80-68: 210 80% 68%;
+  --h-265-75-72: 265 75% 72%;
+  --h-350-80-70: 350 80% 70%;
+  --btn-primary-bg: var(--color-accent);
+  --btn-primary-bg-diag: var(--color-accent);
+  --btn-primary-text: #0e1116;
+}
+.ui-default.light {
+  --c-0-0-0: 0 0 0;
+  --c-80-200-80: 20 128 74;
+  --c-80-200-220: 3 105 161;
+  --c-80-220-140: 20 128 74;
+  --c-100-180-255: 3 105 161;
+  --c-100-200-100: 20 128 74;
+  --c-100-220-100: 20 128 74;
+  --c-150-220-150: 20 128 74;
+  --c-212-175-55: 59 91 219;
+  --c-220-60-60: 180 35 24;
+  --c-220-80-80: 180 35 24;
+  --c-220-180-80: 59 91 219;
+  --c-251-191-36: 161 98 7;
+  --c-255-80-80: 180 35 24;
+  --c-255-100-100: 180 35 24;
+  --c-255-120-120: 59 91 219;
+  --c-255-120-140: 180 35 24;
+  --c-255-140-100: 59 91 219;
+  --c-255-150-150: 180 35 24;
+  --c-255-160-80: 59 91 219;
+  --c-255-180-50: 59 91 219;
+  --c-255-180-60: 59 91 219;
+  --c-255-200-80: 59 91 219;
+  --c-255-220-100: 59 91 219;
+  --c-255-255-255: 15 23 42;
+  --h-0-50-45: 0 50% 38%;
+  --h-0-60-45: 0 60% 38%;
+  --h-0-70-50: 0 70% 38%;
+  --h-25-85-62: 25 85% 38%;
+  --h-38-70-50: 229 68% 48%;
+  --h-38-70-55: 229 68% 48%;
+  --h-38-85-62: 229 68% 48%;
+  --h-43-55-55: 229 68% 48%;
+  --h-43-60-55: 229 68% 48%;
+  --h-43-60-58: 229 68% 48%;
+  --h-43-74-49: 229 68% 48%;
+  --h-45-70-58: 229 68% 48%;
+  --h-155-65-55: 155 65% 38%;
+  --h-188-65-58: 188 65% 38%;
+  --h-210-60-60: 210 60% 38%;
+  --h-210-80-68: 210 80% 38%;
+  --h-265-75-72: 265 75% 38%;
+  --h-350-80-70: 350 80% 38%;
+  --btn-primary-text: #ffffff;
+}
+/* @@color-vars-end */
+/* Calendar style palettes (chosen in Account settings > Appearance > Colours) */
+html.ui-calendar[data-palette="graphite"] {
+  --color-accent: #5eead4;
+  --color-accent-hover: #7ee0d4;
+  --t-background: #0f1012;
+  --t-surface: #17181b;
+  --t-surface-raised: #1e2024;
+  --t-board: #1e2024;
+  --t-border: #2a2c31;
+  --t-curtain: #0f1012;
+  --t-panel-bg: #17181b;
+  --t-panel-border: #2a2c31;
+  --t-nav-active-bg: rgb(94 234 212 / 0.14);
+  --t-nav-active-text: #7ee0d4;
+  --t-nav-indicator: #5eead4;
+  --t-topbar-bg: #17181b;
+  --t-topbar-border: #2a2c31;
+  --t-mobile-nav-bg: #17181b;
+  --t-stage-bg: #0f1012;
+  --t-tab-active-bg: rgb(94 234 212 / 0.16);
+  --t-tab-active-text: #7ee0d4;
+  --t-tab-border: #2a2c31;
+  --t-section-border: #2a2c31;
+  --t-member-role-director: #7ee0d4;
+  --c-212-175-55: 94 234 212;
+  --c-220-180-80: 94 234 212;
+  --c-255-120-120: 94 234 212;
+  --c-255-140-100: 94 234 212;
+  --c-255-160-80: 94 234 212;
+  --c-255-180-50: 94 234 212;
+  --c-255-180-60: 94 234 212;
+  --c-255-200-80: 94 234 212;
+  --c-255-220-100: 94 234 212;
+  --h-38-70-50: 172 70% 62%;
+  --h-38-70-55: 172 70% 62%;
+  --h-38-85-62: 172 70% 62%;
+  --h-43-55-55: 172 70% 62%;
+  --h-43-60-55: 172 70% 62%;
+  --h-43-60-58: 172 70% 62%;
+  --h-43-74-49: 172 70% 62%;
+  --h-45-70-58: 172 70% 62%;
+  --btn-primary-text: #0f1012;
+}
+html.ui-calendar[data-palette="graphite"].light {
+  --color-accent: #0f766e;
+  --color-accent-hover: #0f766e;
+  --t-background: #f3f4f6;
+  --t-surface: #ffffff;
+  --t-surface-raised: #f7f8f9;
+  --t-board: #f7f8f9;
+  --t-border: #dcdfe3;
+  --t-foreground: #14181f;
+  --t-muted: #5b6370;
+  --t-curtain: #f3f4f6;
+  --t-panel-bg: #ffffff;
+  --t-panel-border: #dcdfe3;
+  --t-nav-active-bg: rgb(15 118 110 / 0.12);
+  --t-nav-active-text: #0f766e;
+  --t-nav-indicator: #0f766e;
+  --t-nav-inactive-text: #14181f;
+  --t-nav-hover: #f7f8f9;
+  --t-topbar-bg: #ffffff;
+  --t-topbar-border: #dcdfe3;
+  --t-topbar-text: #14181f;
+  --t-mobile-nav-bg: #ffffff;
+  --t-stage-bg: #f3f4f6;
+  --t-tab-active-bg: rgb(15 118 110 / 0.12);
+  --t-tab-active-text: #0f766e;
+  --t-tab-border: #dcdfe3;
+  --t-section-border: #dcdfe3;
+  --t-member-name: #14181f;
+  --t-member-role-director: #0f766e;
+  --c-212-175-55: 15 118 110;
+  --c-220-180-80: 15 118 110;
+  --c-255-120-120: 15 118 110;
+  --c-255-140-100: 15 118 110;
+  --c-255-160-80: 15 118 110;
+  --c-255-180-50: 15 118 110;
+  --c-255-180-60: 15 118 110;
+  --c-255-200-80: 15 118 110;
+  --c-255-220-100: 15 118 110;
+  --h-38-70-50: 175 78% 26%;
+  --h-38-70-55: 175 78% 26%;
+  --h-38-85-62: 175 78% 26%;
+  --h-43-55-55: 175 78% 26%;
+  --h-43-60-55: 175 78% 26%;
+  --h-43-60-58: 175 78% 26%;
+  --h-43-74-49: 175 78% 26%;
+  --h-45-70-58: 175 78% 26%;
+  --btn-primary-text: #ffffff;
+}
+html.ui-calendar[data-palette="teal"] {
+  --color-accent: #5eead4;
+  --color-accent-hover: #7ee0d4;
+  --t-background: #0b1413;
+  --t-surface: #121e1d;
+  --t-surface-raised: #182827;
+  --t-board: #182827;
+  --t-border: #263a38;
+  --t-curtain: #0b1413;
+  --t-panel-bg: #121e1d;
+  --t-panel-border: #263a38;
+  --t-nav-active-bg: rgb(94 234 212 / 0.14);
+  --t-nav-active-text: #7ee0d4;
+  --t-nav-indicator: #5eead4;
+  --t-topbar-bg: #121e1d;
+  --t-topbar-border: #263a38;
+  --t-mobile-nav-bg: #121e1d;
+  --t-stage-bg: #0b1413;
+  --t-tab-active-bg: rgb(94 234 212 / 0.16);
+  --t-tab-active-text: #7ee0d4;
+  --t-tab-border: #263a38;
+  --t-section-border: #263a38;
+  --t-member-role-director: #7ee0d4;
+  --c-212-175-55: 94 234 212;
+  --c-220-180-80: 94 234 212;
+  --c-255-120-120: 94 234 212;
+  --c-255-140-100: 94 234 212;
+  --c-255-160-80: 94 234 212;
+  --c-255-180-50: 94 234 212;
+  --c-255-180-60: 94 234 212;
+  --c-255-200-80: 94 234 212;
+  --c-255-220-100: 94 234 212;
+  --h-38-70-50: 172 70% 62%;
+  --h-38-70-55: 172 70% 62%;
+  --h-38-85-62: 172 70% 62%;
+  --h-43-55-55: 172 70% 62%;
+  --h-43-60-55: 172 70% 62%;
+  --h-43-60-58: 172 70% 62%;
+  --h-43-74-49: 172 70% 62%;
+  --h-45-70-58: 172 70% 62%;
+  --btn-primary-text: #0b1413;
+}
+html.ui-calendar[data-palette="teal"].light {
+  --color-accent: #0f766e;
+  --color-accent-hover: #0f766e;
+  --t-background: #eef2f4;
+  --t-surface: #ffffff;
+  --t-surface-raised: #f5f8f9;
+  --t-board: #f5f8f9;
+  --t-border: #d5dde0;
+  --t-foreground: #10201f;
+  --t-muted: #4b5b5a;
+  --t-curtain: #eef2f4;
+  --t-panel-bg: #ffffff;
+  --t-panel-border: #d5dde0;
+  --t-nav-active-bg: rgb(15 118 110 / 0.12);
+  --t-nav-active-text: #0f766e;
+  --t-nav-indicator: #0f766e;
+  --t-nav-inactive-text: #10201f;
+  --t-nav-hover: #f5f8f9;
+  --t-topbar-bg: #ffffff;
+  --t-topbar-border: #d5dde0;
+  --t-topbar-text: #10201f;
+  --t-mobile-nav-bg: #ffffff;
+  --t-stage-bg: #eef2f4;
+  --t-tab-active-bg: rgb(15 118 110 / 0.12);
+  --t-tab-active-text: #0f766e;
+  --t-tab-border: #d5dde0;
+  --t-section-border: #d5dde0;
+  --t-member-name: #10201f;
+  --t-member-role-director: #0f766e;
+  --c-212-175-55: 15 118 110;
+  --c-220-180-80: 15 118 110;
+  --c-255-120-120: 15 118 110;
+  --c-255-140-100: 15 118 110;
+  --c-255-160-80: 15 118 110;
+  --c-255-180-50: 15 118 110;
+  --c-255-180-60: 15 118 110;
+  --c-255-200-80: 15 118 110;
+  --c-255-220-100: 15 118 110;
+  --h-38-70-50: 175 78% 26%;
+  --h-38-70-55: 175 78% 26%;
+  --h-38-85-62: 175 78% 26%;
+  --h-43-55-55: 175 78% 26%;
+  --h-43-60-55: 175 78% 26%;
+  --h-43-60-58: 175 78% 26%;
+  --h-43-74-49: 175 78% 26%;
+  --h-45-70-58: 175 78% 26%;
+  --btn-primary-text: #ffffff;
+}
+html.ui-calendar[data-palette="indigo"] {
+  --color-accent: #8da2ff;
+  --color-accent-hover: #a9b8ff;
+  --t-background: #0d1020;
+  --t-surface: #151a30;
+  --t-surface-raised: #1c2240;
+  --t-board: #1c2240;
+  --t-border: #2a3156;
+  --t-curtain: #0d1020;
+  --t-panel-bg: #151a30;
+  --t-panel-border: #2a3156;
+  --t-nav-active-bg: rgb(141 162 255 / 0.14);
+  --t-nav-active-text: #a9b8ff;
+  --t-nav-indicator: #8da2ff;
+  --t-topbar-bg: #151a30;
+  --t-topbar-border: #2a3156;
+  --t-mobile-nav-bg: #151a30;
+  --t-stage-bg: #0d1020;
+  --t-tab-active-bg: rgb(141 162 255 / 0.16);
+  --t-tab-active-text: #a9b8ff;
+  --t-tab-border: #2a3156;
+  --t-section-border: #2a3156;
+  --t-member-role-director: #a9b8ff;
+  --c-212-175-55: 141 162 255;
+  --c-220-180-80: 141 162 255;
+  --c-255-120-120: 141 162 255;
+  --c-255-140-100: 141 162 255;
+  --c-255-160-80: 141 162 255;
+  --c-255-180-50: 141 162 255;
+  --c-255-180-60: 141 162 255;
+  --c-255-200-80: 141 162 255;
+  --c-255-220-100: 141 162 255;
+  --h-38-70-50: 228 100% 78%;
+  --h-38-70-55: 228 100% 78%;
+  --h-38-85-62: 228 100% 78%;
+  --h-43-55-55: 228 100% 78%;
+  --h-43-60-55: 228 100% 78%;
+  --h-43-60-58: 228 100% 78%;
+  --h-43-74-49: 228 100% 78%;
+  --h-45-70-58: 228 100% 78%;
+  --btn-primary-text: #0d1020;
+}
+html.ui-calendar[data-palette="indigo"].light {
+  --color-accent: #3b4fd6;
+  --color-accent-hover: #3b4fd6;
+  --t-background: #eef0f8;
+  --t-surface: #ffffff;
+  --t-surface-raised: #f5f6fb;
+  --t-board: #f5f6fb;
+  --t-border: #d6daec;
+  --t-foreground: #151a33;
+  --t-muted: #50587a;
+  --t-curtain: #eef0f8;
+  --t-panel-bg: #ffffff;
+  --t-panel-border: #d6daec;
+  --t-nav-active-bg: rgb(59 79 214 / 0.12);
+  --t-nav-active-text: #3b4fd6;
+  --t-nav-indicator: #3b4fd6;
+  --t-nav-inactive-text: #151a33;
+  --t-nav-hover: #f5f6fb;
+  --t-topbar-bg: #ffffff;
+  --t-topbar-border: #d6daec;
+  --t-topbar-text: #151a33;
+  --t-mobile-nav-bg: #ffffff;
+  --t-stage-bg: #eef0f8;
+  --t-tab-active-bg: rgb(59 79 214 / 0.12);
+  --t-tab-active-text: #3b4fd6;
+  --t-tab-border: #d6daec;
+  --t-section-border: #d6daec;
+  --t-member-name: #151a33;
+  --t-member-role-director: #3b4fd6;
+  --c-212-175-55: 59 79 214;
+  --c-220-180-80: 59 79 214;
+  --c-255-120-120: 59 79 214;
+  --c-255-140-100: 59 79 214;
+  --c-255-160-80: 59 79 214;
+  --c-255-180-50: 59 79 214;
+  --c-255-180-60: 59 79 214;
+  --c-255-200-80: 59 79 214;
+  --c-255-220-100: 59 79 214;
+  --h-38-70-50: 231 68% 52%;
+  --h-38-70-55: 231 68% 52%;
+  --h-38-85-62: 231 68% 52%;
+  --h-43-55-55: 231 68% 52%;
+  --h-43-60-55: 231 68% 52%;
+  --h-43-60-58: 231 68% 52%;
+  --h-43-74-49: 231 68% 52%;
+  --h-45-70-58: 231 68% 52%;
+  --btn-primary-text: #ffffff;
+}
+html.ui-calendar[data-palette="plum"] {
+  --color-accent: #d8a4ff;
+  --color-accent-hover: #e6c4ff;
+  --t-background: #140e18;
+  --t-surface: #1d1523;
+  --t-surface-raised: #261c2e;
+  --t-board: #261c2e;
+  --t-border: #372a42;
+  --t-curtain: #140e18;
+  --t-panel-bg: #1d1523;
+  --t-panel-border: #372a42;
+  --t-nav-active-bg: rgb(216 164 255 / 0.14);
+  --t-nav-active-text: #e6c4ff;
+  --t-nav-indicator: #d8a4ff;
+  --t-topbar-bg: #1d1523;
+  --t-topbar-border: #372a42;
+  --t-mobile-nav-bg: #1d1523;
+  --t-stage-bg: #140e18;
+  --t-tab-active-bg: rgb(216 164 255 / 0.16);
+  --t-tab-active-text: #e6c4ff;
+  --t-tab-border: #372a42;
+  --t-section-border: #372a42;
+  --t-member-role-director: #e6c4ff;
+  --c-212-175-55: 216 164 255;
+  --c-220-180-80: 216 164 255;
+  --c-255-120-120: 216 164 255;
+  --c-255-140-100: 216 164 255;
+  --c-255-160-80: 216 164 255;
+  --c-255-180-50: 216 164 255;
+  --c-255-180-60: 216 164 255;
+  --c-255-200-80: 216 164 255;
+  --c-255-220-100: 216 164 255;
+  --h-38-70-50: 276 100% 82%;
+  --h-38-70-55: 276 100% 82%;
+  --h-38-85-62: 276 100% 82%;
+  --h-43-55-55: 276 100% 82%;
+  --h-43-60-55: 276 100% 82%;
+  --h-43-60-58: 276 100% 82%;
+  --h-43-74-49: 276 100% 82%;
+  --h-45-70-58: 276 100% 82%;
+  --btn-primary-text: #140e18;
+}
+html.ui-calendar[data-palette="plum"].light {
+  --color-accent: #7e22ce;
+  --color-accent-hover: #7e22ce;
+  --t-background: #f6f1f8;
+  --t-surface: #ffffff;
+  --t-surface-raised: #faf6fb;
+  --t-board: #faf6fb;
+  --t-border: #e3d7e8;
+  --t-foreground: #25152d;
+  --t-muted: #6b5575;
+  --t-curtain: #f6f1f8;
+  --t-panel-bg: #ffffff;
+  --t-panel-border: #e3d7e8;
+  --t-nav-active-bg: rgb(126 34 206 / 0.12);
+  --t-nav-active-text: #7e22ce;
+  --t-nav-indicator: #7e22ce;
+  --t-nav-inactive-text: #25152d;
+  --t-nav-hover: #faf6fb;
+  --t-topbar-bg: #ffffff;
+  --t-topbar-border: #e3d7e8;
+  --t-topbar-text: #25152d;
+  --t-mobile-nav-bg: #ffffff;
+  --t-stage-bg: #f6f1f8;
+  --t-tab-active-bg: rgb(126 34 206 / 0.12);
+  --t-tab-active-text: #7e22ce;
+  --t-tab-border: #e3d7e8;
+  --t-section-border: #e3d7e8;
+  --t-member-name: #25152d;
+  --t-member-role-director: #7e22ce;
+  --c-212-175-55: 126 34 206;
+  --c-220-180-80: 126 34 206;
+  --c-255-120-120: 126 34 206;
+  --c-255-140-100: 126 34 206;
+  --c-255-160-80: 126 34 206;
+  --c-255-180-50: 126 34 206;
+  --c-255-180-60: 126 34 206;
+  --c-255-200-80: 126 34 206;
+  --c-255-220-100: 126 34 206;
+  --h-38-70-50: 272 72% 47%;
+  --h-38-70-55: 272 72% 47%;
+  --h-38-85-62: 272 72% 47%;
+  --h-43-55-55: 272 72% 47%;
+  --h-43-60-55: 272 72% 47%;
+  --h-43-60-58: 272 72% 47%;
+  --h-43-74-49: 272 72% 47%;
+  --h-45-70-58: 272 72% 47%;
+  --btn-primary-text: #ffffff;
+}
+html.ui-calendar[data-palette="amber"] {
+  --color-accent: #fbbf24;
+  --color-accent-hover: #fcd34d;
+  --t-background: #14110c;
+  --t-surface: #1d1913;
+  --t-surface-raised: #27211a;
+  --t-board: #27211a;
+  --t-border: #382f24;
+  --t-curtain: #14110c;
+  --t-panel-bg: #1d1913;
+  --t-panel-border: #382f24;
+  --t-nav-active-bg: rgb(251 191 36 / 0.14);
+  --t-nav-active-text: #fcd34d;
+  --t-nav-indicator: #fbbf24;
+  --t-topbar-bg: #1d1913;
+  --t-topbar-border: #382f24;
+  --t-mobile-nav-bg: #1d1913;
+  --t-stage-bg: #14110c;
+  --t-tab-active-bg: rgb(251 191 36 / 0.16);
+  --t-tab-active-text: #fcd34d;
+  --t-tab-border: #382f24;
+  --t-section-border: #382f24;
+  --t-member-role-director: #fcd34d;
+  --c-212-175-55: 251 191 36;
+  --c-220-180-80: 251 191 36;
+  --c-255-120-120: 251 191 36;
+  --c-255-140-100: 251 191 36;
+  --c-255-160-80: 251 191 36;
+  --c-255-180-50: 251 191 36;
+  --c-255-180-60: 251 191 36;
+  --c-255-200-80: 251 191 36;
+  --c-255-220-100: 251 191 36;
+  --h-38-70-50: 43 96% 56%;
+  --h-38-70-55: 43 96% 56%;
+  --h-38-85-62: 43 96% 56%;
+  --h-43-55-55: 43 96% 56%;
+  --h-43-60-55: 43 96% 56%;
+  --h-43-60-58: 43 96% 56%;
+  --h-43-74-49: 43 96% 56%;
+  --h-45-70-58: 43 96% 56%;
+  --btn-primary-text: #14110c;
+}
+html.ui-calendar[data-palette="amber"].light {
+  --color-accent: #b45309;
+  --color-accent-hover: #b45309;
+  --t-background: #f8f4ec;
+  --t-surface: #ffffff;
+  --t-surface-raised: #fbf8f2;
+  --t-board: #fbf8f2;
+  --t-border: #e6dccb;
+  --t-foreground: #261d0e;
+  --t-muted: #6f6247;
+  --t-curtain: #f8f4ec;
+  --t-panel-bg: #ffffff;
+  --t-panel-border: #e6dccb;
+  --t-nav-active-bg: rgb(180 83 9 / 0.12);
+  --t-nav-active-text: #b45309;
+  --t-nav-indicator: #b45309;
+  --t-nav-inactive-text: #261d0e;
+  --t-nav-hover: #fbf8f2;
+  --t-topbar-bg: #ffffff;
+  --t-topbar-border: #e6dccb;
+  --t-topbar-text: #261d0e;
+  --t-mobile-nav-bg: #ffffff;
+  --t-stage-bg: #f8f4ec;
+  --t-tab-active-bg: rgb(180 83 9 / 0.12);
+  --t-tab-active-text: #b45309;
+  --t-tab-border: #e6dccb;
+  --t-section-border: #e6dccb;
+  --t-member-name: #261d0e;
+  --t-member-role-director: #b45309;
+  --c-212-175-55: 180 83 9;
+  --c-220-180-80: 180 83 9;
+  --c-255-120-120: 180 83 9;
+  --c-255-140-100: 180 83 9;
+  --c-255-160-80: 180 83 9;
+  --c-255-180-50: 180 83 9;
+  --c-255-180-60: 180 83 9;
+  --c-255-200-80: 180 83 9;
+  --c-255-220-100: 180 83 9;
+  --h-38-70-50: 26 90% 37%;
+  --h-38-70-55: 26 90% 37%;
+  --h-38-85-62: 26 90% 37%;
+  --h-43-55-55: 26 90% 37%;
+  --h-43-60-55: 26 90% 37%;
+  --h-43-60-58: 26 90% 37%;
+  --h-43-74-49: 26 90% 37%;
+  --h-45-70-58: 26 90% 37%;
+  --btn-primary-text: #ffffff;
+}
+
+
+/* ── Default style: readable base type everywhere inside the app panel
+   (many pages were sized for the small theater look) ── */
+.ui-default [data-app-panel] .text-\[8px\] { font-size: 10px; }
+.ui-default [data-app-panel] .text-\[9px\] { font-size: 11px; }
+.ui-default [data-app-panel] .text-\[10px\] { font-size: 12px; }
+.ui-default [data-app-panel] .text-\[11px\] { font-size: 13px; }
+.ui-default [data-app-panel] .text-xs { font-size: 13px; }
+
+/* ── Default style: production dashboard grid (3 x 2, cards fill the area) ── */
+.ui-default .dash-grid {
+  flex: 1;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(min-content, 1fr));
+}
+.ui-default .dash-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ui-default .dash-grid > *,
+.ui-default .dash-grid > * > div,
+.ui-default .dash-grid > * > div > div { height: 100%; }
+.ui-default .dash-grid > * > div > div { padding: 22px; }
+/* Larger type inside dashboard cards (they were sized for sticky notes) */
+.ui-default .dash-grid .text-\[8px\] { font-size: 11px; }
+.ui-default .dash-grid .text-\[9px\],
+.ui-default .dash-grid .text-\[10px\] { font-size: 12px; }
+.ui-default .dash-grid .text-\[11px\],
+.ui-default .dash-grid .text-xs { font-size: 15px; }
+.ui-default .dash-grid .text-sm { font-size: 17px; }
+.ui-default .dash-grid .w-16 { width: auto; min-width: 104px; }
+.ui-default .dash-grid .w-12 { width: auto; min-width: 56px; }
+/* Each card is a column; its list/rows spread to use the card's height */
+.ui-default .dash-grid > * > div > div { display: flex; flex-direction: column; }
+.ui-default .dash-grid .space-y-1,
+.ui-default .dash-grid .space-y-1\.5,
+.ui-default .dash-grid .space-y-2 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ui-default .dash-grid .space-y-1 > *,
+.ui-default .dash-grid .space-y-1\.5 > *,
+.ui-default .dash-grid .space-y-2 > * { margin-top: 0 !important; }
+@media (max-width: 1023px) {
+  .ui-default .dash-grid,
+  .ui-default .dash-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; flex: none; }
+}
+@media (max-width: 640px) {
+  .ui-default .dash-grid,
+  .ui-default .dash-grid-2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ══ Default style: shared page system ══
+   One set of rules for every page: the panel fills the screen, titles and
+   actions share a header row, sections are cards, and card lists are
+   uniform responsive grids. (All scoped to .ui-default; Fancy is untouched.) */
+.ui-default .app-page > div { flex: 1 1 auto; }
+
+/* Cards */
+.ui-default .liquid-glass {
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-premium);
+  backdrop-filter: none;
+  --tw-ring-shadow: 0 0 #0000;
+}
+.ui-default .app-page section { border-radius: 12px !important; padding: 22px !important; }
+.ui-default .app-page section[style*="--t-subtle-bg"] {
+  background: var(--t-surface) !important;
+  border: 1px solid var(--t-border) !important;
+  box-shadow: var(--shadow-premium);
+}
+/* Empty states read as a placeholder card */
+.ui-default .app-page > div > .text-center.py-12 {
+  border: 1px dashed var(--t-border);
+  border-radius: 12px;
+  padding: 72px 24px;
+}
+
+/* Uniform responsive card grid */
+.ui-default .page-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  grid-auto-rows: minmax(240px, auto);
+}
+.ui-default .page-grid > * { height: 100%; }
+
+/* Form / settings pages: sections flow into balanced columns that fill the width */
+.ui-default .page-sections {
+  width: 100%;
+  max-width: none !important;
+  column-width: 480px;
+  column-gap: 20px;
+}
+.ui-default .page-sections > section { break-inside: avoid; margin-bottom: 20px; }
+.ui-default .page-sections > :not(section) { column-span: all; }
+.ui-default .page-sections > span { display: block; }
+
+/* Single-form pages: one comfortably wide card, centred */
+.ui-default .app-page > .max-w-md,
+.ui-default .app-page > .max-w-lg {
+  flex: 0 0 auto !important;
+  width: 100%;
+  max-width: 720px;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: var(--shadow-premium);
+}
+
+/* Bulletin and chat lists use the same grid rhythm */
+.ui-default [data-tour="bulletin-posts"] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  align-items: stretch;
+}
+.ui-default [data-tour="chat-conversations"] {
+  display: grid;
+  gap: 12px 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
+  align-items: start;
+}
+.ui-default [data-tour="chat-conversations"] > * { margin-top: 0 !important; }
+
+/* Schedule: the month fills the panel as a ruled grid */
+.ui-default .schedule-root { display: flex; flex-direction: column; }
+.ui-default [data-tour="schedule-calendar"] {
+  flex: 1;
+  gap: 0;
+  grid-auto-rows: minmax(104px, 1fr);
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--t-surface);
+}
+.ui-default [data-tour="schedule-calendar"] > * {
+  border-right: 1px solid var(--t-border);
+  border-bottom: 1px solid var(--t-border);
+  border-radius: 0 !important;
+  align-items: flex-start !important;
+  padding: 8px !important;
+  min-height: 104px !important;
+}
+.ui-default [data-tour="schedule-calendar"] > *:nth-child(7n) { border-right: 0; }
+.ui-default [data-tour="schedule-calendar"] > *:nth-last-child(-n + 7) { border-bottom: 0; }
+.ui-default [data-tour="schedule-calendar"] > button > span:first-child { font-size: 14px !important; }
+.ui-default [data-tour="schedule-calendar"] .rounded-\[2px\] {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  border-radius: 6px !important;
+  transform: none !important;
+  padding: 5px 8px !important;
+  box-shadow: none !important;
+}
+
+/* Word documents shown in the document viewer */
+.doc-html { line-height: 1.65; font-size: 0.95rem; }
+.doc-html h1, .doc-html h2, .doc-html h3, .doc-html h4 { font-weight: 600; margin: 1.2em 0 0.4em; line-height: 1.25; }
+.doc-html h1 { font-size: 1.6rem; } .doc-html h2 { font-size: 1.3rem; } .doc-html h3 { font-size: 1.1rem; }
+.doc-html p { margin: 0.7em 0; }
+.doc-html ul, .doc-html ol { margin: 0.7em 0; padding-left: 1.6em; }
+.doc-html ul { list-style: disc; } .doc-html ol { list-style: decimal; }
+.doc-html table { border-collapse: collapse; margin: 1em 0; max-width: 100%; display: block; overflow-x: auto; }
+.doc-html td, .doc-html th { border: 1px solid var(--t-border); padding: 0.35em 0.6em; vertical-align: top; }
+.doc-html img { max-width: 100%; height: auto; }
+.doc-html a { color: var(--color-accent); text-decoration: underline; }
 
 @layer base {
   body {

@@ -1,7 +1,6 @@
 """COPPA-compliant audit logging service."""
 
 import uuid
-from typing import Optional
 
 from app.database import async_session_maker
 from app.models import AuditLog
@@ -10,11 +9,11 @@ from app.models import AuditLog
 async def log_action(
     action: str,
     resource_type: str,
-    resource_id: Optional[str] = None,
-    user_id: Optional[str] = None,
-    actor_id: Optional[str] = None,
-    details: Optional[str] = None,
-    ip_address: Optional[str] = None,
+    resource_id: str | None = None,
+    user_id: str | None = None,
+    actor_id: str | None = None,
+    details: str | None = None,
+    ip_address: str | None = None,
 ) -> None:
     """Log an auditable action. Fire-and-forget — never raises."""
     try:

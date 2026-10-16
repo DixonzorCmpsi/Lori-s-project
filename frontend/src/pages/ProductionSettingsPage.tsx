@@ -10,6 +10,7 @@ import { ChalkText } from '@/components/theater/Chalkboard';
 import { ROLES } from '@/utils/constants';
 import { PageTour } from '@/tours/PageTour';
 import { settingsTourSteps } from '@/tours/pageTours';
+import { PageGuide } from '@/components/PageGuide';
 
 export function ProductionSettingsPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,10 +72,11 @@ export function ProductionSettingsPage() {
   }
 
   return (
-    <div>
+    <div className="page-sections">
       {isDirector && <PageTour tourId="page-settings" steps={settingsTourSteps} />}
       <ChalkText size="lg">Production Settings</ChalkText>
       <div className="h-4" />
+      <PageGuide page="settings" />
 
       {/* Details */}
       <section
@@ -163,9 +165,9 @@ export function ProductionSettingsPage() {
       <section
         data-tour="settings-danger"
         className="rounded-sm p-5 space-y-4"
-        style={{ background: 'rgba(255,80,80,0.04)', border: '1px solid rgba(255,80,80,0.2)' }}
+        style={{ background: 'rgb(var(--c-255-80-80) / 0.04)', border: '1px solid rgb(var(--c-255-80-80) / 0.2)' }}
       >
-        <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'rgba(255,120,120,0.8)' }}>Danger Zone</p>
+        <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'rgb(var(--c-255-120-120) / 0.8)' }}>Danger Zone</p>
 
         {isArchived ? (
           <div className="flex items-center justify-between gap-4">

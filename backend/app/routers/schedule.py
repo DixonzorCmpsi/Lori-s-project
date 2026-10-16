@@ -1,11 +1,11 @@
 """Schedule router."""
 
 import uuid
-from datetime import date, datetime, time, timedelta
-from typing import Any, Optional
+from datetime import date, datetime, time
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.database import async_session_maker
@@ -31,12 +31,15 @@ class AddDateRequest(BaseModel):
     start_time: str
     end_time: str
     type: str
+    location: str | None = None
+    note: str | None = None
 
 
 class UpdateDateRequest(BaseModel):
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    note: Optional[str] = None
+    start_time: str | None = None
+    end_time: str | None = None
+    note: str | None = None
+    location: str | None = None
 
 
 class BulkDateEntry(BaseModel):
@@ -184,6 +187,7 @@ async def get_schedule(
                 "end_time": d.end_time.strftime("%H:%M"),
                 "type": d.type,
                 "note": d.note,
+                "location": d.location,
                 "is_cancelled": d.is_cancelled,
                 "is_deleted": d.is_deleted,
             }
@@ -231,6 +235,7 @@ async def bulk_sync_schedule(
             if date_str not in target:
                 # Hard delete + cascade conflicts
                 from app.models import CastConflict
+
                 cstmt = select(CastConflict).where(CastConflict.rehearsal_date_id == rd.id)
                 cresult = await session.execute(cstmt)
                 for c in cresult.scalars().all():
@@ -260,14 +265,16 @@ async def bulk_sync_schedule(
                 if changed:
                     updated += 1
             else:
-                session.add(RehearsalDate(
-                    id=str(uuid.uuid4()),
-                    production_id=production_id,
-                    rehearsal_date=date.fromisoformat(date_str),
-                    start_time=t,
-                    end_time=e,
-                    type=entry.type,
-                ))
+                session.add(
+                    RehearsalDate(
+                        id=str(uuid.uuid4()),
+                        production_id=production_id,
+                        rehearsal_date=date.fromisoformat(date_str),
+                        start_time=t,
+                        end_time=e,
+                        type=entry.type,
+                    )
+                )
                 added += 1
 
         await session.commit()
@@ -304,6 +311,8 @@ async def add_rehearsal_date(
             start_time=time.fromisoformat(start_time),
             end_time=time.fromisoformat(end_time),
             type=date_type,
+            location=(body.location or None),
+            note=(body.note or None),
         )
         session.add(rehearsal)
         await session.commit()
@@ -314,6 +323,8 @@ async def add_rehearsal_date(
             "start_time": rehearsal.start_time.strftime("%H:%M"),
             "end_time": rehearsal.end_time.strftime("%H:%M"),
             "type": rehearsal.type,
+            "note": rehearsal.note,
+            "location": rehearsal.location,
         }
 
 
@@ -368,6 +379,14 @@ async def update_rehearsal_date(
                 )
             rehearsal.note = note
 
+        if body.location is not None:
+            if len(body.location) > 200:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={"error": "VALIDATION_ERROR", "message": "Location too long"},
+                )
+            rehearsal.location = body.location or None
+
         await session.commit()
 
         return {
@@ -376,6 +395,7 @@ async def update_rehearsal_date(
             "start_time": rehearsal.start_time.strftime("%H:%M"),
             "end_time": rehearsal.end_time.strftime("%H:%M"),
             "note": rehearsal.note,
+            "location": rehearsal.location,
         }
 
 

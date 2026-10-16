@@ -8,7 +8,6 @@ Covers:
 - CAST-18: Upload exceeding 5MB rejected
 """
 
-import pytest
 import io
 
 
@@ -18,11 +17,15 @@ class TestCastProfileCreation:
     async def test_create_profile_all_fields(self, client, auth_headers):
         """Cast member creates a full profile with all fields."""
         headers = auth_headers("other-cast-user-id")
-        response = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "Alex Johnson",
-            "phone": "555-0123",
-            "role_character": "Narrator",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "Alex Johnson",
+                "phone": "555-0123",
+                "role_character": "Narrator",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["display_name"] == "Alex Johnson"
@@ -32,9 +35,13 @@ class TestCastProfileCreation:
     async def test_create_profile_required_only(self, client, auth_headers):
         """Only display_name is required."""
         headers = auth_headers("cast-member-1")
-        response = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "Alex Johnson",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "Alex Johnson",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["phone"] is None
@@ -43,47 +50,71 @@ class TestCastProfileCreation:
     async def test_create_profile_missing_display_name(self, client, auth_headers):
         """Missing display_name returns 400."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/profile", json={
-            "phone": "555-0123",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "phone": "555-0123",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_display_name_max_200(self, client, auth_headers):
         """Display name > 200 chars rejected."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "A" * 201,
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "A" * 201,
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_phone_max_20(self, client, auth_headers):
         """Phone > 20 chars rejected."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "Alex",
-            "phone": "1" * 21,
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "Alex",
+                "phone": "1" * 21,
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_role_character_max_200(self, client, auth_headers):
         """Role/character > 200 chars rejected."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "Alex",
-            "role_character": "R" * 201,
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "Alex",
+                "role_character": "R" * 201,
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_profile_is_per_production(self, client, auth_headers):
         """Different users can each create a profile in the same production."""
         headers1 = auth_headers("some-cast-id")
-        resp1 = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "Alex in Show 1",
-        }, headers=headers1)
+        resp1 = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "Alex in Show 1",
+            },
+            headers=headers1,
+        )
         headers2 = auth_headers("other-cast-id")
-        resp2 = await client.post("/api/productions/prod-id/profile", json={
-            "display_name": "Alex in Show 2",
-        }, headers=headers2)
+        resp2 = await client.post(
+            "/api/productions/prod-id/profile",
+            json={
+                "display_name": "Alex in Show 2",
+            },
+            headers=headers2,
+        )
         assert resp1.status_code == 201
         assert resp2.status_code == 201
 

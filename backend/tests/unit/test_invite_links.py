@@ -15,9 +15,6 @@ Covers:
 - DIR-11: Director regenerates invite link
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 
 class TestInviteLinkGeneration:
     """DIR-10: Director generates invite link."""
@@ -46,7 +43,8 @@ class TestInviteLinkGeneration:
         token = response.json()["token"]
         # URL-safe: only alphanumeric, hyphens, underscores
         import re
-        assert re.match(r'^[A-Za-z0-9_-]+$', token)
+
+        assert re.match(r"^[A-Za-z0-9_-]+$", token)
 
     async def test_invite_expires_in_30_days(self, client, auth_headers):
         """Token expires 30 days from creation."""
@@ -110,9 +108,13 @@ class TestInviteLinkJoin:
     async def test_join_already_logged_in(self, client, auth_headers):
         """AUTH-08: Already logged in — auto-join as Cast."""
         headers = auth_headers("existing-user-id")
-        response = await client.post("/api/join", json={
-            "token": "valid-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "valid-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["role"] == "cast"  # Always joins as cast
@@ -120,17 +122,25 @@ class TestInviteLinkJoin:
     async def test_join_creates_cast_member(self, client, auth_headers, db_session):
         """Joining via invite creates a production_members row with role=cast."""
         headers = auth_headers("new-member-id")
-        await client.post("/api/join", json={
-            "token": "valid-token",
-        }, headers=headers)
+        await client.post(
+            "/api/join",
+            json={
+                "token": "valid-token",
+            },
+            headers=headers,
+        )
         # Verify in DB: production_members has a row with role='cast'
 
     async def test_join_already_member_idempotent(self, client, auth_headers):
         """Joining a production you're already in is a no-op."""
         headers = auth_headers("existing-member-id")
-        response = await client.post("/api/join", json={
-            "token": "valid-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "valid-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200  # Idempotent, not error
 
 
@@ -140,9 +150,13 @@ class TestInviteLinkExpiry:
     async def test_expired_link_rejected(self, client, auth_headers):
         """AUTH-21: Token expired > 30 days returns error."""
         headers = auth_headers("user-id")
-        response = await client.post("/api/join", json={
-            "token": "expired-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "expired-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
         assert "expired" in response.json()["message"].lower()
 
@@ -153,9 +167,13 @@ class TestInviteLinkMaxUses:
     async def test_max_uses_reached(self, client, auth_headers):
         """AUTH-22: Token at max uses returns error."""
         headers = auth_headers("user-id")
-        response = await client.post("/api/join", json={
-            "token": "maxed-out-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "maxed-out-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
         assert "no longer available" in response.json()["message"].lower()
 
@@ -179,9 +197,13 @@ class TestInviteLinkSecurity:
     async def test_invalid_token_rejected(self, client, auth_headers):
         """CAST-12: Invalid/regenerated invite link returns error."""
         headers = auth_headers("user-id")
-        response = await client.post("/api/join", json={
-            "token": "completely-invalid-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "completely-invalid-token",
+            },
+            headers=headers,
+        )
         assert response.status_code in [400, 404]
 
     async def test_invite_does_not_reveal_production_details(self, client):

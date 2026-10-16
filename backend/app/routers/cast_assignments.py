@@ -3,14 +3,19 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, delete
+from sqlalchemy import delete, select
 
 from app.database import async_session_maker
 from app.models import (
-    ProductionMember, RehearsalDate, CastAssignment,
-    CastProfile, ConflictSubmission, CastConflict, User,
+    CastAssignment,
+    CastConflict,
+    CastProfile,
+    ConflictSubmission,
+    ProductionMember,
+    RehearsalDate,
+    User,
 )
 from app.routers.auth import get_current_user
 
@@ -36,9 +41,13 @@ async def _check_staff(production_id: str, user_id: str) -> ProductionMember:
         result = await session.execute(stmt)
         member = result.scalar_one_or_none()
         if not member:
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"})
+            raise HTTPException(
+                status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"}
+            )
         if member.role not in ("director", "staff"):
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Staff only"})
+            raise HTTPException(
+                status_code=403, detail={"error": "FORBIDDEN", "message": "Staff only"}
+            )
         return member
 
 
@@ -57,7 +66,9 @@ async def list_assignments(
         )
         result = await session.execute(stmt)
         if not result.scalar_one_or_none():
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"})
+            raise HTTPException(
+                status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"}
+            )
 
         stmt = select(CastAssignment).where(CastAssignment.production_id == production_id)
         if user_id:
@@ -78,10 +89,18 @@ async def list_assignments(
                 "id": a.id,
                 "user_id": a.user_id,
                 "rehearsal_date_id": a.rehearsal_date_id,
-                "date": dates_map[a.rehearsal_date_id].rehearsal_date.isoformat() if a.rehearsal_date_id in dates_map else None,
-                "type": dates_map[a.rehearsal_date_id].type if a.rehearsal_date_id in dates_map else None,
-                "start_time": dates_map[a.rehearsal_date_id].start_time.strftime("%H:%M") if a.rehearsal_date_id in dates_map else None,
-                "end_time": dates_map[a.rehearsal_date_id].end_time.strftime("%H:%M") if a.rehearsal_date_id in dates_map else None,
+                "date": dates_map[a.rehearsal_date_id].rehearsal_date.isoformat()
+                if a.rehearsal_date_id in dates_map
+                else None,
+                "type": dates_map[a.rehearsal_date_id].type
+                if a.rehearsal_date_id in dates_map
+                else None,
+                "start_time": dates_map[a.rehearsal_date_id].start_time.strftime("%H:%M")
+                if a.rehearsal_date_id in dates_map
+                else None,
+                "end_time": dates_map[a.rehearsal_date_id].end_time.strftime("%H:%M")
+                if a.rehearsal_date_id in dates_map
+                else None,
             }
             for a in assignments
         ]
@@ -104,7 +123,9 @@ async def assign_cast(
         )
         result = await session.execute(stmt)
         if not result.scalar_one_or_none():
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "User not in production"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "User not in production"}
+            )
 
         # Verify rehearsal date exists
         stmt = select(RehearsalDate).where(
@@ -113,7 +134,9 @@ async def assign_cast(
         )
         result = await session.execute(stmt)
         if not result.scalar_one_or_none():
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Date not found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "Date not found"}
+            )
 
         # Check not already assigned
         stmt = select(CastAssignment).where(
@@ -132,7 +155,11 @@ async def assign_cast(
         )
         session.add(assignment)
         await session.commit()
-        return {"id": assignment.id, "user_id": body.user_id, "rehearsal_date_id": body.rehearsal_date_id}
+        return {
+            "id": assignment.id,
+            "user_id": body.user_id,
+            "rehearsal_date_id": body.rehearsal_date_id,
+        }
 
 
 @router.put("/{production_id}/assignments/bulk")
@@ -155,12 +182,14 @@ async def bulk_assign_cast(
 
         added = 0
         for date_id in body.rehearsal_date_ids:
-            session.add(CastAssignment(
-                id=str(uuid.uuid4()),
-                production_id=production_id,
-                rehearsal_date_id=date_id,
-                user_id=body.user_id,
-            ))
+            session.add(
+                CastAssignment(
+                    id=str(uuid.uuid4()),
+                    production_id=production_id,
+                    rehearsal_date_id=date_id,
+                    user_id=body.user_id,
+                )
+            )
             added += 1
 
         await session.commit()
@@ -207,7 +236,9 @@ async def get_member_details(
         result = await session.execute(stmt)
         caller = result.scalar_one_or_none()
         if not caller:
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"})
+            raise HTTPException(
+                status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"}
+            )
 
         # Get target member
         stmt = select(ProductionMember).where(
@@ -217,7 +248,9 @@ async def get_member_details(
         result = await session.execute(stmt)
         member = result.scalar_one_or_none()
         if not member:
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Member not found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "Member not found"}
+            )
 
         # Get user info
         stmt = select(User).where(User.id == user_id)
@@ -252,7 +285,9 @@ async def get_member_details(
                 date_map = {d.id: d for d in result.scalars().all()}
                 conflicts = [
                     {
-                        "date": date_map[c.rehearsal_date_id].rehearsal_date.isoformat() if c.rehearsal_date_id in date_map else None,
+                        "date": date_map[c.rehearsal_date_id].rehearsal_date.isoformat()
+                        if c.rehearsal_date_id in date_map
+                        else None,
                         "reason": c.reason,
                     }
                     for c in cast_conflicts
@@ -271,13 +306,15 @@ async def get_member_details(
             stmt = select(RehearsalDate).where(RehearsalDate.id.in_(assignment_date_ids))
             result = await session.execute(stmt)
             for d in result.scalars().all():
-                assigned_dates.append({
-                    "id": d.id,
-                    "date": d.rehearsal_date.isoformat(),
-                    "type": d.type,
-                    "start_time": d.start_time.strftime("%H:%M"),
-                    "end_time": d.end_time.strftime("%H:%M"),
-                })
+                assigned_dates.append(
+                    {
+                        "id": d.id,
+                        "date": d.rehearsal_date.isoformat(),
+                        "type": d.type,
+                        "start_time": d.start_time.strftime("%H:%M"),
+                        "end_time": d.end_time.strftime("%H:%M"),
+                    }
+                )
 
         is_self = current_user["id"] == user_id
         is_director = caller.role == "director"
@@ -309,14 +346,22 @@ async def get_member_details(
         # Emergency contacts — director + staff can see, cast sees own only
         if is_director_or_staff or is_self:
             from app.models import EmergencyContact
-            stmt = select(EmergencyContact).where(
-                EmergencyContact.user_id == user_id
-            ).order_by(EmergencyContact.contact_order)
+
+            stmt = (
+                select(EmergencyContact)
+                .where(EmergencyContact.user_id == user_id)
+                .order_by(EmergencyContact.contact_order)
+            )
             ec_result = await session.execute(stmt)
             ec_list = ec_result.scalars().all()
             result_data["emergency_contacts"] = [
-                {"name": c.name, "email": c.email, "phone": c.phone,
-                 "relationship": c.relationship, "contact_order": c.contact_order}
+                {
+                    "name": c.name,
+                    "email": c.email,
+                    "phone": c.phone,
+                    "relationship": c.relationship,
+                    "contact_order": c.contact_order,
+                }
                 for c in ec_list
             ]
         else:

@@ -133,11 +133,42 @@ cloudflared tunnel run callboard               # Tunnel to callboard.deetalk.win
 - No message deletion (audit trail)
 - Actual timestamps (not relative)
 
+## Rehearsal Operations (see spec/SPEC-012)
+
+- Acknowledgements: bulletin posts can require "I've read this"; staff see who is pending and can remind (email)
+- Call sheet: who is called (explicit assignments, else full cast), check-in, late/absent notices, attendance report
+- Personal calendar feed: secret `.ics` link per member (`/api/calendar/{token}.ics`), reset to revoke
+- Rehearsal reports: department sections, distribution list, recipients confirm
+- Scenes with casting and per-date availability; open-call sign-ups; double-booking detection (rooms, people, sign-ups)
+- Documents (files, 10 MB, allow-listed types) and e-signed forms (typed name, guardian for 13-17, immutable once signed)
+- Help in plain language: every page has a role-specific "How this page works" box (`frontend/src/content/guides.ts`, `PageGuide`), plus a Help page with a permission table and glossary. Edit words in `guides.ts`, not in pages
+- The "How this page works" box folds to its small link while a tour is running or due to start (`hooks/tourSignal.ts`), then slides back open; tours that have nothing on screen end themselves. Keep any new tour or guide wired through those hooks so the two never overlap
+- Tours (`frontend/src/tours/`): bump `TOUR_VERSION` in `hooks/useTour.ts` when tour content changes so everyone sees the update once; steps whose target is not on screen are skipped
+- Documents open in a pop-up viewer (`DocumentViewer`): PDF, Word (.docx), Excel (.xlsx), CSV, Markdown, text, images, audio, video; other types download
+- Backend routers use `Depends(get_db)` and `user["id"]` (never `user["sub"]`); shared checks live in `services/access.py`
+- Page colours in inline styles use `rgb(var(--c-R-G-B) / a)` / `hsl(var(--h-H-S-L))`; run `frontend/scripts/gen_color_vars.py` after adding a new colour
+
+## Simple theme (internal key `calendar`)
+
+- Simple is the default for new users; the old "Default" look is now named "Classic" (stored key still `default`)
+- Third style, shown as "Simple" (Account > Appearance); the stored key and CSS class stay `calendar`: Default layout rules plus a top navigation bar (group tabs with a sub-row of pages) and a "road to opening" phase bar on Dashboard and Schedule
+- `ThemeContext`: `uiStyle` stays `'default' | 'fancy'` (calendar counts as default); `isCalendar` is the extra flag; html gets `ui-default ui-calendar`
+- Phases come from the production dates and the types of scheduled calls (rehearsal, tech, dress, performance): `components/layout/PhaseBar.tsx`
+- Teal accent channels are overridden after the generated colour-vars block in `index.css`
+
+## Hosted copy (Google Cloud VM)
+
+- Project `digital-call-board`, VM `callboard-vm` (e2-micro, us-central1-a), static IP `callboard-ip`; site at `https://34-171-7-85.sslip.io` (Caddy gets a free certificate; swap `SITE_ADDRESS` in `/opt/callboard/.env` when a real domain exists)
+- Containers: `docker-compose.vm.yml` (db, backend, frontend, caddy). Images are built locally and copied up; secrets live only in `/opt/callboard/.env` on the VM
+- Google sign-in: the browser sends Google's signed ID token and the backend checks it with Google (`verify_google_credential`); it never trusts an email or ID sent on its own. Needs `GOOGLE_CLIENT_ID` on the VM and `VITE_GOOGLE_CLIENT_ID` as a frontend build arg; no client secret is used
+
 ## Navigation
 
-- Director: Dashboard, Schedule, Bulletin, Members, Chat, Settings
-- Cast: Dashboard, Bulletin, Schedule, Chat
+- Director/staff: Dashboard; Rehearse (Schedule, Call Sheet, Scenes, Reports); Communicate (Bulletin, Chat); Company (Members, Sign-ups, Documents); Production (Settings)
+- Cast: Dashboard, Bulletin, Schedule, Call Sheet, Chat, Sign-ups, Documents
+- Phones: four pages plus a "More" sheet
 - Members page: Roster | Manage tabs
 - "← Productions" back button in sidebar
+- Account page: one section at a time via a pill menu (Classic and Simple); Fancy keeps the long page
 - Account page within production context (`/production/:id/account`)
 - Member count persists across tabs

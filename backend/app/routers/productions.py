@@ -1,17 +1,17 @@
 """Productions router."""
 
 import uuid
-from datetime import date, datetime, timedelta
-from typing import Any, Optional
+from datetime import date, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import Production, ProductionMember, Theater, User
+from app.models import Production, ProductionMember, Theater
 from app.routers.auth import get_current_user
-from app.services.business_logic import validate_production_dates, FIELD_MAX_LENGTHS
+from app.services.business_logic import FIELD_MAX_LENGTHS, validate_production_dates
 
 router = APIRouter()
 
@@ -26,9 +26,9 @@ class CreateProductionRequest(BaseModel):
 
 
 class UpdateProductionRequest(BaseModel):
-    name: Optional[str] = None
-    extra_conflict_windows: Optional[int] = None
-    closing_night: Optional[str] = None
+    name: str | None = None
+    extra_conflict_windows: int | None = None
+    closing_night: str | None = None
 
 
 @router.post("", status_code=201)
@@ -173,9 +173,7 @@ async def list_productions(
 ) -> list[dict[str, Any]]:
     """List user's productions."""
     async with async_session_maker() as session:
-        stmt = select(ProductionMember).where(
-            ProductionMember.user_id == current_user["id"]
-        )
+        stmt = select(ProductionMember).where(ProductionMember.user_id == current_user["id"])
         result = await session.execute(stmt)
         members = result.scalars().all()
 
@@ -251,9 +249,7 @@ async def get_production(
             "closing_night": production.closing_night.isoformat(),
             "extra_conflict_windows": production.extra_conflict_windows,
             "is_archived": production.is_archived,
-            "archived_at": production.archived_at.isoformat()
-            if production.archived_at
-            else None,
+            "archived_at": production.archived_at.isoformat() if production.archived_at else None,
             "role": member.role,
         }
 
@@ -303,7 +299,10 @@ async def update_production(
             if body.extra_conflict_windows < 0 or body.extra_conflict_windows > 50:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={"error": "VALIDATION_ERROR", "message": "Extra conflict windows must be 0-50"},
+                    detail={
+                        "error": "VALIDATION_ERROR",
+                        "message": "Extra conflict windows must be 0-50",
+                    },
                 )
             production.extra_conflict_windows = body.extra_conflict_windows
 
@@ -311,9 +310,18 @@ async def update_production(
             try:
                 new_closing = date.fromisoformat(body.closing_night)
             except ValueError:
-                raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid date format"})
+                raise HTTPException(
+                    status_code=400,
+                    detail={"error": "VALIDATION_ERROR", "message": "Invalid date format"},
+                )
             if new_closing < production.opening_night:
-                raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Closing night must be on or after opening night"})
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "VALIDATION_ERROR",
+                        "message": "Closing night must be on or after opening night",
+                    },
+                )
             production.closing_night = new_closing
 
         await session.commit()

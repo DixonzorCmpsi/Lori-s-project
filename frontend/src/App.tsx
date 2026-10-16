@@ -27,6 +27,12 @@ import { ChatConversationPage } from '@/pages/ChatConversationPage';
 import { ConflictsPage } from '@/pages/ConflictsPage';
 import { CastProfilePage } from '@/pages/CastProfilePage';
 import { ProductionSettingsPage } from '@/pages/ProductionSettingsPage';
+import { CallSheetPage } from '@/pages/CallSheetPage';
+import { ReportsPage } from '@/pages/ReportsPage';
+import { ScenesPage } from '@/pages/ScenesPage';
+import { SignupsPage } from '@/pages/SignupsPage';
+import { DocumentsPage } from '@/pages/DocumentsPage';
+import { HelpPage } from '@/pages/HelpPage';
 
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -66,6 +72,12 @@ export function App() {
           <Route path="conflicts" element={<ConflictsPage />} />
           <Route path="profile" element={<CastProfilePage />} />
           <Route path="settings" element={<ProductionSettingsPage />} />
+          <Route path="call-sheet" element={<CallSheetPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="scenes" element={<ScenesPage />} />
+          <Route path="signups" element={<SignupsPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="help" element={<HelpPage />} />
           <Route path="account" element={<AccountPage />} />
         </Route>
       </Route>

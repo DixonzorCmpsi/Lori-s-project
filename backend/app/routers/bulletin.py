@@ -1,17 +1,16 @@
 """Bulletin board router."""
 
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, select
 
 from app.database import async_session_maker
-from app.models import Production, ProductionMember, BulletinPost
+from app.models import Acknowledgement, BulletinPost, Production, ProductionMember
 from app.routers.auth import get_current_user
-from app.services.business_logic import sanitize_markdown, FIELD_MAX_LENGTHS
+from app.services.business_logic import FIELD_MAX_LENGTHS, sanitize_markdown
 
 router = APIRouter()
 
@@ -20,11 +19,12 @@ class CreatePostRequest(BaseModel):
     title: str
     body: str
     notify_members: bool = False
+    requires_ack: bool = False
 
 
 class UpdatePostRequest(BaseModel):
-    title: Optional[str] = None
-    body: Optional[str] = None
+    title: str | None = None
+    body: str | None = None
 
 
 async def check_production_member(production_id: str, user_id: str) -> ProductionMember:
@@ -68,6 +68,34 @@ async def get_bulletin_posts(
         result = await session.execute(stmt)
         posts = result.scalars().all()
 
+        # Acknowledgement info for posts that ask for it
+        post_ids = [p.id for p in posts if p.requires_ack]
+        ack_counts: dict[str, int] = {}
+        mine: set[str] = set()
+        total_members = 0
+        if post_ids:
+            rows = await session.execute(
+                select(Acknowledgement.target_id, func.count(Acknowledgement.id))
+                .where(Acknowledgement.kind == "bulletin", Acknowledgement.target_id.in_(post_ids))
+                .group_by(Acknowledgement.target_id)
+            )
+            ack_counts = {target: n for target, n in rows.all()}
+            mine_rows = await session.execute(
+                select(Acknowledgement.target_id).where(
+                    Acknowledgement.kind == "bulletin",
+                    Acknowledgement.target_id.in_(post_ids),
+                    Acknowledgement.user_id == current_user["id"],
+                )
+            )
+            mine = {t for (t,) in mine_rows.all()}
+            total_members = (
+                await session.execute(
+                    select(func.count(ProductionMember.id)).where(
+                        ProductionMember.production_id == production_id
+                    )
+                )
+            ).scalar() or 0
+
         return [
             {
                 "id": p.id,
@@ -76,10 +104,14 @@ async def get_bulletin_posts(
                 "author_id": p.author_id,
                 "is_pinned": p.is_pinned,
                 "notify_members": p.notify_members,
+                "requires_ack": bool(p.requires_ack),
+                "ack_count": ack_counts.get(p.id, 0) if p.requires_ack else 0,
+                "ack_total": max(total_members - 1, 0) if p.requires_ack else 0,
+                "acknowledged": (p.id in mine or p.author_id == current_user["id"])
+                if p.requires_ack
+                else False,
                 "created_at": p.created_at.isoformat(),
-                "updated_at": p.updated_at.isoformat()
-                if p.updated_at != p.created_at
-                else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at != p.created_at else None,
             }
             for p in posts
         ]
@@ -141,6 +173,7 @@ async def create_bulletin_post(
             title=title,
             body=sanitized_body,
             notify_members=body.notify_members,
+            requires_ack=body.requires_ack,
         )
         session.add(post)
         await session.commit()
@@ -148,8 +181,10 @@ async def create_bulletin_post(
         # Send email notifications to members who have them enabled
         if body.notify_members:
             try:
+                from app.models import ProductionMember
+                from app.models import User as UserModel
                 from app.services.email import send_announcement_email
-                from app.models import ProductionMember, User as UserModel
+
                 stmt = (
                     select(UserModel)
                     .join(ProductionMember, ProductionMember.user_id == UserModel.id)
@@ -175,6 +210,7 @@ async def create_bulletin_post(
             "author_id": post.author_id,
             "is_pinned": post.is_pinned,
             "notify_members": post.notify_members,
+            "requires_ack": post.requires_ack,
             "created_at": post.created_at.isoformat(),
         }
 

@@ -1,27 +1,36 @@
 """FastAPI application for Digital Call Board."""
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 from app.database import init_db
 from app.routers import (
-    auth,
-    theaters,
-    productions,
-    schedule,
-    bulletin,
-    members,
-    invite,
-    conflicts,
-    cast_profile,
-    cast_assignments,
-    chat,
-    join,
-    scenes,
+    acknowledgements,
     attendance,
+    attention,
+    auth,
+    bulletin,
+    calendar,
+    cast_assignments,
+    cast_profile,
+    chat,
+    conflicts,
+    documents,
+    forms,
+    invite,
+    join,
+    members,
+    productions,
+    reports,
+    scenes,
+    schedule,
+    signups,
     teams,
+    theaters,
 )
 
 
@@ -43,6 +52,7 @@ def create_app() -> FastAPI:
 
     # CORS middleware — include production origin from NEXTAUTH_URL
     from app.config import get_settings
+
     settings = get_settings()
     allowed_origins = [
         "http://localhost:5173",
@@ -64,22 +74,29 @@ def create_app() -> FastAPI:
     # Include all routers with correct prefixes
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(theaters.router, prefix="/api/theaters", tags=["theaters"])
-    app.include_router(
-        productions.router, prefix="/api/productions", tags=["productions"]
-    )
+    app.include_router(productions.router, prefix="/api/productions", tags=["productions"])
     app.include_router(schedule.router, prefix="/api/productions", tags=["schedule"])
     app.include_router(bulletin.router, prefix="/api/productions", tags=["bulletin"])
     app.include_router(members.router, prefix="/api/productions", tags=["members"])
     app.include_router(invite.router, prefix="/api/productions", tags=["invite"])
     app.include_router(conflicts.router, prefix="/api/productions", tags=["conflicts"])
+    app.include_router(cast_profile.router, prefix="/api/productions", tags=["cast_profile"])
     app.include_router(
-        cast_profile.router, prefix="/api/productions", tags=["cast_profile"]
+        cast_assignments.router, prefix="/api/productions", tags=["cast_assignments"]
     )
-    app.include_router(cast_assignments.router, prefix="/api/productions", tags=["cast_assignments"])
     app.include_router(chat.router, prefix="/api/productions", tags=["chat"])
     app.include_router(join.router, prefix="/api", tags=["join"])
     app.include_router(scenes.router, prefix="/api", tags=["scenes"])
     app.include_router(attendance.router, prefix="/api", tags=["attendance"])
+    app.include_router(attendance.callsheet_router, prefix="/api", tags=["call-sheet"])
+    app.include_router(acknowledgements.router, prefix="/api", tags=["acknowledgements"])
+    app.include_router(attention.router, prefix="/api", tags=["attention"])
+    app.include_router(calendar.router, prefix="/api", tags=["calendar"])
+    app.include_router(reports.router, prefix="/api", tags=["reports"])
+    app.include_router(signups.router, prefix="/api", tags=["signups"])
+    app.include_router(signups.checks_router, prefix="/api", tags=["schedule-checks"])
+    app.include_router(documents.router, prefix="/api", tags=["documents"])
+    app.include_router(forms.router, prefix="/api", tags=["forms"])
     app.include_router(teams.router, prefix="/api", tags=["teams"])
 
     # Custom exception handlers to match spec error format
@@ -113,7 +130,6 @@ def create_app() -> FastAPI:
 
     # --- Security headers middleware ---
     from starlette.middleware.base import BaseHTTPMiddleware
-    from starlette.responses import Response as StarletteResponse
 
     class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request, call_next):
@@ -139,13 +155,18 @@ def create_app() -> FastAPI:
 
     # --- CSRF origin checking middleware ---
     CSRF_PROTECTED_PATHS = [
-        "/api/auth/register", "/api/auth/verify-email", "/api/auth/resend-verification",
-        "/api/auth/forgot-password", "/api/auth/reset-password",
+        "/api/auth/register",
+        "/api/auth/verify-email",
+        "/api/auth/resend-verification",
+        "/api/auth/forgot-password",
+        "/api/auth/reset-password",
     ]
 
     csrf_allowed_origins = {
-        "http://localhost:5173", "http://localhost:3000",
-        "http://127.0.0.1:5173", "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
         "http://test",  # httpx test client
     }
     if settings.nextauth_url:
@@ -191,8 +212,9 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
 
     # --- Realtime token endpoint ---
-    from app.routers.auth import get_current_user
     from fastapi import Depends
+
+    from app.routers.auth import get_current_user
 
     @app.post("/api/productions/{production_id}/realtime/token")
     async def generate_realtime_token(
@@ -200,9 +222,12 @@ def create_app() -> FastAPI:
         current_user: dict = Depends(get_current_user),
     ):
         """Generate a short-lived JWT for Supabase Realtime."""
-        from jose import jwt as jose_jwt
         from datetime import datetime, timedelta
+
+        from jose import jwt as jose_jwt
+
         from app.config import get_settings
+
         settings = get_settings()
         payload = {
             "sub": current_user["id"],

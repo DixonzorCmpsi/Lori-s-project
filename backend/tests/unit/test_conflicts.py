@@ -24,31 +24,43 @@ class TestConflictSubmission:
     async def test_submit_conflicts_success(self, client, auth_headers):
         """Cast member submits conflicts for specific rehearsal dates."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "date-1", "reason": "Doctor appointment"},
-                {"rehearsal_date_id": "date-2", "reason": "Work conflict"},
-                {"rehearsal_date_id": "date-3"},  # No reason (optional)
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "date-1", "reason": "Doctor appointment"},
+                    {"rehearsal_date_id": "date-2", "reason": "Work conflict"},
+                    {"rehearsal_date_id": "date-3"},  # No reason (optional)
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_submit_empty_conflicts(self, client, auth_headers):
         """Cast with no conflicts submits empty array — still records submission."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [],
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_submit_conflicts_returns_correct_data(self, client, auth_headers):
         """Response includes the submitted conflict data."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "date-1", "reason": "Doctor appointment"},
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "date-1", "reason": "Doctor appointment"},
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert len(data.get("conflicts", [])) == 1
@@ -61,22 +73,34 @@ class TestConflictImmutability:
         """Second conflict submission returns 409 Conflict."""
         headers = auth_headers("cast-member-id")
         # First submission
-        await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [{"rehearsal_date_id": "date-1"}],
-        }, headers=headers)
+        await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [{"rehearsal_date_id": "date-1"}],
+            },
+            headers=headers,
+        )
         # Second submission
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [{"rehearsal_date_id": "date-2"}],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [{"rehearsal_date_id": "date-2"}],
+            },
+            headers=headers,
+        )
         assert response.status_code == 409
         assert "already submitted" in response.json()["message"].lower()
 
     async def test_no_edit_endpoint_exists(self, client, auth_headers):
         """There is no PUT/PATCH endpoint for conflicts."""
         headers = auth_headers("cast-member-id")
-        response = await client.put("/api/productions/prod-id/conflicts", json={
-            "dates": [],
-        }, headers=headers)
+        response = await client.put(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [],
+            },
+            headers=headers,
+        )
         assert response.status_code == 405  # Method Not Allowed
 
     async def test_cast_cannot_delete_own_conflicts(self, client, auth_headers):
@@ -95,58 +119,84 @@ class TestConflictValidation:
     async def test_invalid_rehearsal_date_id(self, client, auth_headers):
         """Rehearsal date ID not belonging to production returns 400."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "non-existent-date-id"},
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "non-existent-date-id"},
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
         data = response.json()
-        assert "invalid" in data.get("error", "").lower() or "invalid" in data.get("message", "").lower()
+        assert (
+            "invalid" in data.get("error", "").lower()
+            or "invalid" in data.get("message", "").lower()
+        )
 
     async def test_deleted_rehearsal_date_rejected(self, client, auth_headers):
         """Cannot submit conflict for a soft-deleted rehearsal date."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "soft-deleted-date-id"},
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "soft-deleted-date-id"},
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_reason_max_500_chars(self, client, auth_headers):
         """CAST-19: Conflict reason > 500 characters rejected."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "date-1", "reason": "R" * 501},
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "date-1", "reason": "R" * 501},
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_reason_exactly_500_chars(self, client, auth_headers):
         """Conflict reason at exactly 500 chars is accepted."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "date-1", "reason": "R" * 500},
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "date-1", "reason": "R" * 500},
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_non_cast_cannot_submit(self, client, auth_headers):
         """Director and Staff cannot submit conflicts."""
         director_headers = auth_headers("director-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [],
-        }, headers=director_headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [],
+            },
+            headers=director_headers,
+        )
         assert response.status_code == 403
 
     async def test_unauthenticated_submission_rejected(self, client):
         """Unauthenticated conflict submission returns 401."""
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [],
-        })
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [],
+            },
+        )
         assert response.status_code == 401
 
 
@@ -159,12 +209,20 @@ class TestConflictRaceCondition:
         # The DB UNIQUE constraint on conflict_submissions ensures only one wins
         headers = auth_headers("cast-member-id")
         # Simulated — real test would use concurrent requests
-        resp1 = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [{"rehearsal_date_id": "date-1"}],
-        }, headers=headers)
-        resp2 = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [{"rehearsal_date_id": "date-2"}],
-        }, headers=headers)
+        resp1 = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [{"rehearsal_date_id": "date-1"}],
+            },
+            headers=headers,
+        )
+        resp2 = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [{"rehearsal_date_id": "date-2"}],
+            },
+            headers=headers,
+        )
         statuses = {resp1.status_code, resp2.status_code}
         assert 201 in statuses
         assert 409 in statuses
@@ -177,12 +235,16 @@ class TestConflictAtomicity:
         """If one conflict insert fails, entire submission rolls back."""
         # Mix of valid and invalid rehearsal date IDs
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [
-                {"rehearsal_date_id": "valid-date-1"},
-                {"rehearsal_date_id": "invalid-date-999"},
-            ],
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [
+                    {"rehearsal_date_id": "valid-date-1"},
+                    {"rehearsal_date_id": "invalid-date-999"},
+                ],
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
         # Verify no partial data was saved
 
@@ -214,9 +276,13 @@ class TestDirectorConflictReset:
         )
         # Cast re-submits
         cast_headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/conflicts", json={
-            "dates": [{"rehearsal_date_id": "date-1"}],
-        }, headers=cast_headers)
+        response = await client.post(
+            "/api/productions/prod-id/conflicts",
+            json={
+                "dates": [{"rehearsal_date_id": "date-1"}],
+            },
+            headers=cast_headers,
+        )
         assert response.status_code == 201
 
     async def test_reset_creates_bulletin_post(self, client, auth_headers):
@@ -306,16 +372,22 @@ class TestDirectorAggregatedView:
 class TestScaleConflicts:
     """SCHED-12: 50 cast members submit conflicts."""
 
-    @pytest.mark.skip(reason="Requires integration setup: 50 loop-generated users need production membership seeding")
+    @pytest.mark.skip(
+        reason="Requires integration setup: 50 loop-generated users need production membership seeding"
+    )
     async def test_50_members_submit(self, client, auth_headers):
         """System handles 50 cast members submitting conflicts."""
         # This is a load/scale test
         # In real test, create 50 cast members and have each submit
         for i in range(50):
             headers = auth_headers(f"cast-member-{i}")
-            response = await client.post("/api/productions/prod-id/conflicts", json={
-                "dates": [{"rehearsal_date_id": f"date-{i % 10}"}],
-            }, headers=headers)
+            response = await client.post(
+                "/api/productions/prod-id/conflicts",
+                json={
+                    "dates": [{"rehearsal_date_id": f"date-{i % 10}"}],
+                },
+                headers=headers,
+            )
             assert response.status_code == 201
 
     async def test_aggregated_view_with_50_members(self, client, auth_headers):

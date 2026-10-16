@@ -1,7 +1,6 @@
 """Application configuration using pydantic-settings."""
 
 from functools import lru_cache
-from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,17 +24,17 @@ class Settings(BaseSettings):
     nextauth_url: str = Field(default="http://localhost:3000")
 
     # Google OAuth
-    google_client_id: Optional[str] = None
-    google_client_secret: Optional[str] = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
 
     # Email (Resend)
-    resend_api_key: Optional[str] = None
+    resend_api_key: str | None = None
     email_from: str = "noreply@callboard.deetalk.win"
 
     # Supabase (production)
-    supabase_url: Optional[str] = None
-    supabase_anon_key: Optional[str] = None
-    supabase_service_role_key: Optional[str] = None
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
 
     # Storage provider: "supabase" or "local"
     storage_provider: str = "local"

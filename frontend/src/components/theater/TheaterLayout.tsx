@@ -1,10 +1,11 @@
-import { ReactNode, useState, useCallback, useRef, useEffect } from 'react';
+import { ReactNode, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Curtain } from './Curtain';
 import { StageFloor } from './StageFloor';
 import { Spotlight } from './Spotlight';
 import { Pelmet } from './Pelmet';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const DEFAULT_PANEL_PX = 240;
 const SNAP_CLOSE_PX = 80;   // below this, snap shut
@@ -38,6 +39,17 @@ export function TheaterLayout({
   onDrawerClose,
   focusMode,
 }: TheaterLayoutProps) {
+  // The theater stage is the original look. Pre-login pages always use it, whatever
+  // theme the user picked for the app (the picked theme applies after sign-in).
+  const { setForceFancy } = useTheme();
+  // The in-app layout (BackstageLayout) passes panels; standalone landing pages do not.
+  const isLanding = !leftPanel && !topBar;
+  useLayoutEffect(() => {
+    if (!isLanding) return;
+    setForceFancy(true);
+    return () => setForceFancy(false);
+  }, [isLanding, setForceFancy]);
+
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const isDesktop = bp === 'desktop';

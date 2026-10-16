@@ -7,8 +7,16 @@ RUN npm ci
 
 COPY frontend/ .
 
-# Copy .env.production so Vite picks up VITE_* vars at build time
-COPY .env.production .env.production
+# Optional: pick up .env.production if present (local/manual builds). The
+# bracket glob makes this a no-op when the file doesn't exist (e.g. CI),
+# instead of failing the build.
+COPY .env.productio[n] .env.production
+
+# CI/CD (Cloud Run) passes build-time config as build args instead of a file.
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 RUN npx vite build
 

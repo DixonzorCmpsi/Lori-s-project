@@ -15,11 +15,15 @@ import type { Team, BulletinPost } from '@/types';
 import { formatTime } from '@/utils/format';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
+import { CalendarButton, DoubleBookingBanner } from '@/components/CalendarButton';
 import { ChalkText } from '@/components/theater/Chalkboard';
 import { GafferTape } from '@/components/theater/GafferTape';
 import type { RehearsalDate } from '@/types';
 import { PageTour } from '@/tours/PageTour';
 import { scheduleTourSteps, scheduleCastTourSteps } from '@/tours/pageTours';
+import { PageGuide } from '@/components/PageGuide';
+import { PhaseBar } from '@/components/layout/PhaseBar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Map rehearsal types to gaffer tape colors (must match sticky note colors)
 const tapeColorMap: Record<string, 'yellow' | 'blue' | 'purple' | 'pink' | 'white'> = {
@@ -39,11 +43,11 @@ const typesCycle = ['', 'regular', 'tech', 'dress', 'performance', 'blocked'] as
 type DayType = typeof typesCycle[number];
 
 const typeConfig: Record<string, { label: string; noteBg: string; noteText: string; chalkBg: string }> = {
-  regular: { label: 'Rehearsal', noteBg: 'hsl(48, 90%, 85%)', noteText: 'hsl(35, 40%, 20%)', chalkBg: 'rgba(255,255,255,0.08)' },
-  tech: { label: 'Tech', noteBg: 'hsl(210, 70%, 88%)', noteText: 'hsl(210, 30%, 22%)', chalkBg: 'rgba(100,180,255,0.1)' },
-  dress: { label: 'Dress', noteBg: 'hsl(280, 60%, 88%)', noteText: 'hsl(280, 30%, 25%)', chalkBg: 'rgba(200,140,255,0.1)' },
-  performance: { label: 'Show', noteBg: 'hsl(340, 80%, 88%)', noteText: 'hsl(340, 30%, 25%)', chalkBg: 'rgba(255,140,100,0.1)' },
-  blocked: { label: 'Blocked', noteBg: 'hsl(0, 0%, 75%)', noteText: 'hsl(0, 0%, 30%)', chalkBg: 'rgba(255,80,80,0.06)' },
+  regular: { label: 'Rehearsal', noteBg: 'hsl(48, 90%, 85%)', noteText: 'hsl(35, 40%, 20%)', chalkBg: 'rgb(var(--c-255-255-255) / 0.08)' },
+  tech: { label: 'Tech', noteBg: 'hsl(210, 70%, 88%)', noteText: 'hsl(210, 30%, 22%)', chalkBg: 'rgb(var(--c-100-180-255) / 0.1)' },
+  dress: { label: 'Dress', noteBg: 'hsl(280, 60%, 88%)', noteText: 'hsl(280, 30%, 25%)', chalkBg: 'rgb(var(--c-200-140-255) / 0.1)' },
+  performance: { label: 'Show', noteBg: 'hsl(340, 80%, 88%)', noteText: 'hsl(340, 30%, 25%)', chalkBg: 'rgb(var(--c-255-140-100) / 0.1)' },
+  blocked: { label: 'Blocked', noteBg: 'hsl(0, 0%, 75%)', noteText: 'hsl(0, 0%, 30%)', chalkBg: 'rgb(var(--c-255-80-80) / 0.06)' },
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -55,6 +59,7 @@ export function SchedulePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { userRole, production, members } = useProduction();
+  const { isCalendar } = useTheme();
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const { toast } = useToast();
@@ -183,6 +188,7 @@ export function SchedulePage() {
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
   const [editNote, setEditNote] = useState('');
+  const [editLocation, setEditLocation] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -450,7 +456,7 @@ export function SchedulePage() {
   // Handlers for existing date edits
   async function handleEditSave() {
     if (!editId || !id) return; setBusy(true);
-    try { await updateDate(id, editId, { start_time: editStart, end_time: editEnd, note: editNote || undefined }); toast('Updated'); setEditId(null); refetch(); }
+    try { await updateDate(id, editId, { start_time: editStart, end_time: editEnd, note: editNote || undefined, location: editLocation }); toast('Updated'); setEditId(null); refetch(); }
     catch { toast('Failed', 'error'); } finally { setBusy(false); }
   }
   async function handleCancel(dateId: string) {
@@ -467,33 +473,40 @@ export function SchedulePage() {
   const selectedEvents = selectedDay ? (dateMap[selectedDay] || []) : [];
 
   return (
-    <div>
+    <div className="schedule-root">
       {userRole && <PageTour tourId={`page-schedule-${canEdit ? 'staff' : 'cast'}`} steps={canEdit ? scheduleTourSteps : scheduleCastTourSteps} />}
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <ChalkText size="lg">Schedule</ChalkText>
+        <div className="flex items-center gap-2">
+        <CalendarButton productionId={id!} />
         {canEdit && !editMode && (
           <button data-tour="schedule-edit-btn" onClick={startEditMode}
             className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
-            style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
+            style={{ background: 'rgb(var(--c-255-220-100) / 0.1)', color: 'rgb(var(--c-255-220-100) / 0.8)', border: '1px solid rgb(var(--c-255-220-100) / 0.15)' }}>
             Edit Schedule
           </button>
         )}
+        </div>
       </div>
+      {isCalendar && <PhaseBar production={production} dates={dates} />}
+      {canEdit && !editMode && <DoubleBookingBanner productionId={id!} />}
+
+      <PageGuide page="schedule" />
 
       {/* Edit mode toolbar */}
       <AnimatePresence>
         {editMode && (
           <motion.div
             className="mb-4 rounded-sm p-3 space-y-3"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,220,100,0.12)' }}
+            style={{ background: 'rgb(var(--c-255-255-255) / 0.04)', border: '1px solid rgb(var(--c-255-220-100) / 0.12)' }}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
           >
             {/* Weekly pattern — set the recurring weekly flow */}
             <div>
-              <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,220,100,0.6)' }}>
+              <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--c-255-220-100) / 0.6)' }}>
                 Weekly Pattern — click to set each day
               </p>
               <div className="grid grid-cols-7 gap-1">
@@ -506,20 +519,20 @@ export function SchedulePage() {
                       onClick={() => cycleWeekDay(dow)}
                       className="flex flex-col items-center gap-1 py-2 rounded-sm cursor-pointer"
                       style={{
-                        background: config ? config.chalkBg : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${config ? 'rgba(255,220,100,0.12)' : 'rgba(255,255,255,0.04)'}`,
+                        background: config ? config.chalkBg : 'rgb(var(--c-255-255-255) / 0.02)',
+                        border: `1px solid ${config ? 'rgb(var(--c-255-220-100) / 0.12)' : 'rgb(var(--c-255-255-255) / 0.04)'}`,
                       }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>{day}</span>
+                      <span className="text-[10px] font-medium" style={{ color: 'rgb(var(--c-255-255-255) / 0.5)' }}>{day}</span>
                       {config ? (
                         <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-[2px]"
                           style={{ background: config.noteBg, color: config.noteText }}>
                           {config.label}
                         </span>
                       ) : (
-                        <span className="text-[8px]" style={{ color: 'rgba(255,255,255,0.2)' }}>off</span>
+                        <span className="text-[8px]" style={{ color: 'rgb(var(--c-255-255-255) / 0.2)' }}>off</span>
                       )}
                     </motion.button>
                   );
@@ -528,21 +541,21 @@ export function SchedulePage() {
             </div>
 
             {/* Then override individual days below */}
-            <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <p className="text-[10px]" style={{ color: 'rgb(var(--c-255-255-255) / 0.3)' }}>
               Then click individual days on the calendar below to override or block specific dates
             </p>
 
             {/* Default times */}
             <div className={`flex gap-3 ${isMobile ? 'flex-col items-start' : 'items-center'}`}>
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Default time:</span>
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'rgb(var(--c-255-255-255) / 0.4)' }}>Default time:</span>
               <div className="flex items-center gap-2">
                 <input type="time" value={defaultTime.start} onChange={e => setDefaultTime(p => ({ ...p, start: e.target.value }))}
                   className="px-2 py-1 rounded-sm text-xs outline-none w-full sm:w-24"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
-                <span style={{ color: 'rgba(255,255,255,0.25)' }}>to</span>
+                  style={{ background: 'rgb(var(--c-255-255-255) / 0.06)', border: '1px solid rgb(var(--c-255-255-255) / 0.08)', color: 'rgb(var(--c-255-255-255) / 0.7)' }} />
+                <span style={{ color: 'rgb(var(--c-255-255-255) / 0.25)' }}>to</span>
                 <input type="time" value={defaultTime.end} onChange={e => setDefaultTime(p => ({ ...p, end: e.target.value }))}
                   className="px-2 py-1 rounded-sm text-xs outline-none w-full sm:w-24"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }} />
+                  style={{ background: 'rgb(var(--c-255-255-255) / 0.06)', border: '1px solid rgb(var(--c-255-255-255) / 0.08)', color: 'rgb(var(--c-255-255-255) / 0.7)' }} />
               </div>
             </div>
 
@@ -552,18 +565,18 @@ export function SchedulePage() {
                 {Object.entries(typeConfig).map(([type, c]) => (
                   <div key={type} className="flex items-center gap-1">
                     <div className="w-3 h-2 rounded-[1px]" style={{ background: c.noteBg }} />
-                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px' }}>{c.label}</span>
+                    <span style={{ color: 'rgb(var(--c-255-255-255) / 0.3)', fontSize: '8px' }}>{c.label}</span>
                   </div>
                 ))}
               </div>
               <div className="flex gap-2">
                 <button onClick={cancelEditMode} className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"
-                  style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}>
+                  style={{ color: 'rgb(var(--c-255-255-255) / 0.4)', background: 'rgb(var(--c-255-255-255) / 0.04)' }}>
                   Cancel
                 </button>
                 <button onClick={applySchedule} disabled={saving || changes.total === 0}
                   className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer font-bold"
-                  style={{ color: 'hsl(25,20%,8%)', background: 'hsl(38,70%,50%)', opacity: (saving || changes.total === 0) ? 0.5 : 1 }}>
+                  style={{ color: 'var(--btn-primary-text)', background: 'hsl(var(--h-38-70-50))', opacity: (saving || changes.total === 0) ? 0.5 : 1 }}>
                   {saving ? 'Saving...' : changes.total === 0 ? 'No changes' : `Apply ${changes.total} change${changes.total !== 1 ? 's' : ''}`}
                 </button>
               </div>
@@ -574,22 +587,22 @@ export function SchedulePage() {
 
       {/* Month nav */}
       <div className="flex items-center justify-center gap-6 mb-5">
-        <button onClick={prevMonth} className="cursor-pointer px-2 py-1 text-lg" style={{ color: 'rgba(255,255,255,0.35)' }}>&lsaquo;</button>
-        <h2 style={{ color: 'rgba(255,255,255,0.8)', fontFamily: '"Playfair Display", serif', fontSize: '1.4rem', letterSpacing: '0.04em' }}>
+        <button onClick={prevMonth} className="cursor-pointer px-2 py-1 text-lg" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)' }}>&lsaquo;</button>
+        <h2 style={{ color: 'rgb(var(--c-255-255-255) / 0.8)', fontFamily: 'var(--t-heading-font)', fontSize: '1.4rem', letterSpacing: '0.04em' }}>
           {monthName}
         </h2>
-        <button onClick={nextMonth} className="cursor-pointer px-2 py-1 text-lg" style={{ color: 'rgba(255,255,255,0.35)' }}>&rsaquo;</button>
+        <button onClick={nextMonth} className="cursor-pointer px-2 py-1 text-lg" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)' }}>&rsaquo;</button>
       </div>
 
       {/* Day headers */}
       <div className="grid grid-cols-7 mb-1">
         {(isMobile ? DAY_HEADERS_SHORT : DAY_HEADERS).map((day, i) => (
-          <div key={i} className="text-center py-1" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <div key={i} className="text-center py-1" style={{ color: 'rgb(var(--c-255-255-255) / 0.4)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             {day}
           </div>
         ))}
       </div>
-      <div className="mb-3 mx-1" style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12) 10%, rgba(255,255,255,0.1) 90%, transparent)' }} />
+      <div className="mb-3 mx-1" style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgb(var(--c-255-255-255) / 0.12) 10%, rgb(var(--c-255-255-255) / 0.1) 90%, transparent)' }} />
 
       {/* Calendar grid */}
       <div data-tour="schedule-calendar" className="grid grid-cols-7 gap-[2px]">
@@ -619,12 +632,12 @@ export function SchedulePage() {
               onClick={() => handleDayClick(day)}
               className={`relative flex flex-col items-center rounded-sm cursor-pointer p-1 ${isMobile ? 'min-h-[56px]' : 'min-h-[80px]'}`}
               style={{
-                background: isSelected ? 'rgba(255,255,255,0.06)'
-                  : isBlocked ? (typeConfig.blocked?.chalkBg || 'rgba(255,80,80,0.06)')
+                background: isSelected ? 'rgb(var(--c-255-255-255) / 0.06)'
+                  : isBlocked ? (typeConfig.blocked?.chalkBg || 'rgb(var(--c-255-80-80) / 0.06)')
                     : editMode && editType ? (typeConfig[editType]?.chalkBg || 'transparent')
                       : 'transparent',
-                outline: isBlocked ? '1px dashed rgba(255,80,80,0.2)'
-                  : editMode && editType ? `1px dashed rgba(255,220,100,0.15)` : 'none',
+                outline: isBlocked ? '1px dashed rgb(var(--c-255-80-80) / 0.2)'
+                  : editMode && editType ? `1px dashed rgb(var(--c-255-220-100) / 0.15)` : 'none',
               }}
               whileHover={editMode ? { scale: 1.05 } : {}}
               whileTap={editMode ? { scale: 0.95 } : {}}
@@ -632,11 +645,11 @@ export function SchedulePage() {
             >
               {/* Day number */}
               <span style={{
-                color: isCancelled ? 'rgba(255,100,100,0.4)'
-                  : isBlocked ? 'rgba(255,100,100,0.5)'
-                    : isToday ? 'rgba(255,220,100,0.9)'
-                      : displayType ? 'rgba(255,255,255,0.75)'
-                        : 'rgba(255,255,255,0.4)',
+                color: isCancelled ? 'rgb(var(--c-255-100-100) / 0.4)'
+                  : isBlocked ? 'rgb(var(--c-255-100-100) / 0.5)'
+                    : isToday ? 'rgb(var(--c-255-220-100) / 0.9)'
+                      : displayType ? 'rgb(var(--c-255-255-255) / 0.75)'
+                        : 'rgb(var(--c-255-255-255) / 0.4)',
                 fontSize: isMobile ? '10px' : '12px',
                 fontWeight: isToday ? 600 : 300,
                 textDecoration: (isCancelled || isBlocked) ? 'line-through' : 'none',
@@ -651,7 +664,7 @@ export function SchedulePage() {
                   style={{
                     background: config.noteBg,
                     color: config.noteText,
-                    boxShadow: '1px 2px 4px rgba(0,0,0,0.15)',
+                    boxShadow: '1px 2px 4px rgb(var(--c-0-0-0) / 0.15)',
                     transform: `rotate(${(day % 3 - 1) * 0.5}deg)`,
                     fontSize: '9px',
                     lineHeight: '1.3',
@@ -668,7 +681,7 @@ export function SchedulePage() {
 
               {/* Blocked X marker — visible in both edit and view mode */}
               {isBlocked && (
-                <div className="mt-2 text-sm font-bold" style={{ color: 'rgba(255,100,100,0.4)' }}>X</div>
+                <div className="mt-2 text-sm font-bold" style={{ color: 'rgb(var(--c-255-100-100) / 0.4)' }}>X</div>
               )}
 
               {/* Multiple events dots */}
@@ -698,7 +711,7 @@ export function SchedulePage() {
                   aria-label="View pinned bulletin post"
                   title="View pinned bulletin post"
                   className="absolute top-1 right-1 w-2 h-2 rounded-full cursor-pointer"
-                  style={{ background: 'rgba(255,180,60,0.8)' }}
+                  style={{ background: 'rgb(var(--c-255-180-60) / 0.8)' }}
                   animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                 />
@@ -707,12 +720,12 @@ export function SchedulePage() {
               {/* Conflict count badge — admin/staff only */}
               {!editMode && canEdit && conflictMap[key] && (
                 <div className="absolute top-0.5 left-0.5 text-[8px] font-bold px-1 rounded-full"
-                  style={{ background: 'rgba(255,80,80,0.2)', color: 'rgba(255,120,120,0.9)' }}>
+                  style={{ background: 'rgb(var(--c-255-80-80) / 0.2)', color: 'rgb(var(--c-255-120-120) / 0.9)' }}>
                   {conflictMap[key].count}
                 </div>
               )}
 
-              {isToday && <div className="absolute bottom-0.5 w-3 h-[2px] rounded-full" style={{ background: 'rgba(255,220,100,0.5)' }} />}
+              {isToday && <div className="absolute bottom-0.5 w-3 h-[2px] rounded-full" style={{ background: 'rgb(var(--c-255-220-100) / 0.5)' }} />}
             </motion.button>
           );
         })}
@@ -733,10 +746,10 @@ export function SchedulePage() {
           <div
             data-tour="schedule-pins"
             className="flex items-center gap-2 px-3 py-1 rounded-sm"
-            style={{ background: 'rgba(255,180,60,0.08)', border: '1px solid rgba(255,180,60,0.2)' }}
+            style={{ background: 'rgb(var(--c-255-180-60) / 0.08)', border: '1px solid rgb(var(--c-255-180-60) / 0.2)' }}
           >
-            <span className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,180,60,0.8)' }} />
-            <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: 'rgba(255,220,100,0.8)' }}>
+            <span className="w-2 h-2 rounded-full" style={{ background: 'rgb(var(--c-255-180-60) / 0.8)' }} />
+            <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: 'rgb(var(--c-255-220-100) / 0.8)' }}>
               Pinned
             </span>
           </div>
@@ -748,7 +761,7 @@ export function SchedulePage() {
         <motion.div
           data-tour="schedule-day-detail"
           className="mt-5 rounded-sm overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--t-tab-border)' }}
+          style={{ background: 'rgb(var(--c-255-255-255) / 0.04)', border: '1px solid var(--t-tab-border)' }}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -756,20 +769,20 @@ export function SchedulePage() {
             <ChalkText size="md">
               {new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDay).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </ChalkText>
-            <button onClick={() => setSelectedDay(null)} className="cursor-pointer text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>x</button>
+            <button onClick={() => setSelectedDay(null)} className="cursor-pointer text-sm" style={{ color: 'rgb(var(--c-255-255-255) / 0.3)' }}>x</button>
           </div>
 
           {/* Bulletin post link */}
           {((pinnedBulletinByDate.get(dateStr(selectedDay)) || []).length > 0) && (
-            <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-section-border)', background: 'rgba(255,180,60,0.04)' }}>
+            <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-section-border)', background: 'rgb(var(--c-255-180-60) / 0.04)' }}>
               <motion.div
                 className="w-2 h-2 rounded-full"
-                style={{ background: 'rgba(255,180,60,0.8)' }}
+                style={{ background: 'rgb(var(--c-255-180-60) / 0.8)' }}
                 animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               />
               <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-sm"
-                style={{ background: 'rgba(255,220,100,0.15)', color: 'rgba(255,220,100,0.9)' }}>
+                style={{ background: 'rgb(var(--c-255-220-100) / 0.15)', color: 'rgb(var(--c-255-220-100) / 0.9)' }}>
                 Pinned
               </span>
               {(() => {
@@ -777,7 +790,7 @@ export function SchedulePage() {
                 const first = posts[0];
                 if (!first) return null;
                 return (
-                  <span className="text-[11px]" style={{ color: 'rgba(255,220,100,0.7)' }}>
+                  <span className="text-[11px]" style={{ color: 'rgb(var(--c-255-220-100) / 0.7)' }}>
                     {first.title}{posts.length > 1 ? ` (+${posts.length - 1} more)` : ''}
                   </span>
                 );
@@ -793,7 +806,7 @@ export function SchedulePage() {
                   }
                 }}
                 className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer ml-auto"
-                style={{ color: 'rgba(255,220,100,0.8)', background: 'rgba(255,220,100,0.08)', border: '1px solid rgba(255,220,100,0.12)' }}
+                style={{ color: 'rgb(var(--c-255-220-100) / 0.8)', background: 'rgb(var(--c-255-220-100) / 0.08)', border: '1px solid rgb(var(--c-255-220-100) / 0.12)' }}
               >
                 {((pinnedBulletinByDate.get(dateStr(selectedDay)) || []).length > 1) ? 'View Pinned Posts' : 'View Pinned Post'}
               </button>
@@ -802,39 +815,40 @@ export function SchedulePage() {
 
           {selectedEvents.length === 0 ? (
             <div className="px-4 py-6 text-center">
-              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', fontStyle: 'italic' }}>No rehearsals scheduled</span>
+              <span style={{ color: 'rgb(var(--c-255-255-255) / 0.3)', fontSize: '12px', fontStyle: 'italic' }}>No rehearsals scheduled</span>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+            <div className="divide-y" style={{ borderColor: 'rgb(var(--c-255-255-255) / 0.04)' }}>
               {selectedEvents.map(d => {
                 const c = typeConfig[d.type] || typeConfig.regular;
                 return (
                   <div key={d.id} className={`px-4 py-3 ${d.is_cancelled ? 'opacity-40' : ''}`}>
                     <div className="flex items-center gap-3 mb-1">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-[2px]" style={{ background: c.noteBg, color: c.noteText }}>{c.label}</span>
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontFamily: '"JetBrains Mono", monospace' }}>
+                      <span style={{ color: 'rgb(var(--c-255-255-255) / 0.6)', fontSize: '12px', fontFamily: '"JetBrains Mono", monospace' }}>
                         {formatTime(d.start_time)} - {formatTime(d.end_time)}
                       </span>
-                      {d.is_cancelled && <span className="text-[9px] px-1.5 py-0.5 rounded-sm" style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,150,150,0.7)' }}>Cancelled</span>}
+                      {d.location && <span className="text-xs" style={{ color: 'rgb(var(--c-255-255-255) / 0.55)' }}>📍 {d.location}</span>}
+                      {d.is_cancelled && <span className="text-[9px] px-1.5 py-0.5 rounded-sm" style={{ background: 'rgb(var(--c-255-80-80) / 0.1)', color: 'rgb(var(--c-255-150-150) / 0.7)' }}>Cancelled</span>}
                     </div>
                     {d.note ? (
-                      <div className="mt-2 px-2 py-1.5 rounded-sm" style={{ background: 'rgba(255,220,100,0.04)', border: '1px solid rgba(255,220,100,0.08)' }}>
-                        <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'rgba(255,220,100,0.5)' }}>Notes</p>
-                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>{d.note}</p>
+                      <div className="mt-2 px-2 py-1.5 rounded-sm" style={{ background: 'rgb(var(--c-255-220-100) / 0.04)', border: '1px solid rgb(var(--c-255-220-100) / 0.08)' }}>
+                        <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'rgb(var(--c-255-220-100) / 0.5)' }}>Notes</p>
+                        <p className="text-xs" style={{ color: 'rgb(var(--c-255-255-255) / 0.55)' }}>{d.note}</p>
                       </div>
                     ) : (
-                      <p className="text-[10px] mt-1 italic" style={{ color: 'rgba(255,255,255,0.2)' }}>No notes for this day</p>
+                      <p className="text-[10px] mt-1 italic" style={{ color: 'rgb(var(--c-255-255-255) / 0.2)' }}>No notes for this day</p>
                     )}
                     {canEdit && !d.is_cancelled && (
                       <div className="flex gap-2 mt-2">
                         <button className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer"
-                          style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}
-                          onClick={() => { setEditId(d.id); setEditStart(d.start_time); setEditEnd(d.end_time); setEditNote(d.note || ''); }}>Edit</button>
+                          style={{ color: 'rgb(var(--c-255-255-255) / 0.4)', background: 'rgb(var(--c-255-255-255) / 0.04)' }}
+                          onClick={() => { setEditId(d.id); setEditStart(d.start_time); setEditEnd(d.end_time); setEditNote(d.note || ''); setEditLocation(d.location || ''); }}>Edit</button>
                         <button className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer"
-                          style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}
+                          style={{ color: 'rgb(var(--c-255-255-255) / 0.4)', background: 'rgb(var(--c-255-255-255) / 0.04)' }}
                           onClick={() => handleCancel(d.id)}>Cancel</button>
                         <button className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm cursor-pointer"
-                          style={{ color: 'rgba(255,150,150,0.5)', background: 'rgba(255,80,80,0.04)' }}
+                          style={{ color: 'rgb(var(--c-255-150-150) / 0.5)', background: 'rgb(var(--c-255-80-80) / 0.04)' }}
                           onClick={() => setDeleteId(d.id)}>Delete</button>
                       </div>
                     )}
@@ -846,17 +860,17 @@ export function SchedulePage() {
 
           {/* Conflicts for this day — admin/staff only */}
           {canEdit && selectedDay && conflictMap[dateStr(selectedDay)] && (
-            <div className="px-4 py-3" style={{ borderTop: '1px solid var(--t-section-border)', background: 'rgba(255,80,80,0.02)' }}>
-              <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgba(255,120,120,0.7)' }}>
+            <div className="px-4 py-3" style={{ borderTop: '1px solid var(--t-section-border)', background: 'rgb(var(--c-255-80-80) / 0.02)' }}>
+              <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--c-255-120-120) / 0.7)' }}>
                 Conflicts ({conflictMap[dateStr(selectedDay)].count})
               </p>
               <div className="space-y-1 max-h-[120px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                 {conflictMap[dateStr(selectedDay)].conflicts.map((c, i) => {
                   const member = members.find(m => m.user_id === c.user_id);
                   return (
-                    <div key={i} className="text-[11px] px-2 py-1 rounded" style={{ background: 'rgba(255,80,80,0.06)' }}>
-                      <span style={{ color: 'rgba(255,150,150,0.8)' }}>{member?.name || 'Unknown'}</span>
-                      {c.reason && <span style={{ color: 'rgba(255,255,255,0.3)' }}> — {c.reason}</span>}
+                    <div key={i} className="text-[11px] px-2 py-1 rounded" style={{ background: 'rgb(var(--c-255-80-80) / 0.06)' }}>
+                      <span style={{ color: 'rgb(var(--c-255-150-150) / 0.8)' }}>{member?.name || 'Unknown'}</span>
+                      {c.reason && <span style={{ color: 'rgb(var(--c-255-255-255) / 0.3)' }}> — {c.reason}</span>}
                     </div>
                   );
                 })}
@@ -902,7 +916,7 @@ export function SchedulePage() {
               <div className="px-4 py-3" style={{ borderTop: '1px solid var(--t-section-border)' }}>
                 {/* Header with tabs */}
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,220,100,0.6)' }}>
+                  <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--c-255-220-100) / 0.6)' }}>
                     Cast Assigned ({assigned.length}/{castMembers.length})
                   </p>
                   {hasTeams && (
@@ -929,11 +943,11 @@ export function SchedulePage() {
                   <div className="space-y-0.5 max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                     {assigned.map(m => (
                       <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
-                        style={{ background: 'rgba(100,200,100,0.06)' }}>
-                        <span style={{ color: 'rgba(150,220,150,0.8)' }}>{m.name || 'Member'}</span>
+                        style={{ background: 'rgb(var(--c-100-200-100) / 0.06)' }}>
+                        <span style={{ color: 'rgb(var(--c-150-220-150) / 0.8)' }}>{m.name || 'Member'}</span>
                         <button onClick={() => toggleAssignment(m.user_id, true)}
                           className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
-                          style={{ color: 'rgba(255,150,150,0.6)', background: 'rgba(255,80,80,0.06)' }}>
+                          style={{ color: 'rgb(var(--c-255-150-150) / 0.6)', background: 'rgb(var(--c-255-80-80) / 0.06)' }}>
                           Remove
                         </button>
                       </div>
@@ -947,14 +961,14 @@ export function SchedulePage() {
                           const hasConflict = conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === m.user_id);
                           return (
                             <div key={m.user_id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded"
-                              style={{ background: hasConflict ? 'rgba(255,80,80,0.04)' : 'rgba(255,255,255,0.02)' }}>
-                              <span style={{ color: hasConflict ? 'rgba(255,150,150,0.5)' : 'var(--t-subtle-text)' }}>
+                              style={{ background: hasConflict ? 'rgb(var(--c-255-80-80) / 0.04)' : 'rgb(var(--c-255-255-255) / 0.02)' }}>
+                              <span style={{ color: hasConflict ? 'rgb(var(--c-255-150-150) / 0.5)' : 'var(--t-subtle-text)' }}>
                                 {m.name || 'Member'}
-                                {hasConflict && <span className="text-[8px] ml-1" style={{ color: 'rgba(255,120,120,0.6)' }}>conflict</span>}
+                                {hasConflict && <span className="text-[8px] ml-1" style={{ color: 'rgb(var(--c-255-120-120) / 0.6)' }}>conflict</span>}
                               </span>
                               <button onClick={() => toggleAssignment(m.user_id, false)}
                                 className="text-[9px] cursor-pointer px-1.5 py-0.5 rounded"
-                                style={{ color: 'rgba(150,220,150,0.6)', background: 'rgba(100,200,100,0.06)' }}>
+                                style={{ color: 'rgb(var(--c-150-220-150) / 0.6)', background: 'rgb(var(--c-100-200-100) / 0.06)' }}>
                                 Assign
                               </button>
                             </div>
@@ -994,11 +1008,11 @@ export function SchedulePage() {
                               <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--t-subtle-text-bright)' }}>
                                 {team.name}
                               </span>
-                              <span className="text-[9px] font-mono flex-shrink-0" style={{ color: allAssigned ? 'rgba(150,220,150,0.7)' : 'var(--t-subtle-text)' }}>
+                              <span className="text-[9px] font-mono flex-shrink-0" style={{ color: allAssigned ? 'rgb(var(--c-150-220-150) / 0.7)' : 'var(--t-subtle-text)' }}>
                                 {teamAssignedCount}/{teamCastIds.length}
                               </span>
                               {teamConflicts > 0 && (
-                                <span className="text-[8px] px-1 rounded flex-shrink-0" style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)' }}>
+                                <span className="text-[8px] px-1 rounded flex-shrink-0" style={{ background: 'rgb(var(--c-255-80-80) / 0.1)', color: 'rgb(var(--c-255-120-120) / 0.7)' }}>
                                   {teamConflicts}
                                 </span>
                               )}
@@ -1007,14 +1021,14 @@ export function SchedulePage() {
                               {!allAssigned && teamCastIds.length > 0 && (
                                 <button onClick={() => bulkAssignTeam(teamCastIds, true)}
                                   className="text-[9px] cursor-pointer px-2 py-0.5 rounded"
-                                  style={{ color: 'rgba(150,220,150,0.7)', background: 'rgba(100,200,100,0.08)' }}>
+                                  style={{ color: 'rgb(var(--c-150-220-150) / 0.7)', background: 'rgb(var(--c-100-200-100) / 0.08)' }}>
                                   Assign
                                 </button>
                               )}
                               {!noneAssigned && (
                                 <button onClick={() => bulkAssignTeam(teamCastIds, false)}
                                   className="text-[9px] cursor-pointer px-2 py-0.5 rounded"
-                                  style={{ color: 'rgba(255,150,150,0.6)', background: 'rgba(255,80,80,0.06)' }}>
+                                  style={{ color: 'rgb(var(--c-255-150-150) / 0.6)', background: 'rgb(var(--c-255-80-80) / 0.06)' }}>
                                   Remove
                                 </button>
                               )}
@@ -1031,18 +1045,18 @@ export function SchedulePage() {
                                 const hasConflict = conflictMap[dateStr(selectedDay)]?.conflicts.some(c => c.user_id === uid);
                                 return (
                                   <div key={uid} className="flex items-center justify-between text-[10px] px-1.5 py-1 rounded mt-0.5"
-                                    style={{ background: isIn ? 'rgba(100,200,100,0.04)' : 'transparent' }}>
+                                    style={{ background: isIn ? 'rgb(var(--c-100-200-100) / 0.04)' : 'transparent' }}>
                                     <span style={{
-                                      color: hasConflict ? 'rgba(255,150,150,0.5)' : isIn ? 'rgba(150,220,150,0.7)' : 'var(--t-subtle-text)',
+                                      color: hasConflict ? 'rgb(var(--c-255-150-150) / 0.5)' : isIn ? 'rgb(var(--c-150-220-150) / 0.7)' : 'var(--t-subtle-text)',
                                     }}>
                                       {m.name || 'Member'}
-                                      {hasConflict && <span className="text-[7px] ml-1" style={{ color: 'rgba(255,120,120,0.5)' }}>conflict</span>}
+                                      {hasConflict && <span className="text-[7px] ml-1" style={{ color: 'rgb(var(--c-255-120-120) / 0.5)' }}>conflict</span>}
                                     </span>
                                     <button onClick={() => toggleAssignment(m.user_id, isIn)}
                                       className="text-[8px] cursor-pointer px-1.5 py-0.5 rounded"
                                       style={{
-                                        color: isIn ? 'rgba(255,150,150,0.5)' : 'rgba(150,220,150,0.5)',
-                                        background: isIn ? 'rgba(255,80,80,0.04)' : 'rgba(100,200,100,0.04)',
+                                        color: isIn ? 'rgb(var(--c-255-150-150) / 0.5)' : 'rgb(var(--c-150-220-150) / 0.5)',
+                                        background: isIn ? 'rgb(var(--c-255-80-80) / 0.04)' : 'rgb(var(--c-100-200-100) / 0.04)',
                                       }}>
                                       {isIn ? 'Remove' : 'Assign'}
                                     </button>
@@ -1085,14 +1099,14 @@ export function SchedulePage() {
                                 const isIn = assignedUserIds.has(m.user_id);
                                 return (
                                   <div key={m.user_id} className="flex items-center justify-between text-[10px] px-1.5 py-1 rounded mt-0.5">
-                                    <span style={{ color: isIn ? 'rgba(150,220,150,0.7)' : 'var(--t-subtle-text)' }}>
+                                    <span style={{ color: isIn ? 'rgb(var(--c-150-220-150) / 0.7)' : 'var(--t-subtle-text)' }}>
                                       {m.name || 'Member'}
                                     </span>
                                     <button onClick={() => toggleAssignment(m.user_id, isIn)}
                                       className="text-[8px] cursor-pointer px-1.5 py-0.5 rounded"
                                       style={{
-                                        color: isIn ? 'rgba(255,150,150,0.5)' : 'rgba(150,220,150,0.5)',
-                                        background: isIn ? 'rgba(255,80,80,0.04)' : 'rgba(100,200,100,0.04)',
+                                        color: isIn ? 'rgb(var(--c-255-150-150) / 0.5)' : 'rgb(var(--c-150-220-150) / 0.5)',
+                                        background: isIn ? 'rgb(var(--c-255-80-80) / 0.04)' : 'rgb(var(--c-100-200-100) / 0.04)',
                                       }}>
                                       {isIn ? 'Remove' : 'Assign'}
                                     </button>
@@ -1116,6 +1130,7 @@ export function SchedulePage() {
         <div className="space-y-3">
           <Input label="Start Time" type="time" value={editStart} onChange={e => setEditStart(e.target.value)} />
           <Input label="End Time" type="time" value={editEnd} onChange={e => setEditEnd(e.target.value)} />
+          <Input label="Location" value={editLocation} maxLength={200} onChange={e => setEditLocation(e.target.value)} placeholder="Studio B (used to catch double-booked rooms)" />
           <Input label="Note" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="Optional note" />
         </div>
       </Dialog>

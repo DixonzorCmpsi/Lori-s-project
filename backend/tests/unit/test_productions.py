@@ -9,7 +9,6 @@ Covers:
 - Production archival and unarchival
 """
 
-import pytest
 from datetime import date, timedelta
 
 
@@ -20,19 +19,29 @@ class TestCreateProduction:
         """Happy path: valid production within a theater."""
         headers = auth_headers("new-director-prod-1")
         # Create a theater for this new director first
-        theater_resp = await client.post("/api/theaters", json={
-            "name": "Prod Test Theater", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        theater_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Prod Test Theater",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = theater_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Into the Woods",
-            "estimated_cast_size": 30,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Into the Woods",
+                "estimated_cast_size": 30,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Into the Woods"
@@ -42,19 +51,29 @@ class TestCreateProduction:
         """Director is auto-joined as 'director' role in production_members."""
         headers = auth_headers("new-director-prod-2")
         # Create a theater for this new director first
-        theater_resp = await client.post("/api/theaters", json={
-            "name": "Auto Join Theater", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        theater_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Auto Join Theater",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = theater_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Auto Join Test",
-            "estimated_cast_size": 20,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Auto Join Test",
+                "estimated_cast_size": 20,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         production_id = response.json()["id"]
         # Verify director is a member with role='director'
@@ -76,76 +95,116 @@ class TestProductionDateValidation:
         """first_rehearsal > opening_night is rejected."""
         headers = auth_headers("new-director-date-1")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Date Test Theater 1", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Date Test Theater 1",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Bad Dates",
-            "estimated_cast_size": 20,
-            "first_rehearsal": (today + timedelta(days=100)).isoformat(),  # After opening
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Bad Dates",
+                "estimated_cast_size": 20,
+                "first_rehearsal": (today + timedelta(days=100)).isoformat(),  # After opening
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_opening_after_closing_rejected(self, client, auth_headers):
         """opening_night > closing_night is rejected."""
         headers = auth_headers("new-director-date-2")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Date Test Theater 2", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Date Test Theater 2",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Bad Dates 2",
-            "estimated_cast_size": 20,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=100)).isoformat(),  # After closing
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Bad Dates 2",
+                "estimated_cast_size": 20,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=100)).isoformat(),  # After closing
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_dates_in_past_rejected(self, client, auth_headers):
         """All dates must be in the future."""
         headers = auth_headers("new-director-date-3")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Date Test Theater 3", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Date Test Theater 3",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Past Dates",
-            "estimated_cast_size": 20,
-            "first_rehearsal": (today - timedelta(days=10)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Past Dates",
+                "estimated_cast_size": 20,
+                "first_rehearsal": (today - timedelta(days=10)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_same_day_dates_allowed(self, client, auth_headers):
         """first_rehearsal == opening_night == closing_night is valid (edge case)."""
         headers = auth_headers("new-director-date-4")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Date Test Theater 4", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Date Test Theater 4",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         future = date.today() + timedelta(days=30)
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "One Day Show",
-            "estimated_cast_size": 5,
-            "first_rehearsal": future.isoformat(),
-            "opening_night": future.isoformat(),
-            "closing_night": future.isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "One Day Show",
+                "estimated_cast_size": 5,
+                "first_rehearsal": future.isoformat(),
+                "opening_night": future.isoformat(),
+                "closing_night": future.isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
 
@@ -156,57 +215,87 @@ class TestProductionFieldValidation:
         """Production name > 200 chars rejected."""
         headers = auth_headers("new-director-field-1")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Field Test Theater 1", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Field Test Theater 1",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "A" * 201,
-            "estimated_cast_size": 20,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "A" * 201,
+                "estimated_cast_size": 20,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_cast_size_minimum_1(self, client, auth_headers):
         """Cast size must be >= 1."""
         headers = auth_headers("new-director-field-2")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Field Test Theater 2", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Field Test Theater 2",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Zero Cast",
-            "estimated_cast_size": 0,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Zero Cast",
+                "estimated_cast_size": 0,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_cast_size_maximum_200(self, client, auth_headers):
         """Cast size must be <= 200."""
         headers = auth_headers("new-director-field-3")
         # Create a theater for this new director
-        t_resp = await client.post("/api/theaters", json={
-            "name": "Field Test Theater 3", "city": "Springfield", "state": "IL",
-        }, headers=headers)
+        t_resp = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Field Test Theater 3",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         theater_id = t_resp.json()["id"]
         today = date.today()
-        response = await client.post("/api/productions", json={
-            "theater_id": theater_id,
-            "name": "Huge Cast",
-            "estimated_cast_size": 201,
-            "first_rehearsal": (today + timedelta(days=30)).isoformat(),
-            "opening_night": (today + timedelta(days=90)).isoformat(),
-            "closing_night": (today + timedelta(days=97)).isoformat(),
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": theater_id,
+                "name": "Huge Cast",
+                "estimated_cast_size": 201,
+                "first_rehearsal": (today + timedelta(days=30)).isoformat(),
+                "opening_night": (today + timedelta(days=90)).isoformat(),
+                "closing_night": (today + timedelta(days=97)).isoformat(),
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
 
@@ -251,10 +340,14 @@ class TestProductionArchival:
         # Archive first
         await client.post("/api/productions/prod-id/archive", headers=headers)
         # Try to post to bulletin
-        response = await client.post("/api/productions/prod-id/bulletin", json={
-            "title": "Test",
-            "body": "Test body",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/bulletin",
+            json={
+                "title": "Test",
+                "body": "Test body",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403  # Read-only
 
     async def test_archived_production_can_be_viewed(self, client, auth_headers):

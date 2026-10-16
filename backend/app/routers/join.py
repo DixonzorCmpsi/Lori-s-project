@@ -1,14 +1,14 @@
 """Join router - handles invite link joining."""
 
 import uuid
-from datetime import datetime, timedelta
-from typing import Any, Optional
+from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import Production, ProductionMember, InviteToken, User
+from app.models import InviteToken, Production, ProductionMember
 from app.routers.auth import get_current_user
 
 router = APIRouter(tags=["join"])
@@ -56,9 +56,7 @@ async def validate_invite_token(
             )
 
         # Fetch the production name for the invite landing page
-        prod_stmt = select(Production.name).where(
-            Production.id == invite.production_id
-        )
+        prod_stmt = select(Production.name).where(Production.id == invite.production_id)
         prod_result = await session.execute(prod_stmt)
         production_name = prod_result.scalar_one_or_none() or "a production"
 
@@ -145,6 +143,7 @@ async def join_production(
 
         # Check if user is blocked from this production
         from app.models import BlockedMember
+
         stmt = select(BlockedMember).where(
             BlockedMember.production_id == invite.production_id,
             BlockedMember.user_id == current_user["id"],

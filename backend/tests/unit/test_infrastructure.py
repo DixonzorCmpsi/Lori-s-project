@@ -10,7 +10,6 @@ Covers:
 """
 
 import pytest
-from datetime import datetime, timedelta
 
 
 class TestHealthCheck:
@@ -55,11 +54,15 @@ class TestPIICleanup:
         """Unarchiving before 90 days keeps all PII intact."""
         pass
 
-    async def test_production_metadata_preserved_after_cleanup(self, client, auth_headers, db_session):
+    async def test_production_metadata_preserved_after_cleanup(
+        self, client, auth_headers, db_session
+    ):
         """After PII cleanup, production name/dates/theater are retained."""
         pass
 
-    @pytest.mark.skip(reason="Requires seeding an archived production with archived_at > 90 days ago")
+    @pytest.mark.skip(
+        reason="Requires seeding an archived production with archived_at > 90 days ago"
+    )
     async def test_unarchive_blocked_after_90_days(self, client, auth_headers):
         """Cannot unarchive after 90-day window."""
         headers = auth_headers("director-id")
@@ -75,12 +78,15 @@ class TestPIIScrubbing:
 
     async def test_password_not_in_response(self, client):
         """Registration response does not include password or password_hash."""
-        response = await client.post("/api/auth/register", json={
-            "email": "nopassleak@example.com",
-            "name": "No Leak",
-            "password": "StrongP@ss99!",
-            "date_of_birth": "1990-01-01",
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "nopassleak@example.com",
+                "name": "No Leak",
+                "password": "StrongP@ss99!",
+                "date_of_birth": "1990-01-01",
+            },
+        )
         if response.status_code == 201:
             body = response.text
             assert "password_hash" not in body
@@ -88,12 +94,15 @@ class TestPIIScrubbing:
 
     async def test_raw_dob_not_in_response(self, client):
         """Registration response does not include raw date_of_birth."""
-        response = await client.post("/api/auth/register", json={
-            "email": "nodobleaks@example.com",
-            "name": "No DOB Leak",
-            "password": "StrongP@ss99!",
-            "date_of_birth": "1990-03-25",
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "nodobleaks@example.com",
+                "name": "No DOB Leak",
+                "password": "StrongP@ss99!",
+                "date_of_birth": "1990-03-25",
+            },
+        )
         if response.status_code == 201:
             data = response.json()
             assert "date_of_birth" not in data
@@ -101,10 +110,13 @@ class TestPIIScrubbing:
 
     async def test_password_not_in_error_responses(self, client):
         """Error responses do not echo back the password."""
-        response = await client.post("/api/auth/login", json={
-            "email": "user@example.com",
-            "password": "MySecretPassword!",
-        })
+        response = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "user@example.com",
+                "password": "MySecretPassword!",
+            },
+        )
         assert "MySecretPassword!" not in response.text
 
     async def test_token_not_fully_logged(self, client, auth_headers):
@@ -144,9 +156,13 @@ class TestDataIsolation:
         """Invite link for Prod A only grants access to Prod A."""
         headers = auth_headers("user-id")
         # Join via Prod A invite
-        response = await client.post("/api/join", json={
-            "token": "prod-a-invite-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "prod-a-invite-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
         # Should not have access to Prod B
         response = await client.get("/api/productions/prod-b-id/bulletin", headers=headers)
@@ -213,12 +229,16 @@ class TestSystemBulletinPosts:
         initial_count = len(response.json())
 
         # Add a date
-        await client.post("/api/productions/prod-id/schedule", json={
-            "date": "2026-06-01",
-            "start_time": "18:00",
-            "end_time": "21:00",
-            "type": "regular",
-        }, headers=headers)
+        await client.post(
+            "/api/productions/prod-id/schedule",
+            json={
+                "date": "2026-06-01",
+                "start_time": "18:00",
+                "end_time": "21:00",
+                "type": "regular",
+            },
+            headers=headers,
+        )
 
         # Post count should be unchanged
         response = await client.get("/api/productions/prod-id/bulletin", headers=headers)

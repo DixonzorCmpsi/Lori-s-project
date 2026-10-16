@@ -1,8 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Step, EventData } from 'react-joyride';
+import { useReportTour, usePendingWindow } from './tourSignal';
+
+/** Time for the "How this page works" box to fold away before a tour measures the page. */
+const SETTLE_MS = 380;
 
 const TOUR_STORAGE_KEY = 'dcb-tours-completed';
 const ACTIVE_TOUR_KEY = 'dcb-tour-active';
+/** Bump when tour content changes so people see the updated tours once. */
+const TOUR_VERSION = '2';
+const versioned = (tourId: string) => `${tourId}@${TOUR_VERSION}`;
 
 function getCompletedTours(): Record<string, boolean> {
   try {
@@ -14,7 +21,7 @@ function getCompletedTours(): Record<string, boolean> {
 
 function markTourComplete(tourId: string) {
   const completed = getCompletedTours();
-  completed[tourId] = true;
+  completed[versioned(tourId)] = true;
   localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(completed));
   // Clear active flag
   sessionStorage.removeItem(ACTIVE_TOUR_KEY);
@@ -31,7 +38,7 @@ function getActiveTour(): string | null {
 }
 
 export function isTourCompleted(tourId: string): boolean {
-  return getCompletedTours()[tourId] === true;
+  return getCompletedTours()[versioned(tourId)] === true;
 }
 
 export function resetAllTours() {
@@ -50,7 +57,10 @@ export function triggerPageTour() {
  */
 export function useTour(tourId: string, steps: Step[], autoStart = true) {
   const [run, setRun] = useState(false);
-  const isCompleted = getCompletedTours()[tourId] === true;
+  const isCompleted = getCompletedTours()[versioned(tourId)] === true;
+  const waiting = autoStart && !isCompleted && steps.length > 0 && !!tourId && !run;
+  const pending = usePendingWindow(waiting);
+  useReportTour(`prod:${tourId}`, run ? 'running' : pending ? 'pending' : null);
 
   useEffect(() => {
     if (autoStart && !isCompleted && steps.length > 0 && tourId) {
@@ -83,7 +93,11 @@ export function useTour(tourId: string, steps: Step[], autoStart = true) {
  */
 export function usePageTour(tourId: string, steps: Step[]) {
   const [run, setRun] = useState(false);
-  const isCompleted = getCompletedTours()[tourId] === true;
+  const [starting, setStarting] = useState(false);
+  const isCompleted = getCompletedTours()[versioned(tourId)] === true;
+  const waiting = (!isCompleted && steps.length > 0 && !run) || starting;
+  const pending = usePendingWindow(waiting);
+  useReportTour(`page:${tourId}`, run ? 'running' : pending ? 'pending' : null);
 
   // Auto-start: only runs when the tour hasn't been completed yet
   useEffect(() => {
@@ -93,12 +107,12 @@ export function usePageTour(tourId: string, steps: Step[]) {
 
     function tryStart() {
       // Re-check completion from localStorage to avoid stale closure
-      if (cancelled || getCompletedTours()[tourId]) return;
+      if (cancelled || getCompletedTours()[versioned(tourId)]) return;
       const active = getActiveTour();
       // Don't start if another tour is running
       if (active && active !== tourId) return;
       setActiveTour(tourId);
-      setRun(true);
+      setTimeout(() => { if (!cancelled) setRun(true); }, SETTLE_MS);
     }
 
     // Wait a bit for the production tour to claim the active slot
@@ -130,7 +144,9 @@ export function usePageTour(tourId: string, steps: Step[]) {
 
     function onManualStart() {
       setActiveTour(tourId);
-      setRun(true);
+      setStarting(true);
+      // Let the "How this page works" box fold away before the tour measures the page
+      setTimeout(() => { setStarting(false); setRun(true); }, SETTLE_MS);
     }
     window.addEventListener('start-page-tour', onManualStart);
     return () => window.removeEventListener('start-page-tour', onManualStart);
@@ -144,5 +160,11 @@ export function usePageTour(tourId: string, steps: Step[]) {
     }
   }, [tourId]);
 
-  return { run, handleEvent, isCompleted };
+  /** Ends a tour that has nothing to show (every target missing from the screen). */
+  const finish = useCallback(() => {
+    setRun(false);
+    markTourComplete(tourId);
+  }, [tourId]);
+
+  return { run, handleEvent, isCompleted, finish };
 }

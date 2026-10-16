@@ -13,6 +13,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { ChalkText, StickyNote } from '@/components/theater/Chalkboard';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ConflictStatus } from '@/types';
+import { PageGuide } from '@/components/PageGuide';
 
 interface SelectedConflict {
   rehearsal_date_id: string;
@@ -153,9 +154,10 @@ export function ConflictsPage() {
         <PageTour tourId="page-conflicts" steps={conflictsTourSteps} />
 
         <ChalkText size="lg">Conflicts Submitted</ChalkText>
-        <p className="mt-2 mb-4" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+        <p className="mt-2 mb-4" style={{ color: 'rgb(var(--c-255-255-255) / 0.4)', fontSize: '13px' }}>
           Your conflicts are locked in. Your director can see which dates you can't make.
         </p>
+        <PageGuide page="conflicts" />
 
         {/* Existing conflicts list */}
         <div className="space-y-2 max-h-[55vh] sm:max-h-[40vh] overflow-y-auto pr-1 mb-6" style={{ scrollbarWidth: 'thin' }}>
@@ -164,29 +166,29 @@ export function ConflictsPage() {
             if (!d) return null;
             return (
               <div key={c.rehearsal_date_id} className="px-4 py-3 rounded-sm flex flex-wrap items-center gap-2"
-                style={{ background: 'rgba(255,80,80,0.06)', border: '1px solid rgba(255,80,80,0.1)' }}>
-                <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{formatDate(d.date)}</span>
-                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
-                {c.reason && <span className="text-xs truncate max-w-[120px] sm:max-w-[250px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{c.reason}</span>}
+                style={{ background: 'rgb(var(--c-255-80-80) / 0.06)', border: '1px solid rgb(var(--c-255-80-80) / 0.1)' }}>
+                <span className="text-sm font-medium" style={{ color: 'rgb(var(--c-255-255-255) / 0.8)' }}>{formatDate(d.date)}</span>
+                <span className="text-xs" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
+                {c.reason && <span className="text-xs truncate max-w-[120px] sm:max-w-[250px]" style={{ color: 'rgb(var(--c-255-255-255) / 0.3)' }}>{c.reason}</span>}
               </div>
             );
           })}
           {existing!.length === 0 && (
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px' }}>No conflicts reported. You're available for all dates.</p>
+            <p style={{ color: 'rgb(var(--c-255-255-255) / 0.35)', fontSize: '13px' }}>No conflicts reported. You're available for all dates.</p>
           )}
         </div>
 
         {/* Additional submission window */}
         {remainingWindows > 0 ? (
-          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgb(var(--c-255-255-255) / 0.06)' }}>
             <div className="flex items-center gap-3 mb-4">
               <ChalkText size="md">Submit Additional Conflicts</ChalkText>
               <span className="text-[10px] font-bold px-2 py-1 rounded-full"
-                style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
+                style={{ background: 'rgb(var(--c-255-220-100) / 0.1)', color: 'rgb(var(--c-255-220-100) / 0.8)', border: '1px solid rgb(var(--c-255-220-100) / 0.15)' }}>
                 {remainingWindows} window{remainingWindows !== 1 ? 's' : ''} left
               </span>
             </div>
-            <p className="mb-4" style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>
+            <p className="mb-4" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)', fontSize: '12px' }}>
               Your director has given you additional conflict submission windows. Select new dates below.
             </p>
 
@@ -212,21 +214,21 @@ export function ConflictsPage() {
                         onClick={() => toggleWeekDay(dow)}
                         className="flex flex-col items-center gap-1 py-3 rounded-sm cursor-pointer"
                         style={{
-                          background: isConflict ? 'rgba(220,60,60,0.15)' : 'rgba(0,0,0,0.06)',
-                          border: `1.5px solid ${isConflict ? 'rgba(220,60,60,0.4)' : 'rgba(0,0,0,0.08)'}`,
+                          background: isConflict ? 'rgb(var(--c-220-60-60) / 0.15)' : 'rgb(var(--c-0-0-0) / 0.06)',
+                          border: `1.5px solid ${isConflict ? 'rgb(var(--c-220-60-60) / 0.4)' : 'rgb(var(--c-0-0-0) / 0.08)'}`,
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        <span className="text-xs font-semibold" style={{ color: isConflict ? 'rgba(220,80,80,0.9)' : 'rgba(0,0,0,0.5)' }}>
+                        <span className="text-xs font-semibold" style={{ color: isConflict ? 'rgb(var(--c-220-80-80) / 0.9)' : 'rgb(var(--c-0-0-0) / 0.5)' }}>
                           {day}
                         </span>
-                        <span className="text-[9px]" style={{ color: isConflict ? 'rgba(220,80,80,0.6)' : 'rgba(0,0,0,0.3)' }}>
+                        <span className="text-[9px]" style={{ color: isConflict ? 'rgb(var(--c-220-80-80) / 0.6)' : 'rgb(var(--c-0-0-0) / 0.3)' }}>
                           {count} dates
                         </span>
                         {isConflict && (
                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-[2px]"
-                            style={{ background: 'rgba(220,60,60,0.2)', color: 'rgba(220,80,80,0.9)' }}>
+                            style={{ background: 'rgb(var(--c-220-60-60) / 0.2)', color: 'rgb(var(--c-220-80-80) / 0.9)' }}>
                             OUT
                           </span>
                         )}
@@ -243,9 +245,9 @@ export function ConflictsPage() {
                 onClick={() => setShowSpecificDates(!showSpecificDates)}
                 className="text-[10px] uppercase tracking-widest px-4 py-2 rounded cursor-pointer"
                 style={{
-                  background: showSpecificDates ? 'rgba(255,220,100,0.12)' : 'rgba(255,255,255,0.04)',
-                  color: showSpecificDates ? 'rgba(255,220,100,0.8)' : 'rgba(255,255,255,0.4)',
-                  border: `1px solid ${showSpecificDates ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                  background: showSpecificDates ? 'rgb(var(--c-255-220-100) / 0.12)' : 'rgb(var(--c-255-255-255) / 0.04)',
+                  color: showSpecificDates ? 'rgb(var(--c-255-220-100) / 0.8)' : 'rgb(var(--c-255-255-255) / 0.4)',
+                  border: `1px solid ${showSpecificDates ? 'rgb(var(--c-255-220-100) / 0.2)' : 'rgb(var(--c-255-255-255) / 0.06)'}`,
                 }}
               >
                 {showSpecificDates ? 'Hide Specific Dates' : 'Pick Specific Dates'}
@@ -272,14 +274,14 @@ export function ConflictsPage() {
                             onClick={() => toggleDate(d.id)}
                             className="w-full text-left px-4 py-3 rounded-sm flex flex-wrap items-center gap-2 transition-colors cursor-pointer"
                             style={{
-                              background: isSelected ? 'rgba(220,60,60,0.08)' : 'rgba(255,255,255,0.02)',
-                              border: `1px solid ${isSelected ? 'rgba(220,60,60,0.2)' : 'rgba(255,255,255,0.04)'}`,
+                              background: isSelected ? 'rgb(var(--c-220-60-60) / 0.08)' : 'rgb(var(--c-255-255-255) / 0.02)',
+                              border: `1px solid ${isSelected ? 'rgb(var(--c-220-60-60) / 0.2)' : 'rgb(var(--c-255-255-255) / 0.04)'}`,
                             }}
                           >
-                            <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{formatDate(d.date)}</span>
-                            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
+                            <span className="text-sm font-medium" style={{ color: 'rgb(var(--c-255-255-255) / 0.8)' }}>{formatDate(d.date)}</span>
+                            <span className="text-xs" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[2px]"
-                              style={{ background: isSelected ? 'rgba(220,60,60,0.15)' : 'rgba(255,255,255,0.04)', color: isSelected ? 'rgba(220,80,80,0.8)' : 'rgba(255,255,255,0.3)' }}>
+                              style={{ background: isSelected ? 'rgb(var(--c-220-60-60) / 0.15)' : 'rgb(var(--c-255-255-255) / 0.04)', color: isSelected ? 'rgb(var(--c-220-80-80) / 0.8)' : 'rgb(var(--c-255-255-255) / 0.3)' }}>
                               {isSelected ? 'CONFLICT' : color.label}
                             </span>
                           </button>
@@ -292,7 +294,7 @@ export function ConflictsPage() {
                                 onChange={e => setReason(d.id, e.target.value)}
                                 maxLength={MAX_LENGTHS.conflict_reason}
                                 className="w-full px-3 py-1.5 rounded-sm text-xs outline-none"
-                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--t-tab-border)', color: 'rgba(255,255,255,0.6)' }}
+                                style={{ background: 'rgb(var(--c-255-255-255) / 0.03)', border: '1px solid var(--t-tab-border)', color: 'rgb(var(--c-255-255-255) / 0.6)' }}
                               />
                             </div>
                           )}
@@ -311,10 +313,10 @@ export function ConflictsPage() {
               className="px-6 py-3 rounded-sm text-sm font-semibold cursor-pointer"
               style={{
                 background: Object.keys(selected).length === 0
-                  ? 'rgba(255,255,255,0.06)'
-                  : 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
-                color: Object.keys(selected).length === 0 ? 'rgba(255,255,255,0.25)' : 'hsl(220, 6%, 9%)',
-                boxShadow: Object.keys(selected).length > 0 ? '0 2px 8px rgba(212,175,55,0.2)' : 'none',
+                  ? 'rgb(var(--c-255-255-255) / 0.06)'
+                  : 'var(--btn-primary-bg)',
+                color: Object.keys(selected).length === 0 ? 'rgb(var(--c-255-255-255) / 0.25)' : 'var(--btn-primary-text)',
+                boxShadow: Object.keys(selected).length > 0 ? '0 2px 8px rgb(var(--c-212-175-55) / 0.2)' : 'none',
               }}
               whileHover={Object.keys(selected).length > 0 ? { scale: 1.02 } : {}}
               whileTap={Object.keys(selected).length > 0 ? { scale: 0.98 } : {}}
@@ -323,7 +325,7 @@ export function ConflictsPage() {
             </motion.button>
           </div>
         ) : (
-          <p className="mt-4 text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          <p className="mt-4 text-[11px]" style={{ color: 'rgb(var(--c-255-255-255) / 0.25)' }}>
             No additional conflict windows available.
           </p>
         )}
@@ -351,10 +353,11 @@ export function ConflictsPage() {
 
       <div className="mb-6">
         <ChalkText size="lg">Submit Conflicts</ChalkText>
-        <p className="mt-2" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+        <p className="mt-2" style={{ color: 'rgb(var(--c-255-255-255) / 0.4)', fontSize: '13px' }}>
           Let your director know which dates you can't make. Start by picking days of the week, then fine-tune with specific dates.
         </p>
       </div>
+      <PageGuide page="conflicts" />
 
       {/* Step 1: Weekly pattern picker */}
       <div data-tour="conflicts-weekly" className="mb-6">
@@ -372,23 +375,23 @@ export function ConflictsPage() {
                   onClick={() => toggleWeekDay(dow)}
                   className="flex flex-col items-center gap-1 py-3 rounded-sm cursor-pointer"
                   style={{
-                    background: isConflict ? 'rgba(220,60,60,0.15)' : 'rgba(0,0,0,0.06)',
-                    border: `1.5px solid ${isConflict ? 'rgba(220,60,60,0.4)' : 'rgba(0,0,0,0.08)'}`,
+                    background: isConflict ? 'rgb(var(--c-220-60-60) / 0.15)' : 'rgb(var(--c-0-0-0) / 0.06)',
+                    border: `1.5px solid ${isConflict ? 'rgb(var(--c-220-60-60) / 0.4)' : 'rgb(var(--c-0-0-0) / 0.08)'}`,
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <span className="text-xs font-semibold" style={{ color: isConflict ? 'rgba(220,80,80,0.9)' : 'rgba(0,0,0,0.5)' }}>
+                  <span className="text-xs font-semibold" style={{ color: isConflict ? 'rgb(var(--c-220-80-80) / 0.9)' : 'rgb(var(--c-0-0-0) / 0.5)' }}>
                     {day}
                   </span>
                   {count > 0 && (
-                    <span className="text-[9px]" style={{ color: isConflict ? 'rgba(220,80,80,0.6)' : 'rgba(0,0,0,0.3)' }}>
+                    <span className="text-[9px]" style={{ color: isConflict ? 'rgb(var(--c-220-80-80) / 0.6)' : 'rgb(var(--c-0-0-0) / 0.3)' }}>
                       {count} dates
                     </span>
                   )}
                   {isConflict && (
                     <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-[2px]"
-                      style={{ background: 'rgba(220,60,60,0.2)', color: 'rgba(220,80,80,0.9)' }}>
+                      style={{ background: 'rgb(var(--c-220-60-60) / 0.2)', color: 'rgb(var(--c-220-80-80) / 0.9)' }}>
                       OUT
                     </span>
                   )}
@@ -411,15 +414,15 @@ export function ConflictsPage() {
           onClick={() => setShowSpecificDates(!showSpecificDates)}
           className="text-[10px] uppercase tracking-widest px-4 py-2 rounded cursor-pointer transition-colors"
           style={{
-            background: showSpecificDates ? 'rgba(255,220,100,0.12)' : 'rgba(255,255,255,0.04)',
-            color: showSpecificDates ? 'rgba(255,220,100,0.8)' : 'rgba(255,255,255,0.4)',
-            border: `1px solid ${showSpecificDates ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.06)'}`,
+            background: showSpecificDates ? 'rgb(var(--c-255-220-100) / 0.12)' : 'rgb(var(--c-255-255-255) / 0.04)',
+            color: showSpecificDates ? 'rgb(var(--c-255-220-100) / 0.8)' : 'rgb(var(--c-255-255-255) / 0.4)',
+            border: `1px solid ${showSpecificDates ? 'rgb(var(--c-255-220-100) / 0.2)' : 'rgb(var(--c-255-255-255) / 0.06)'}`,
           }}
         >
           {showSpecificDates ? 'Hide Specific Dates' : 'Pick Specific Dates'}
         </button>
         {!showSpecificDates && selectedCount > 0 && (
-          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <span className="text-[10px]" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)' }}>
             {selectedCount} conflict{selectedCount !== 1 ? 's' : ''} selected
           </span>
         )}
@@ -447,14 +450,14 @@ export function ConflictsPage() {
                       onClick={() => toggleDate(d.id)}
                       className="w-full text-left px-4 py-3 rounded-sm flex flex-wrap items-center gap-2 transition-colors cursor-pointer"
                       style={{
-                        background: isSelected ? 'rgba(220,60,60,0.08)' : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${isSelected ? 'rgba(220,60,60,0.2)' : 'rgba(255,255,255,0.04)'}`,
+                        background: isSelected ? 'rgb(var(--c-220-60-60) / 0.08)' : 'rgb(var(--c-255-255-255) / 0.02)',
+                        border: `1px solid ${isSelected ? 'rgb(var(--c-220-60-60) / 0.2)' : 'rgb(var(--c-255-255-255) / 0.04)'}`,
                       }}
                     >
-                      <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{formatDate(d.date)}</span>
-                      <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
+                      <span className="text-sm font-medium" style={{ color: 'rgb(var(--c-255-255-255) / 0.8)' }}>{formatDate(d.date)}</span>
+                      <span className="text-xs" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)' }}>{formatTime(d.start_time)} – {formatTime(d.end_time)}</span>
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[2px]"
-                        style={{ background: isSelected ? 'rgba(220,60,60,0.15)' : 'rgba(255,255,255,0.04)', color: isSelected ? 'rgba(220,80,80,0.8)' : 'rgba(255,255,255,0.3)' }}>
+                        style={{ background: isSelected ? 'rgb(var(--c-220-60-60) / 0.15)' : 'rgb(var(--c-255-255-255) / 0.04)', color: isSelected ? 'rgb(var(--c-220-80-80) / 0.8)' : 'rgb(var(--c-255-255-255) / 0.3)' }}>
                         {isSelected ? 'CONFLICT' : d.type === 'blocked' ? 'Blocked' : color.label}
                       </span>
                     </button>
@@ -468,9 +471,9 @@ export function ConflictsPage() {
                           maxLength={MAX_LENGTHS.conflict_reason}
                           className="w-full px-3 py-1.5 rounded-sm text-xs outline-none"
                           style={{
-                            background: 'rgba(255,255,255,0.03)',
+                            background: 'rgb(var(--c-255-255-255) / 0.03)',
                             border: '1px solid var(--t-tab-border)',
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgb(var(--c-255-255-255) / 0.6)',
                           }}
                         />
                       </div>
@@ -489,9 +492,9 @@ export function ConflictsPage() {
           onClick={() => setConfirmOpen(true)}
           className="px-6 py-3 rounded-sm text-sm font-semibold cursor-pointer"
           style={{
-            background: 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
-            color: 'hsl(220, 6%, 9%)',
-            boxShadow: '0 2px 8px rgba(212,175,55,0.2)',
+            background: 'var(--btn-primary-bg)',
+            color: 'var(--btn-primary-text)',
+            boxShadow: '0 2px 8px rgb(var(--c-212-175-55) / 0.2)',
           }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}

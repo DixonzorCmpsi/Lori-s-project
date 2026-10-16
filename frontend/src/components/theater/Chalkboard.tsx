@@ -118,7 +118,26 @@ const noteColors = {
 };
 
 export function StickyNote({ children, color = 'yellow', rotate = 0, className = '' }: StickyNoteProps) {
+  const { uiStyle } = useTheme();
   const c = noteColors[color];
+  // Default style: a plain surface card (no pin, tilt or paper colour)
+  if (uiStyle === 'default') {
+    return (
+      <div className={`relative ${className}`}>
+        <div
+          className="p-4 rounded-xl"
+          style={{
+            background: 'var(--t-surface)',
+            color: 'var(--t-foreground)',
+            border: '1px solid var(--t-border)',
+            boxShadow: 'var(--shadow-premium)',
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`relative ${className}`} style={{ transform: `rotate(${rotate}deg)` }}>
       {/* Pushpin */}
@@ -139,14 +158,15 @@ export function StickyNote({ children, color = 'yellow', rotate = 0, className =
 }
 
 export function ChalkText({ children, className = '', size = 'md' }: { children: ReactNode; className?: string; size?: 'sm' | 'md' | 'lg' }) {
+  const { uiStyle } = useTheme();
   const sizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-xl' };
   return (
     <span className={`${sizes[size]} ${className}`}
       style={{
         color: 'var(--t-chalk-text)',
         textShadow: `0 0 6px var(--t-chalk-glow)`,
-        fontFamily: '"Playfair Display", serif',
-        fontWeight: 400,
+        fontFamily: 'var(--t-heading-font)',
+        fontWeight: uiStyle === 'default' ? 600 : 400,
       }}
     >
       {children}

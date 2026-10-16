@@ -14,6 +14,9 @@ import { formatTime, formatDate } from '@/utils/format';
 import { AvatarDisplay } from '@/components/ui/AvatarPicker';
 import { useNotifications } from '@/hooks/useNotifications';
 import { TheaterLayout } from './TheaterLayout';
+import { AppShell } from '@/components/layout/AppShell';
+import { MemberDirectory } from '@/components/layout/MemberDirectory';
+import { MoreSheet } from '@/components/layout/MoreSheet';
 import { Chalkboard, ChalkText } from './Chalkboard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useTour, triggerPageTour } from '@/hooks/useTour';
@@ -97,8 +100,8 @@ const flightCaseBase = {
 export function BackstageLayout() {
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme, theme } = useTheme();
-  const tourStyles = useMemo(() => getTheaterTourStyles(), [theme]);
+  const { isDark, toggleTheme, theme, uiStyle, isCalendar } = useTheme();
+  const tourStyles = useMemo(() => getTheaterTourStyles(uiStyle), [theme, uiStyle]);
   const navigate = useNavigate();
   const location = useLocation();
   const bp = useBreakpoint();
@@ -171,31 +174,53 @@ export function BackstageLayout() {
   // Tour system — different flows per role
   const tourSteps = useMemo(() => {
     if (!id) return [];
-    if (userRole === 'director') return directorTourSteps;
-    if (userRole === 'staff') return staffTourSteps;
-    return castTourSteps;
+    const steps = userRole === 'director' ? directorTourSteps
+      : userRole === 'staff' ? staffTourSteps
+      : castTourSteps;
+    return steps;
   }, [id, userRole]);
   const tourId = id && userRole ? `production-${userRole}` : '';
   const { run: tourRun, handleEvent: tourEvent } = useTour(tourId, tourSteps, !!id);
+  // Only point at things that are actually on screen (phone menus hide some pages)
+  const liveSteps = useMemo(
+    () => (tourRun
+      ? tourSteps.filter(st => typeof st.target !== 'string' || !!document.querySelector(st.target))
+      : tourSteps),
+    [tourRun, tourSteps],
+  );
+  // If every step points at something hidden, end the tour instead of leaving it "running"
+  useEffect(() => {
+    if (tourRun && liveSteps.length === 0) tourEvent({ status: 'skipped' } as any);
+  }, [tourRun, liveSteps.length, tourEvent]);
 
   // Navigation config
   const directorNav = [
     { icon: '◈', label: 'Dashboard', path: basePath || '/', tourId: 'nav-dashboard' },
-    { icon: '◷', label: 'Schedule', path: `${basePath}/schedule`, tourId: 'nav-schedule' },
-    { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin`, tourId: 'nav-bulletin' },
-    { icon: '◉', label: 'Members', path: `${basePath}/roster`, tourId: 'nav-members' },
-    { icon: '◆', label: 'Chat', path: `${basePath}/chat`, tourId: 'nav-chat' },
-    { icon: '◎', label: 'Settings', path: `${basePath}/settings`, tourId: 'nav-settings' },
+    { icon: '◷', label: 'Schedule', path: `${basePath}/schedule`, tourId: 'nav-schedule', group: 'Rehearse' },
+    { icon: '☑', label: 'Call Sheet', path: `${basePath}/call-sheet`, tourId: 'nav-callsheet', group: 'Rehearse' },
+    { icon: '◐', label: 'Scenes', path: `${basePath}/scenes`, tourId: 'nav-scenes', group: 'Rehearse' },
+    { icon: '▤', label: 'Reports', path: `${basePath}/reports`, tourId: 'nav-reports', group: 'Rehearse' },
+    { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin`, tourId: 'nav-bulletin', group: 'Communicate' },
+    { icon: '◆', label: 'Chat', path: `${basePath}/chat`, tourId: 'nav-chat', group: 'Communicate' },
+    { icon: '◉', label: 'Members', path: `${basePath}/roster`, tourId: 'nav-members', group: 'Company' },
+    { icon: '✚', label: 'Sign-ups', path: `${basePath}/signups`, tourId: 'nav-signups', group: 'Company' },
+    { icon: '▣', label: 'Documents', path: `${basePath}/documents`, tourId: 'nav-documents', group: 'Company' },
+    { icon: '◎', label: 'Settings', path: `${basePath}/settings`, tourId: 'nav-settings', group: 'Production' },
   ];
   const castNav = [
     { icon: '◈', label: 'Dashboard', path: basePath || '/', tourId: 'nav-dashboard' },
     { icon: '◻', label: 'Bulletin', path: `${basePath}/bulletin`, tourId: 'nav-bulletin' },
     { icon: '◷', label: 'Schedule', path: `${basePath}/schedule`, tourId: 'nav-schedule' },
+    { icon: '☑', label: 'Call Sheet', path: `${basePath}/call-sheet`, tourId: 'nav-callsheet' },
     { icon: '◆', label: 'Chat', path: `${basePath}/chat`, tourId: 'nav-chat' },
+    { icon: '✚', label: 'Sign-ups', path: `${basePath}/signups`, tourId: 'nav-signups' },
+    { icon: '▣', label: 'Documents', path: `${basePath}/documents`, tourId: 'nav-documents' },
   ];
-  const navItems = isDirectorOrStaff ? directorNav : (id ? castNav : [
-    { icon: '◈', label: 'Dashboard', path: '/', tourId: 'nav-dashboard' },
-  ]);
+  const navItems: { icon: string; label: string; path: string; tourId: string; group?: string }[] =
+    isDirectorOrStaff ? directorNav : (id ? castNav : [
+      { icon: '◈', label: 'Dashboard', path: '/', tourId: 'nav-dashboard' },
+    ]);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   function isActive(path: string) {
     return location.pathname === path ||
@@ -363,6 +388,18 @@ export function BackstageLayout() {
           <span className="text-xs opacity-60">◇</span>
           <span className="truncate">{user?.name || 'Account'}</span>
         </motion.button>
+        {id && (
+          <motion.button
+            data-tour="nav-help"
+            onClick={() => navigate(`/production/${id}/help`)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer"
+            style={{ color: 'hsl(43, 50%, 45%)' }}
+            whileHover={{ background: 'rgba(255,180,80,0.06)' }}
+          >
+            <span className="text-xs opacity-60">i</span>
+            <span className="font-medium">How It Works</span>
+          </motion.button>
+        )}
         {id && (
           <motion.button
             onClick={triggerPageTour}
@@ -769,11 +806,12 @@ export function BackstageLayout() {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      {navItems.slice(0, 5).map((item) => {
+      {navItems.slice(0, navItems.length > 5 ? 4 : 5).map((item) => {
         const active = isActive(item.path);
         return (
           <button
             key={item.path}
+            data-tour={item.tourId}
             onClick={() => navigate(item.path)}
             className="flex-1 flex flex-col items-center gap-1 py-2.5 cursor-pointer relative"
             style={{
@@ -794,6 +832,17 @@ export function BackstageLayout() {
           </button>
         );
       })}
+      {navItems.length > 5 && (
+        <button
+          onClick={() => setMoreOpen(true)}
+          aria-haspopup="dialog"
+          className="flex-1 flex flex-col items-center gap-1 py-2.5 cursor-pointer"
+          style={{ color: navItems.slice(4).some(i => isActive(i.path)) ? 'var(--t-nav-active-text)' : 'var(--t-nav-inactive-text)' }}
+        >
+          <span className="text-sm">⋯</span>
+          <span className="text-[9px] tracking-wider uppercase font-medium">More</span>
+        </button>
+      )}
     </div>
   );
 
@@ -801,9 +850,9 @@ export function BackstageLayout() {
 
   return (
     <ProductionContext.Provider value={{ production, members: members || [], userRole, refetch }}>
-      {id && tourSteps.length > 0 && tourRun && (
+      {id && liveSteps.length > 0 && tourRun && (
         <Joyride
-          steps={tourSteps}
+          steps={liveSteps}
           run={tourRun}
           onEvent={tourEvent}
           continuous
@@ -813,6 +862,50 @@ export function BackstageLayout() {
           options={theaterTourOptions}
         />
       )}
+      {uiStyle === 'default' ? (
+        <AppShell
+          productionId={id}
+          productionName={production?.name}
+          userName={user?.name}
+          userAvatar={user?.avatar_url}
+          userRole={userRole}
+          navItems={navItems}
+          unreadMessages={unreadMessages}
+          isMobile={isMobile}
+          isDark={isDark}
+          calendar={isCalendar}
+          isActive={isActive}
+          notificationsPending={permission === 'default'}
+          onNavigate={navigate}
+          onToggleTheme={toggleTheme}
+          onLogout={logout}
+          onTour={triggerPageTour}
+          onEnableNotifications={requestPermission}
+          onOpenPeople={() => setDrawerOpen(true)}
+          overlay={id ? (
+            <MemberDirectory
+              open={drawerOpen}
+              onClose={() => setDrawerOpen(false)}
+              productionId={id}
+              currentUserId={user?.id}
+              members={members || []}
+              teammateIds={teammateIds}
+              showTeamTab={isCast && !!myTeamData && myTeamData.teams.length > 0}
+              onMessage={person => {
+                setDrawerOpen(false);
+                navigate(`/production/${id}/chat`);
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('open-chat-to', { detail: person }));
+                }, 300);
+              }}
+            />
+          ) : undefined}
+        >
+          <PageErrorBoundary location={location.pathname}>
+            <Outlet />
+          </PageErrorBoundary>
+        </AppShell>
+      ) : (
       <TheaterLayout
         curtainsOpen={true}
         leftPanel={leftPanel}
@@ -824,6 +917,21 @@ export function BackstageLayout() {
         onDrawerClose={() => setDrawerOpen(false)}
         focusMode={focusMode}
       >
+        {isMobile && (
+          <MoreSheet
+            open={moreOpen}
+            onClose={() => setMoreOpen(false)}
+            items={navItems}
+            isActive={isActive}
+            onNavigate={navigate}
+            extra={[
+              { label: 'Account', onClick: () => navigate(id ? `/production/${id}/account` : '/account') },
+              ...(id ? [{ label: 'How it works', onClick: () => navigate(`/production/${id}/help`) }] : []),
+              { label: isDark ? 'Light mode' : 'Dark mode', onClick: toggleTheme },
+              { label: 'Sign out', onClick: logout },
+            ]}
+          />
+        )}
         {/* Center stage — chalkboard nailed to the stage */}
         <div
           className={`w-full h-full pt-[90px] sm:pt-[100px] px-1 sm:px-2 overflow-y-auto ${isMobile ? 'pb-20' : 'pb-2'}`}
@@ -841,6 +949,7 @@ export function BackstageLayout() {
           </Chalkboard>
         </div>
       </TheaterLayout>
+      )}
     </ProductionContext.Provider>
   );
 }

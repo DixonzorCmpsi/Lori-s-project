@@ -43,6 +43,7 @@ export interface RehearsalDate {
   end_time: string;
   type: 'regular' | 'tech' | 'dress' | 'performance' | 'blocked';
   note: string | null;
+  location?: string | null;
   is_cancelled: boolean;
   is_deleted: boolean;
 }
@@ -55,6 +56,10 @@ export interface BulletinPost {
   body: string;
   is_pinned: boolean;
   notify_members: boolean;
+  requires_ack?: boolean;
+  ack_count?: number;
+  ack_total?: number;
+  acknowledged?: boolean;
   created_at: string;
   updated_at?: string;
 }

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApi } from '@/hooks/useApi';
 import { useProduction } from '@/components/theater/BackstageLayout';
+import { useTheme } from '@/contexts/ThemeContext';
+import { AttentionPanel } from '@/components/AttentionPanel';
 import { useToast } from '@/components/ui/Toast';
 import { getSchedule } from '@/services/schedule';
 import { getPosts } from '@/services/bulletin';
@@ -15,6 +17,8 @@ import { StickyNote, ChalkText } from '@/components/theater/Chalkboard';
 import type { RehearsalDate, ConflictStatus } from '@/types';
 import { PageTour } from '@/tours/PageTour';
 import { dashboardTourSteps } from '@/tours/pageTours';
+import { PageGuide } from '@/components/PageGuide';
+import { PhaseBar } from '@/components/layout/PhaseBar';
 
 const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
 const stagger = {
@@ -46,6 +50,8 @@ export function ProductionDashboardPage() {
   const navigate = useNavigate();
   const { production, members, userRole } = useProduction();
   const { toast } = useToast();
+  const { uiStyle, isCalendar } = useTheme();
+  const modern = uiStyle === 'default';
 
   const { data: dates } = useApi(() => getSchedule(id!), [id]);
   const { data: posts } = useApi(() => getPosts(id!), [id]);
@@ -215,7 +221,7 @@ export function ProductionDashboardPage() {
               key={day}
               className="flex items-center gap-2 py-0.5 rounded-sm px-1"
               style={{
-                background: isToday ? 'rgba(0,0,0,0.06)' : 'transparent',
+                background: isToday ? 'rgb(var(--c-0-0-0) / 0.06)' : 'transparent',
               }}
             >
               <span className="text-[10px] font-bold w-12 flex-shrink-0" style={{ opacity: isToday ? 1 : 0.6 }}>
@@ -253,7 +259,7 @@ export function ProductionDashboardPage() {
             <button
               key={action.label}
               onClick={() => navigate(`/production/${action.path}`)}
-              className="block w-full text-left text-[11px] px-2 py-1 rounded cursor-pointer transition-colors hover:bg-black/[0.04]"
+              className="block w-full text-left text-[11px] px-2 py-1 rounded cursor-pointer transition-colors hover:bg-[rgb(var(--c-0-0-0)/0.04)]"
             >
               {action.label}
             </button>
@@ -281,7 +287,7 @@ export function ProductionDashboardPage() {
             <span className="font-mono text-xs font-bold">{upcoming[0] ? formatDate(upcoming[0].date) : 'TBD'}</span>
           </div>
           {production?.opening_night && (
-            <div className="flex justify-between items-baseline pt-1 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+            <div className="flex justify-between items-baseline pt-1 border-t" style={{ borderColor: 'rgb(var(--c-0-0-0) / 0.08)' }}>
               <span className="text-[11px]">Opening Night</span>
               <span className="font-mono text-xs font-bold">{formatDate(production.opening_night)}</span>
             </div>
@@ -303,7 +309,7 @@ export function ProductionDashboardPage() {
             <button
               onClick={(e) => { e.stopPropagation(); copyInvite(); }}
               className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded cursor-pointer"
-              style={{ background: 'rgba(0,0,0,0.08)' }}
+              style={{ background: 'rgb(var(--c-0-0-0) / 0.08)' }}
             >
               Copy Link
             </button>
@@ -338,7 +344,7 @@ export function ProductionDashboardPage() {
             </div>
           )}
           {production?.opening_night && (
-            <div className="flex justify-between items-baseline pt-1 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+            <div className="flex justify-between items-baseline pt-1 border-t" style={{ borderColor: 'rgb(var(--c-0-0-0) / 0.08)' }}>
               <span className="text-[11px]">Opening Night</span>
               <span className="font-mono text-xs font-bold">{formatDate(production.opening_night)}</span>
             </div>
@@ -352,7 +358,7 @@ export function ProductionDashboardPage() {
                 onClick={() => !disabled && navigate(`/production/${id}/conflicts`)}
                 className="w-full text-[10px] uppercase tracking-widest font-bold mt-2 px-3 py-1.5 rounded cursor-pointer flex items-center justify-center gap-2"
                 style={{
-                  background: disabled ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.06)',
+                  background: disabled ? 'rgb(var(--c-0-0-0) / 0.03)' : 'rgb(var(--c-0-0-0) / 0.06)',
                   opacity: disabled ? 0.4 : 1,
                   cursor: disabled ? 'default' : 'pointer',
                 }}
@@ -360,7 +366,7 @@ export function ProductionDashboardPage() {
                 {!hasSubmitted ? 'Submit Conflicts' : remaining > 0 ? 'Submit New Conflicts' : 'Conflicts Submitted'}
                 {hasSubmitted && remaining > 0 && (
                   <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ background: 'rgba(220,60,60,0.12)', color: 'rgba(220,80,80,0.9)' }}>
+                    style={{ background: 'rgb(var(--c-220-60-60) / 0.12)', color: 'rgb(var(--c-220-80-80) / 0.9)' }}>
                     {remaining}
                   </span>
                 )}
@@ -379,18 +385,23 @@ export function ProductionDashboardPage() {
         variants={stagger}
         initial="hidden"
         animate="show"
+        className={modern ? 'flex flex-col flex-1 min-h-0' : undefined}
       >
         {/* Board title */}
-        <motion.div variants={fadeIn} className="text-center mb-6">
+        <motion.div variants={fadeIn} className={modern ? 'mb-5' : 'text-center mb-6'}>
           <ChalkText size="lg">{production?.name || 'Call Board'}</ChalkText>
-          <div className="w-24 h-[1px] mx-auto mt-2 opacity-20" style={{ background: 'rgba(255,255,255,0.4)' }} />
+          {!modern && <div className="w-24 h-[1px] mx-auto mt-2 opacity-20" style={{ background: 'rgb(var(--c-255-255-255) / 0.4)' }} />}
         </motion.div>
+
+        {isCalendar && <PhaseBar production={production} dates={dates} />}
+
+        <PageGuide page="dashboard" startHidden />
 
         {/* Production expired banner — director only */}
         {isExpired && isDirector && (
           <motion.div variants={fadeIn} className="mb-6 rounded-sm p-4"
-            style={{ background: 'rgba(255,180,50,0.08)', border: '1px solid rgba(255,180,50,0.2)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: 'rgba(255,220,100,0.9)' }}>
+            style={{ background: 'rgb(var(--c-255-180-50) / 0.08)', border: '1px solid rgb(var(--c-255-180-50) / 0.2)' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'rgb(var(--c-255-220-100) / 0.9)' }}>
               Production has ended
             </p>
             <p className="text-xs mb-3" style={{ color: 'var(--t-subtle-text-bright)' }}>
@@ -412,8 +423,8 @@ export function ProductionDashboardPage() {
                   disabled={extending || !extendDate}
                   className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-sm cursor-pointer"
                   style={{
-                    background: extendDate ? 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)' : 'var(--t-subtle-bg)',
-                    color: extendDate ? 'hsl(220, 6%, 9%)' : 'var(--t-subtle-text)',
+                    background: extendDate ? 'var(--btn-primary-bg)' : 'var(--t-subtle-bg)',
+                    color: extendDate ? 'var(--btn-primary-text)' : 'var(--t-subtle-text)',
                     opacity: extending ? 0.5 : 1,
                   }}
                 >
@@ -423,7 +434,7 @@ export function ProductionDashboardPage() {
               <button
                 onClick={handleArchiveNow}
                 className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-sm cursor-pointer"
-                style={{ color: 'rgba(255,150,150,0.7)', background: 'rgba(255,80,80,0.06)', border: '1px solid rgba(255,80,80,0.12)' }}
+                style={{ color: 'rgb(var(--c-255-150-150) / 0.7)', background: 'rgb(var(--c-255-80-80) / 0.06)', border: '1px solid rgb(var(--c-255-80-80) / 0.12)' }}
               >
                 Archive Production
               </button>
@@ -434,16 +445,18 @@ export function ProductionDashboardPage() {
         {/* Production expired notice — cast/staff */}
         {isExpired && !isDirector && (
           <motion.div variants={fadeIn} className="mb-6 rounded-sm p-4"
-            style={{ background: 'rgba(255,180,50,0.06)', border: '1px solid rgba(255,180,50,0.12)' }}>
-            <p className="text-xs" style={{ color: 'rgba(255,220,100,0.7)' }}>
+            style={{ background: 'rgb(var(--c-255-180-50) / 0.06)', border: '1px solid rgb(var(--c-255-180-50) / 0.12)' }}>
+            <p className="text-xs" style={{ color: 'rgb(var(--c-255-220-100) / 0.7)' }}>
               This production's closing night has passed. Your director will decide whether to extend or archive it.
             </p>
           </motion.div>
         )}
 
+        <AttentionPanel productionId={id!} isStaff={isDirectorOrStaff} />
+
         {isCast ? (
           /* ── Cast layout: clean 2x2 grid ── */
-          <div data-tour="dashboard-cards" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div data-tour="dashboard-cards" className={modern ? 'dash-grid dash-grid-2' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
             {weekCard}
             {myInfoCard}
             {announcementsCard}
@@ -451,7 +464,7 @@ export function ProductionDashboardPage() {
           </div>
         ) : (
           /* ── Director / Staff layout: 3-column grid ── */
-          <div data-tour="dashboard-cards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div data-tour="dashboard-cards" className={modern ? 'dash-grid' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}>
             {scheduleCard}
             {statusCard}
             {announcementsCard}
@@ -462,7 +475,7 @@ export function ProductionDashboardPage() {
         )}
 
         {/* Chalk note at bottom */}
-        <motion.div variants={fadeIn} className="text-center mt-8">
+        <motion.div variants={fadeIn} className={modern ? 'hidden' : 'text-center mt-8'}>
           <ChalkText size="sm">
             {isDirector ? 'Click any card to manage that section' : 'Check the board for updates'}
           </ChalkText>

@@ -1,17 +1,16 @@
 """Theaters router."""
 
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import Theater, User, Production
+from app.models import Theater
 from app.routers.auth import get_current_user
-from app.services.business_logic import check_permission, FIELD_MAX_LENGTHS
+from app.services.business_logic import FIELD_MAX_LENGTHS
 
 router = APIRouter()
 
@@ -23,9 +22,9 @@ class CreateTheaterRequest(BaseModel):
 
 
 class UpdateTheaterRequest(BaseModel):
-    name: Optional[str] = Field(None, max_length=200)
-    city: Optional[str] = Field(None, max_length=100)
-    state: Optional[str] = Field(None, max_length=100)
+    name: str | None = Field(None, max_length=200)
+    city: str | None = Field(None, max_length=100)
+    state: str | None = Field(None, max_length=100)
 
 
 def require_director(current_user: dict, member_role: str = None) -> None:
@@ -65,11 +64,32 @@ async def create_theater(
 
     # Validate field lengths
     if len(name) > 200:
-        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid input", "fields": [{"field": "name", "message": "Must be 200 characters or fewer"}]})
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "VALIDATION_ERROR",
+                "message": "Invalid input",
+                "fields": [{"field": "name", "message": "Must be 200 characters or fewer"}],
+            },
+        )
     if len(city) > 100:
-        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid input", "fields": [{"field": "city", "message": "Must be 100 characters or fewer"}]})
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "VALIDATION_ERROR",
+                "message": "Invalid input",
+                "fields": [{"field": "city", "message": "Must be 100 characters or fewer"}],
+            },
+        )
     if len(state) > 100:
-        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Invalid input", "fields": [{"field": "state", "message": "Must be 100 characters or fewer"}]})
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "VALIDATION_ERROR",
+                "message": "Invalid input",
+                "fields": [{"field": "state", "message": "Must be 100 characters or fewer"}],
+            },
+        )
 
     # Check if user already has a theater
     async with async_session_maker() as session:

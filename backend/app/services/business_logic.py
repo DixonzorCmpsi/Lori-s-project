@@ -1,6 +1,6 @@
-from datetime import date, time, datetime, timedelta
-from typing import Any, Optional
 import re
+from datetime import date, datetime, time, timedelta
+from typing import Any
 
 DAY_MAP = {
     "monday": 0,
@@ -233,9 +233,7 @@ def validate_password(password: str) -> dict[str, Any]:
 def validate_production_dates(
     first_rehearsal: date, opening_night: date, closing_night: date
 ) -> dict[str, bool]:
-    return {
-        "valid": first_rehearsal <= opening_night and opening_night <= closing_night
-    }
+    return {"valid": first_rehearsal <= opening_night and opening_night <= closing_night}
 
 
 def validate_invite_token(
@@ -254,7 +252,7 @@ def validate_invite_token(
     return {"valid": True, "reason": ""}
 
 
-def validate_field_lengths(field_name: str, value: Optional[str]) -> dict[str, bool]:
+def validate_field_lengths(field_name: str, value: str | None) -> dict[str, bool]:
     if value is None:
         return {"valid": True}
 
@@ -265,12 +263,8 @@ def validate_field_lengths(field_name: str, value: Optional[str]) -> dict[str, b
 
 
 def sanitize_markdown(text: str) -> str:
-    text = re.sub(
-        r"<script[^>]*>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL
-    )
-    text = re.sub(
-        r"<iframe[^>]*>.*?</iframe>", "", text, flags=re.IGNORECASE | re.DOTALL
-    )
+    text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<iframe[^>]*>.*?</iframe>", "", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<img[^>]*>", "", text, flags=re.IGNORECASE)
     text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r'\s*on\w+\s*=\s*["\'].*?["\']', "", text, flags=re.IGNORECASE)
@@ -314,9 +308,7 @@ def generate_schedule(
         current += timedelta(days=1)
 
     if tech_week_enabled and tech_week_days > 0:
-        tech_start = max(
-            first_rehearsal, opening_night - timedelta(days=tech_week_days)
-        )
+        tech_start = max(first_rehearsal, opening_night - timedelta(days=tech_week_days))
         tech_end = opening_night - timedelta(days=1)
         current = tech_start
         while current <= tech_end:
@@ -357,8 +349,6 @@ def generate_schedule(
     dates.sort(key=lambda x: x["date"])
 
     if not dates:
-        return {
-            "error": "No rehearsal dates could be generated. Please adjust your settings."
-        }
+        return {"error": "No rehearsal dates could be generated. Please adjust your settings."}
 
     return {"dates": dates, "warnings": warnings}

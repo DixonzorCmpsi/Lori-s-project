@@ -8,8 +8,6 @@ All API endpoints must return errors in the format:
 }
 """
 
-import pytest
-
 
 class TestErrorFormat:
     """All error responses follow the standard format."""
@@ -17,11 +15,15 @@ class TestErrorFormat:
     async def test_400_format(self, client, auth_headers):
         """400 errors include error code and message."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/theaters", json={
-            "name": "A" * 201,  # Too long
-            "city": "Springfield",
-            "state": "IL",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "A" * 201,  # Too long
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
         data = response.json()
         assert "error" in data
@@ -31,11 +33,15 @@ class TestErrorFormat:
     async def test_400_validation_includes_fields(self, client, auth_headers):
         """Validation errors include per-field details."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/theaters", json={
-            "name": "A" * 201,
-            "city": "C" * 101,
-            "state": "IL",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "A" * 201,
+                "city": "C" * 101,
+                "state": "IL",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
         data = response.json()
         assert "fields" in data
@@ -55,9 +61,14 @@ class TestErrorFormat:
     async def test_403_format(self, client, auth_headers):
         """403 errors follow standard format."""
         headers = auth_headers("cast-id")
-        response = await client.post("/api/productions/prod-id/bulletin", json={
-            "title": "Test", "body": "Test",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/bulletin",
+            json={
+                "title": "Test",
+                "body": "Test",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
         data = response.json()
         assert data["error"] == "FORBIDDEN"
@@ -79,12 +90,24 @@ class TestErrorFormat:
         """409 errors follow standard format."""
         # e.g., duplicate theater
         headers = auth_headers("director-id")
-        await client.post("/api/theaters", json={
-            "name": "Theater", "city": "City", "state": "ST",
-        }, headers=headers)
-        response = await client.post("/api/theaters", json={
-            "name": "Theater 2", "city": "City", "state": "ST",
-        }, headers=headers)
+        await client.post(
+            "/api/theaters",
+            json={
+                "name": "Theater",
+                "city": "City",
+                "state": "ST",
+            },
+            headers=headers,
+        )
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Theater 2",
+                "city": "City",
+                "state": "ST",
+            },
+            headers=headers,
+        )
         assert response.status_code == 409
         data = response.json()
         assert data["error"] == "CONFLICT"
@@ -93,14 +116,20 @@ class TestErrorFormat:
         """429 errors follow standard format."""
         # Exhaust rate limit
         for _ in range(6):
-            await client.post("/api/auth/login", json={
+            await client.post(
+                "/api/auth/login",
+                json={
+                    "email": "ratelimit@example.com",
+                    "password": "test",
+                },
+            )
+        response = await client.post(
+            "/api/auth/login",
+            json={
                 "email": "ratelimit@example.com",
                 "password": "test",
-            })
-        response = await client.post("/api/auth/login", json={
-            "email": "ratelimit@example.com",
-            "password": "test",
-        })
+            },
+        )
         # May or may not hit 429 depending on implementation
         if response.status_code == 429:
             data = response.json()
@@ -118,12 +147,15 @@ class TestPasswordNotExposed:
 
     async def test_registration_response_no_password(self, client):
         """Registration response does not include password."""
-        response = await client.post("/api/auth/register", json={
-            "email": "nopw@example.com",
-            "name": "No PW",
-            "password": "StrongP@ss99!",
-            "date_of_birth": "1990-01-01",
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "nopw@example.com",
+                "name": "No PW",
+                "password": "StrongP@ss99!",
+                "date_of_birth": "1990-01-01",
+            },
+        )
         if response.status_code == 201:
             data = response.json()
             assert "password" not in data

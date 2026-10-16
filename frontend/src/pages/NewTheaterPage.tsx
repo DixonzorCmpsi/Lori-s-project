@@ -36,7 +36,7 @@ export function NewTheaterPage() {
   };
 
   const inputStyle = "w-full px-3 py-2 rounded text-sm border outline-none";
-  const inputCss = { borderColor: 'rgba(0,0,0,0.1)', background: 'rgba(0,0,0,0.02)' };
+  const inputCss = { borderColor: 'rgb(var(--c-0-0-0) / 0.1)', background: 'rgb(var(--c-0-0-0) / 0.02)' };
 
   return (
     <div className="flex flex-col items-center pt-8">
@@ -53,23 +53,23 @@ export function NewTheaterPage() {
             <label className="block text-[11px] font-medium mb-1 opacity-70">Theater / School Name</label>
             <input value={name} onChange={e => setName(e.target.value)} required maxLength={200}
               placeholder="Lincoln High School" className={inputStyle} style={inputCss} />
-            {errors.name && <p className="text-[10px] mt-1" style={{ color: 'hsl(0,60%,45%)' }}>{errors.name}</p>}
+            {errors.name && <p className="text-[10px] mt-1" style={{ color: 'hsl(var(--h-0-60-45))' }}>{errors.name}</p>}
           </div>
           <div>
             <label className="block text-[11px] font-medium mb-1 opacity-70">City</label>
             <input value={city} onChange={e => setCity(e.target.value)} required maxLength={100}
               placeholder="Springfield" className={inputStyle} style={inputCss} />
-            {errors.city && <p className="text-[10px] mt-1" style={{ color: 'hsl(0,60%,45%)' }}>{errors.city}</p>}
+            {errors.city && <p className="text-[10px] mt-1" style={{ color: 'hsl(var(--h-0-60-45))' }}>{errors.city}</p>}
           </div>
           <div>
             <label className="block text-[11px] font-medium mb-1 opacity-70">State</label>
             <input value={state} onChange={e => setState(e.target.value)} required maxLength={100}
               placeholder="Illinois" className={inputStyle} style={inputCss} />
-            {errors.state && <p className="text-[10px] mt-1" style={{ color: 'hsl(0,60%,45%)' }}>{errors.state}</p>}
+            {errors.state && <p className="text-[10px] mt-1" style={{ color: 'hsl(var(--h-0-60-45))' }}>{errors.state}</p>}
           </div>
           <button type="submit" disabled={isLoading}
             className="w-full py-2 rounded text-sm font-bold uppercase tracking-wider cursor-pointer"
-            style={{ background: 'rgba(0,0,0,0.08)', opacity: isLoading ? 0.5 : 1 }}>
+            style={{ background: 'rgb(var(--c-0-0-0) / 0.08)', opacity: isLoading ? 0.5 : 1 }}>
             {isLoading ? 'Creating...' : 'Create Theater'}
           </button>
         </form>

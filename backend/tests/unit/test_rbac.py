@@ -26,31 +26,43 @@ class TestPermissionMatrix:
     async def test_director_creates_theater(self, client, auth_headers):
         """Director can create theater."""
         headers = auth_headers("new-director-rbac")
-        response = await client.post("/api/theaters", json={
-            "name": "Test Theater",
-            "city": "Springfield",
-            "state": "IL",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Test Theater",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_staff_cannot_create_theater(self, client, auth_headers):
         """Staff cannot create theater."""
         headers = auth_headers("staff-id")
-        response = await client.post("/api/theaters", json={
-            "name": "Staff Theater",
-            "city": "Springfield",
-            "state": "IL",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Staff Theater",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_cast_cannot_create_theater(self, client, auth_headers):
         """Cast cannot create theater."""
         headers = auth_headers("cast-id")
-        response = await client.post("/api/theaters", json={
-            "name": "Cast Theater",
-            "city": "Springfield",
-            "state": "IL",
-        }, headers=headers)
+        response = await client.post(
+            "/api/theaters",
+            json={
+                "name": "Cast Theater",
+                "city": "Springfield",
+                "state": "IL",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     # --- Production operations ---
@@ -63,27 +75,35 @@ class TestPermissionMatrix:
     async def test_staff_cannot_create_production(self, client, auth_headers):
         """Staff cannot create production."""
         headers = auth_headers("staff-id")
-        response = await client.post("/api/productions", json={
-            "theater_id": "theater-id",
-            "name": "Staff Production",
-            "estimated_cast_size": 20,
-            "first_rehearsal": "2026-06-01",
-            "opening_night": "2026-08-01",
-            "closing_night": "2026-08-07",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": "theater-id",
+                "name": "Staff Production",
+                "estimated_cast_size": 20,
+                "first_rehearsal": "2026-06-01",
+                "opening_night": "2026-08-01",
+                "closing_night": "2026-08-07",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     async def test_cast_cannot_create_production(self, client, auth_headers):
         """AUTH-10: Cast cannot access Director-only routes."""
         headers = auth_headers("cast-id")
-        response = await client.post("/api/productions", json={
-            "theater_id": "theater-id",
-            "name": "Cast Production",
-            "estimated_cast_size": 20,
-            "first_rehearsal": "2026-06-01",
-            "opening_night": "2026-08-01",
-            "closing_night": "2026-08-07",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions",
+            json={
+                "theater_id": "theater-id",
+                "name": "Cast Production",
+                "estimated_cast_size": 20,
+                "first_rehearsal": "2026-06-01",
+                "opening_night": "2026-08-01",
+                "closing_night": "2026-08-07",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     # --- Schedule edit operations ---
@@ -91,25 +111,37 @@ class TestPermissionMatrix:
     async def test_director_edits_schedule(self, client, auth_headers):
         """Director can edit schedule."""
         headers = auth_headers("director-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "note": "Director note",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "note": "Director note",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
 
     async def test_staff_edits_schedule(self, client, auth_headers):
         """Staff can edit schedule."""
         headers = auth_headers("staff-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "note": "Staff note",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "note": "Staff note",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
 
     async def test_cast_cannot_edit_schedule(self, client, auth_headers):
         """Cast cannot edit schedule."""
         headers = auth_headers("cast-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "note": "Cast note",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "note": "Cast note",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     # --- Bulletin board operations ---
@@ -124,9 +156,14 @@ class TestPermissionMatrix:
     async def test_cast_cannot_post_to_bulletin(self, client, auth_headers):
         """Cast cannot post."""
         headers = auth_headers("cast-id")
-        response = await client.post("/api/productions/prod-id/bulletin", json={
-            "title": "Test", "body": "Test",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/bulletin",
+            json={
+                "title": "Test",
+                "body": "Test",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     # --- Conflict operations ---
@@ -154,9 +191,13 @@ class TestPermissionMatrix:
         """Director and Staff cannot submit conflicts."""
         for role_id in ["director-id", "staff-id"]:
             headers = auth_headers(role_id)
-            response = await client.post("/api/productions/prod-id/conflicts", json={
-                "dates": [],
-            }, headers=headers)
+            response = await client.post(
+                "/api/productions/prod-id/conflicts",
+                json={
+                    "dates": [],
+                },
+                headers=headers,
+            )
             assert response.status_code == 403
 
 
@@ -227,7 +268,9 @@ class TestRoleDemotion:
 class TestDemotionSideEffects:
     """SPEC-003 Section 6.4.1: Demotion side effects."""
 
-    @pytest.mark.skip(reason="Requires integration setup: demoted user needs production membership and conflict seeding")
+    @pytest.mark.skip(
+        reason="Requires integration setup: demoted user needs production membership and conflict seeding"
+    )
     async def test_demoted_user_loses_conflict_view(self, client, auth_headers):
         """Demoted staff loses access to aggregated conflict view."""
         # After demotion, requesting aggregated conflicts returns 403
@@ -239,18 +282,26 @@ class TestDemotionSideEffects:
     async def test_demoted_user_loses_post_editing(self, client, auth_headers):
         """Demoted user can no longer edit their bulletin posts."""
         headers = auth_headers("demoted-user-id")
-        response = await client.patch("/api/productions/prod-id/bulletin/their-post-id", json={
-            "body": "Trying to edit after demotion",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/bulletin/their-post-id",
+            json={
+                "body": "Trying to edit after demotion",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     async def test_demoted_user_cannot_message_cast(self, client, auth_headers):
         """Demoted user (now Cast) cannot message other Cast."""
         headers = auth_headers("demoted-user-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "other-cast-member-id",
-            "body": "Can I still message you?",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "other-cast-member-id",
+                "body": "Can I still message you?",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     async def test_demoted_user_posts_remain(self, client, auth_headers):
@@ -359,9 +410,14 @@ class TestMiddlewareChain:
     async def test_wrong_role_returns_403(self, client, auth_headers):
         """Step 3: Member but wrong role returns 403."""
         headers = auth_headers("cast-id")
-        response = await client.post("/api/productions/prod-id/bulletin", json={
-            "title": "Test", "body": "Test",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/bulletin",
+            json={
+                "title": "Test",
+                "body": "Test",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
 

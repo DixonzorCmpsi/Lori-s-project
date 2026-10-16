@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 /**
  * A colored "gaffer tape" strip — iconic backstage accent.
@@ -27,7 +28,18 @@ interface GafferTapeProps {
 }
 
 export function GafferTape({ color = 'yellow', children, className = '', rotate = 0 }: GafferTapeProps) {
+  const { uiStyle } = useTheme();
   const c = tapeColors[color];
+  if (uiStyle === 'default') {
+    return (
+      <span
+        className={`inline-block px-2.5 py-0.5 text-[11px] font-semibold rounded-full ${className}`}
+        style={{ background: c.bg, color: c.text, lineHeight: '1.6' }}
+      >
+        {children}
+      </span>
+    );
+  }
   return (
     <span
       className={`inline-block px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider relative ${className}`}

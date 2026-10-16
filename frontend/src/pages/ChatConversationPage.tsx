@@ -81,10 +81,10 @@ export function ChatConversationPage() {
       <div className="flex items-center gap-3 mb-4">
         <button onClick={() => navigate(`/production/${id}/chat`)}
           className="text-[10px] cursor-pointer px-2 py-1 rounded"
-          style={{ color: 'var(--t-chalk-text)', background: 'rgba(255,255,255,0.06)' }}>
+          style={{ color: 'var(--t-chalk-text)', background: 'rgb(var(--c-255-255-255) / 0.06)' }}>
           &larr;
         </button>
-        <h1 className="text-base font-semibold" style={{ color: 'var(--t-chalk-text)', fontFamily: '"Playfair Display", serif' }}>
+        <h1 className="text-base font-semibold" style={{ color: 'var(--t-chalk-text)', fontFamily: 'var(--t-heading-font)' }}>
           {otherParticipant?.name || 'Conversation'}
         </h1>
       </div>
@@ -98,11 +98,11 @@ export function ChatConversationPage() {
             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
               <div className="max-w-[88%] sm:max-w-[75%] px-3 py-2 rounded-lg"
                 style={{
-                  background: isMine ? 'rgba(212,175,55,0.1)' : 'var(--t-subtle-bg)',
-                  border: isMine ? '1px solid rgba(212,175,55,0.12)' : `1px solid var(--t-section-border)`,
+                  background: isMine ? 'rgb(var(--c-212-175-55) / 0.1)' : 'var(--t-subtle-bg)',
+                  border: isMine ? '1px solid rgb(var(--c-212-175-55) / 0.12)' : `1px solid var(--t-section-border)`,
                 }}>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-medium" style={{ color: isMine ? 'hsl(43,55%,55%)' : 'var(--t-subtle-text)' }}>
+                  <span className="text-[10px] font-medium" style={{ color: isMine ? 'hsl(var(--h-43-55-55))' : 'var(--t-subtle-text)' }}>
                     {isMine ? 'You' : sender?.name || 'Unknown'}
                   </span>
                   <span className="text-[9px]" style={{ color: 'var(--t-subtle-text)' }}>{formatMessageTime(msg.created_at)}</span>
@@ -133,9 +133,9 @@ export function ChatConversationPage() {
           <button onClick={handleSend} disabled={!body.trim() || sending}
             className="px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest font-semibold cursor-pointer"
             style={{
-              background: body.trim() ? 'rgba(212,175,55,0.15)' : 'var(--t-subtle-bg)',
-              color: body.trim() ? 'hsl(43,60%,58%)' : 'var(--t-subtle-text)',
-              border: '1px solid rgba(212,175,55,0.1)',
+              background: body.trim() ? 'rgb(var(--c-212-175-55) / 0.15)' : 'var(--t-subtle-bg)',
+              color: body.trim() ? 'hsl(var(--h-43-60-58))' : 'var(--t-subtle-text)',
+              border: '1px solid rgb(var(--c-212-175-55) / 0.1)',
             }}>
             {sending ? '...' : 'Send'}
           </button>

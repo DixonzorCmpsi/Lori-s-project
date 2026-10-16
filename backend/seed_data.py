@@ -8,18 +8,24 @@ from uuid import uuid4
 
 sys.path.insert(0, os.path.dirname(__file__))
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # Pre-computed bcrypt hash for "Director123!" (used for all seed accounts)
 _HASH = "$2b$12$YI6YS96Qxiyeo0qPJ3gInO6DSZ7vs6i4/mLNJQJ3BNzlstE296v6m"
 
 
 async def seed():
-    from app.database import engine, Base, async_session_maker
+    from app.database import Base, async_session_maker, engine
     from app.models import (
-        User, Theater, Production, ProductionMember,
-        RehearsalDate, BulletinPost, CastProfile,
+        BulletinPost,
+        CastProfile,
         InviteToken,
+        Production,
+        ProductionMember,
+        RehearsalDate,
+        Theater,
+        User,
     )
 
     # Create tables (idempotent)
@@ -30,9 +36,7 @@ async def seed():
         from sqlalchemy import select
 
         # Check if director already exists
-        result = await session.execute(
-            select(User).where(User.email == "dixon.zor@radsquared.ai")
-        )
+        result = await session.execute(select(User).where(User.email == "dixon.zor@radsquared.ai"))
         existing = result.scalar_one_or_none()
         if existing:
             print(f"Director already exists: {existing.id}")
@@ -49,12 +53,10 @@ async def seed():
                 token_version=0,
             )
             session.add(director)
-            print(f"Created director: dixon.zor@radsquared.ai / Director123!")
+            print("Created director: dixon.zor@radsquared.ai / Director123!")
 
         # Create theater
-        result = await session.execute(
-            select(Theater).where(Theater.owner_id == director_id)
-        )
+        result = await session.execute(select(Theater).where(Theater.owner_id == director_id))
         existing_theater = result.scalar_one_or_none()
         if existing_theater:
             theater_id = existing_theater.id
@@ -102,12 +104,14 @@ async def seed():
             )
         )
         if not result.scalar_one_or_none():
-            session.add(ProductionMember(
-                id=str(uuid4()),
-                production_id=production_id,
-                user_id=director_id,
-                role="director",
-            ))
+            session.add(
+                ProductionMember(
+                    id=str(uuid4()),
+                    production_id=production_id,
+                    user_id=director_id,
+                    role="director",
+                )
+            )
             print("Added director to production")
 
         # Mock cast members
@@ -149,20 +153,20 @@ async def seed():
                 )
             )
             if not result2.scalar_one_or_none():
-                session.add(ProductionMember(
-                    id=str(uuid4()),
-                    production_id=production_id,
-                    user_id=sm_id,
-                    role="staff",
-                ))
+                session.add(
+                    ProductionMember(
+                        id=str(uuid4()),
+                        production_id=production_id,
+                        user_id=sm_id,
+                        role="staff",
+                    )
+                )
             print("Created staff: Alex Rivera (stage.manager@example.com / Staff123!)")
         else:
             sm_id = sm.id
 
         for name, email, role_name in cast_members:
-            result = await session.execute(
-                select(User).where(User.email == email)
-            )
+            result = await session.execute(select(User).where(User.email == email))
             existing_user = result.scalar_one_or_none()
             if existing_user:
                 user_id = existing_user.id
@@ -186,12 +190,14 @@ async def seed():
                 )
             )
             if not result.scalar_one_or_none():
-                session.add(ProductionMember(
-                    id=str(uuid4()),
-                    production_id=production_id,
-                    user_id=user_id,
-                    role="cast",
-                ))
+                session.add(
+                    ProductionMember(
+                        id=str(uuid4()),
+                        production_id=production_id,
+                        user_id=user_id,
+                        role="cast",
+                    )
+                )
 
             # Add cast profile
             result = await session.execute(
@@ -201,12 +207,14 @@ async def seed():
                 )
             )
             if not result.scalar_one_or_none():
-                session.add(CastProfile(
-                    id=str(uuid4()),
-                    production_id=production_id,
-                    user_id=user_id,
-                    display_name=name,
-                ))
+                session.add(
+                    CastProfile(
+                        id=str(uuid4()),
+                        production_id=production_id,
+                        user_id=user_id,
+                        display_name=name,
+                    )
+                )
 
             print(f"  Cast: {name} ({email}) - {role_name}")
 
@@ -224,14 +232,16 @@ async def seed():
             end_date = first_rehearsal + timedelta(weeks=8)
             while current <= end_date:
                 if current.weekday() in (0, 2, 4):  # Mon, Wed, Fri
-                    session.add(RehearsalDate(
-                        id=str(uuid4()),
-                        production_id=production_id,
-                        rehearsal_date=current,
-                        start_time=time(18, 30),
-                        end_time=time(21, 30),
-                        type="regular",
-                    ))
+                    session.add(
+                        RehearsalDate(
+                            id=str(uuid4()),
+                            production_id=production_id,
+                            rehearsal_date=current,
+                            start_time=time(18, 30),
+                            end_time=time(21, 30),
+                            type="regular",
+                        )
+                    )
                 current += timedelta(days=1)
             print("Created rehearsal schedule (Mon/Wed/Fri for 8 weeks)")
 
@@ -242,14 +252,16 @@ async def seed():
             )
         )
         if not result.scalar_one_or_none():
-            session.add(InviteToken(
-                id=str(uuid4()),
-                production_id=production_id,
-                token=str(uuid4())[:8],
-                expires_at=datetime.utcnow() + timedelta(days=30),
-                max_uses=50,
-                use_count=0,
-            ))
+            session.add(
+                InviteToken(
+                    id=str(uuid4()),
+                    production_id=production_id,
+                    token=str(uuid4())[:8],
+                    expires_at=datetime.utcnow() + timedelta(days=30),
+                    max_uses=50,
+                    use_count=0,
+                )
+            )
             print("Created invite token")
 
         # Create a welcome bulletin post
@@ -259,22 +271,24 @@ async def seed():
             )
         )
         if not result.scalar_one_or_none():
-            session.add(BulletinPost(
-                id=str(uuid4()),
-                production_id=production_id,
-                author_id=director_id,
-                title="Welcome to Into the Woods!",
-                body="Welcome everyone to our production! Please submit your conflicts ASAP so we can finalize the rehearsal schedule. First read-through is in two weeks.",
-                is_pinned=True,
-            ))
+            session.add(
+                BulletinPost(
+                    id=str(uuid4()),
+                    production_id=production_id,
+                    author_id=director_id,
+                    title="Welcome to Into the Woods!",
+                    body="Welcome everyone to our production! Please submit your conflicts ASAP so we can finalize the rehearsal schedule. First read-through is in two weeks.",
+                    is_pinned=True,
+                )
+            )
             print("Created welcome bulletin post")
 
         await session.commit()
         print("\nSeed complete!")
-        print(f"\nLogin credentials:")
-        print(f"  Director: dixon.zor@radsquared.ai / Director123!")
-        print(f"  Staff:    stage.manager@example.com / Staff123!")
-        print(f"  Cast:     any cast email above / Cast123!")
+        print("\nLogin credentials:")
+        print("  Director: dixon.zor@radsquared.ai / Director123!")
+        print("  Staff:    stage.manager@example.com / Staff123!")
+        print("  Cast:     any cast email above / Cast123!")
 
     await engine.dispose()
 

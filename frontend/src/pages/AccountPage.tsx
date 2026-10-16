@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme, PALETTES, type UiStyle } from '@/contexts/ThemeContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/services/api';
@@ -13,6 +14,7 @@ import { ChalkText } from '@/components/theater/Chalkboard';
 import { AvatarPicker, AvatarDisplay } from '@/components/ui/AvatarPicker';
 import { PageTour } from '@/tours/PageTour';
 import { accountTourSteps } from '@/tours/pageTours';
+import { PageGuide } from '@/components/PageGuide';
 
 interface EmergencyContact {
   name: string;
@@ -24,11 +26,22 @@ interface EmergencyContact {
 const RELATIONSHIPS = ['Parent', 'Guardian', 'Spouse', 'Sibling', 'Other'];
 const emptyContact = (): EmergencyContact => ({ name: '', email: '', phone: '', relationship: 'Parent' });
 
+type SectionKey = 'appearance' | 'profile' | 'notifications' | 'emergency' | 'security';
+const SECTIONS: { key: SectionKey; label: string }[] = [
+  { key: 'appearance', label: 'Appearance' },
+  { key: 'profile', label: 'Profile & avatar' },
+  { key: 'notifications', label: 'Notifications' },
+  { key: 'emergency', label: 'Emergency contacts' },
+  { key: 'security', label: 'Password & account' },
+];
+
 export function AccountPage() {
   usePageTitle('Account');
   const { user, logout, setUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { theme, setTheme, preferredStyle: uiStyle, setUiStyle, palette, setPalette } = useTheme();
+  const [section, setSection] = useState<SectionKey>('appearance');
 
   const [name, setName] = useState(user?.name || '');
   const [nameError, setNameError] = useState('');
@@ -195,17 +208,47 @@ export function AccountPage() {
     }
   }
 
+  // Default and Simple show one settings section at a time; Fancy keeps the long page.
+  const sectioned = uiStyle !== 'fancy';
+  const show = (key: SectionKey) => !sectioned || section === key;
+
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className={sectioned ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto page-sections'}>
       <PageTour tourId="page-account" steps={accountTourSteps} />
       <ChalkText size="lg">Account Settings</ChalkText>
       <div className="h-4" />
+      <PageGuide page="account" />
+
+      {sectioned && (
+        <div className="flex flex-wrap gap-2 mb-6" role="tablist" aria-label="Account settings sections" data-tour="account-sections">
+          {SECTIONS.map(sec => {
+            const on = section === sec.key;
+            return (
+              <button
+                key={sec.key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setSection(sec.key)}
+                className="px-4 py-2 rounded-full text-sm font-medium cursor-pointer"
+                style={{
+                  background: on ? 'var(--t-nav-active-bg)' : 'transparent',
+                  color: on ? 'var(--t-nav-active-text)' : 'var(--t-nav-inactive-text)',
+                  border: `1px solid ${on ? 'var(--t-nav-indicator)' : 'var(--t-section-border)'}`,
+                }}
+              >
+                {sec.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Incomplete profile banner */}
       {profileIncomplete && (
         <div className="rounded-sm p-4 mb-6"
-          style={{ background: 'rgba(255,180,50,0.08)', border: '1px solid rgba(255,180,50,0.2)' }}>
-          <p className="text-sm font-semibold mb-1" style={{ color: 'rgba(255,220,100,0.9)' }}>
+          style={{ background: 'rgb(var(--c-255-180-50) / 0.08)', border: '1px solid rgb(var(--c-255-180-50) / 0.2)' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: 'rgb(var(--c-255-220-100) / 0.9)' }}>
             Complete your profile
           </p>
           <p className="text-xs" style={{ color: 'var(--t-subtle-text-bright)' }}>
@@ -214,7 +257,92 @@ export function AccountPage() {
         </div>
       )}
 
+      {/* Appearance */}
+{show('appearance') && (
+      <section data-tour="account-appearance" className="rounded-sm p-5 mb-6 space-y-4"
+        style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
+        <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Appearance</p>
+        <div className="space-y-2">
+          <p className="text-sm" style={{ color: 'var(--t-subtle-text-bright)' }}>Theme</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Theme">
+            {([
+              ['calendar', 'Simple', 'Menu across the top, a road-to-opening bar and one thing at a time. The default.'],
+              ['default', 'Classic', 'A clean layout with one sidebar and one content panel.'],
+              ['fancy', 'Fancy', 'The original theater look: curtains, chalkboard and side panels.'],
+            ] as [UiStyle, string, string][]).map(([key, label, desc]) => {
+              const on = uiStyle === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setUiStyle(key)}
+                  className="text-left rounded-lg p-3 cursor-pointer"
+                  style={{
+                    background: on ? 'var(--t-tab-active-bg)' : 'transparent',
+                    border: `1px solid ${on ? 'var(--color-accent)' : 'var(--t-section-border)'}`,
+                  }}
+                >
+                  <span className="block text-sm font-semibold" style={{ color: 'var(--t-subtle-text-bright)' }}>{label}</span>
+                  <span className="block text-xs mt-0.5" style={{ color: 'var(--t-subtle-text)' }}>{desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {uiStyle === 'calendar' && (
+          <div className="space-y-2" data-tour="account-colours">
+            <p className="text-sm" style={{ color: 'var(--t-subtle-text-bright)' }}>Colours</p>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Colours">
+              {PALETTES.map(pal => {
+                const on = palette === pal.id;
+                return (
+                  <button
+                    key={pal.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setPalette(pal.id)}
+                    className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm cursor-pointer"
+                    style={{ border: `1px solid ${on ? 'var(--color-accent)' : 'var(--t-section-border)'}`, background: on ? 'var(--t-tab-active-bg)' : 'transparent', color: 'var(--t-subtle-text-bright)' }}
+                  >
+                    <span className="w-5 h-5 rounded-full flex-none" style={{ background: `linear-gradient(135deg, ${pal.base} 50%, ${pal.swatch} 50%)`, border: '1px solid var(--t-section-border)' }} aria-hidden="true" />
+                    {pal.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>Applies to the Simple theme, in both light and dark mode.</p>
+          </div>
+        )}
+        <div className="space-y-2">
+          <p className="text-sm" style={{ color: 'var(--t-subtle-text-bright)' }}>Mode</p>
+          <div className="inline-flex rounded-lg overflow-hidden" role="radiogroup" aria-label="Mode"
+            style={{ border: '1px solid var(--t-section-border)' }}>
+            {(['light', 'dark'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={theme === m}
+                onClick={() => setTheme(m)}
+                className="px-4 py-1.5 text-sm capitalize cursor-pointer"
+                style={{
+                  background: theme === m ? 'var(--t-tab-active-bg)' : 'transparent',
+                  color: theme === m ? 'var(--t-tab-active-text)' : 'var(--t-subtle-text)',
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+      )}
+
       {/* Profile */}
+{show('profile') && (
       <section className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Profile</p>
@@ -224,15 +352,15 @@ export function AccountPage() {
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>Age Range:</span>
             <span className="text-xs font-medium px-2 py-0.5 rounded" style={{
-              background: isMinor ? 'rgba(255,180,50,0.1)' : 'rgba(100,200,100,0.1)',
-              color: isMinor ? 'rgba(255,200,80,0.8)' : 'rgba(100,220,100,0.8)',
+              background: isMinor ? 'rgb(var(--c-255-180-50) / 0.1)' : 'rgb(var(--c-100-200-100) / 0.1)',
+              color: isMinor ? 'rgb(var(--c-255-200-80) / 0.8)' : 'rgb(var(--c-100-220-100) / 0.8)',
             }}>
               {user.age_range}
             </span>
           </div>
         ) : (
           <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--t-section-border)' }}>
-            <p className="text-xs font-medium" style={{ color: 'rgba(255,200,80,0.8)' }}>Date of Birth (required)</p>
+            <p className="text-xs font-medium" style={{ color: 'rgb(var(--c-255-200-80) / 0.8)' }}>Date of Birth (required)</p>
             <p className="text-[10px]" style={{ color: 'var(--t-subtle-text)' }}>
               We only store your age range (13-17 or 18+), never your exact birthday.
             </p>
@@ -251,8 +379,10 @@ export function AccountPage() {
         )}
         <Button onClick={handleNameSave} isLoading={savingName} disabled={name === user?.name}>Save Name</Button>
       </section>
+      )}
 
       {/* Avatar */}
+{show('profile') && (
       <section data-tour="account-avatar" className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <div className="flex items-center justify-between">
@@ -269,8 +399,10 @@ export function AccountPage() {
         />
         {savingAvatar && <p className="text-[10px]" style={{ color: 'var(--t-subtle-text)' }}>Saving...</p>}
       </section>
+      )}
 
       {/* Email Notifications */}
+{show('notifications') && (
       <section data-tour="account-notifications" className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Notifications</p>
@@ -284,7 +416,7 @@ export function AccountPage() {
           <button
             onClick={() => setEmailNotifs(!emailNotifs)}
             className="w-10 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0"
-            style={{ background: emailNotifs ? 'hsl(43, 74%, 49%)' : 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}
+            style={{ background: emailNotifs ? 'hsl(var(--h-43-74-49))' : 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}
           >
             <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
               style={{ left: emailNotifs ? '20px' : '2px', background: emailNotifs ? '#1a1a1a' : 'var(--t-subtle-text)' }}
@@ -295,19 +427,21 @@ export function AccountPage() {
           <Button size="sm" onClick={handleEmailPrefSave} isLoading={savingPrefs}>Save Preference</Button>
         )}
       </section>
+      )}
 
       {/* Emergency Contacts */}
+{show('emergency') && (
       <section data-tour="account-emergency" className="rounded-sm p-5 mb-6 space-y-4"
         style={{
-          background: isMinor ? 'rgba(255,180,50,0.04)' : 'var(--t-subtle-bg)',
-          border: `1px solid ${isMinor ? 'rgba(255,180,50,0.15)' : 'var(--t-section-border)'}`,
+          background: isMinor ? 'rgb(var(--c-255-180-50) / 0.04)' : 'var(--t-subtle-bg)',
+          border: `1px solid ${isMinor ? 'rgb(var(--c-255-180-50) / 0.15)' : 'var(--t-section-border)'}`,
         }}>
         <div className="flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: isMinor ? 'rgba(255,200,80,0.7)' : 'var(--t-subtle-text)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: isMinor ? 'rgb(var(--c-255-200-80) / 0.7)' : 'var(--t-subtle-text)' }}>
             Emergency Contacts
           </p>
           {isMinor && !user?.parental_consent && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.8)' }}>Required</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgb(var(--c-255-80-80) / 0.1)', color: 'rgb(var(--c-255-120-120) / 0.8)' }}>Required</span>
           )}
         </div>
         <p className="text-xs" style={{ color: 'var(--t-subtle-text)' }}>
@@ -333,9 +467,9 @@ export function AccountPage() {
                   <button key={r} onClick={() => updateContact(idx, 'relationship', r)}
                     className="text-[10px] px-2.5 py-1 rounded cursor-pointer"
                     style={{
-                      background: c.relationship === r ? 'rgba(212,175,55,0.15)' : 'var(--t-subtle-bg)',
-                      color: c.relationship === r ? 'hsl(43,60%,55%)' : 'var(--t-subtle-text)',
-                      border: `1px solid ${c.relationship === r ? 'rgba(212,175,55,0.2)' : 'var(--t-section-border)'}`,
+                      background: c.relationship === r ? 'rgb(var(--c-212-175-55) / 0.15)' : 'var(--t-subtle-bg)',
+                      color: c.relationship === r ? 'hsl(var(--h-43-60-55))' : 'var(--t-subtle-text)',
+                      border: `1px solid ${c.relationship === r ? 'rgb(var(--c-212-175-55) / 0.2)' : 'var(--t-section-border)'}`,
                     }}>
                     {r}
                   </button>
@@ -345,15 +479,17 @@ export function AccountPage() {
           </div>
         ))}
         {user?.parental_consent && isMinor && (
-          <p className="text-[10px]" style={{ color: 'rgba(100,220,100,0.7)' }}>Parental consent recorded.</p>
+          <p className="text-[10px]" style={{ color: 'rgb(var(--c-100-220-100) / 0.7)' }}>Parental consent recorded.</p>
         )}
         <Button size="sm" onClick={handleContactsSave} isLoading={savingContacts}
           disabled={!contacts[0].name.trim()}>
           Save Emergency Contacts
         </Button>
       </section>
+      )}
 
       {/* Change Password */}
+{show('security') && (
       <section className="rounded-sm p-5 mb-6 space-y-4"
         style={{ background: 'var(--t-subtle-bg)', border: '1px solid var(--t-section-border)' }}>
         <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--t-subtle-text)' }}>Change Password</p>
@@ -363,11 +499,13 @@ export function AccountPage() {
         {pwError && <p className="text-sm text-destructive">{pwError}</p>}
         <Button onClick={handlePasswordChange} isLoading={savingPw}>Change Password</Button>
       </section>
+      )}
 
       {/* Danger Zone */}
+{show('security') && (
       <section className="rounded-sm p-5"
-        style={{ background: 'rgba(255,80,80,0.04)', border: '1px solid rgba(255,80,80,0.2)' }}>
-        <p className="text-[10px] uppercase tracking-widest font-bold mb-3" style={{ color: 'rgba(255,120,120,0.8)' }}>Danger Zone</p>
+        style={{ background: 'rgb(var(--c-255-80-80) / 0.04)', border: '1px solid rgb(var(--c-255-80-80) / 0.2)' }}>
+        <p className="text-[10px] uppercase tracking-widest font-bold mb-3" style={{ color: 'rgb(var(--c-255-120-120) / 0.8)' }}>Danger Zone</p>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium" style={{ color: 'var(--t-subtle-text-bright)' }}>Delete Account</p>
@@ -376,6 +514,7 @@ export function AccountPage() {
           <Button variant="destructive" onClick={() => setDeleteOpen(true)}>Delete Account</Button>
         </div>
       </section>
+      )}
 
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete Account"
         confirmLabel="Delete Account" confirmVariant="destructive" onConfirm={handleDeleteAccount} isLoading={deleting}>

@@ -8,8 +8,6 @@ Covers:
 - CHAT-15: Cast sends WebSocket frame to another cast (rejected)
 """
 
-import pytest
-
 
 class TestWebSocketAuth:
     """CHAT-12: WebSocket authentication on upgrade."""

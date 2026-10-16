@@ -1,0 +1,60 @@
+# Single-VM deployment (Google Compute Engine). Images are built elsewhere and loaded onto the VM.
+# Secrets live in /opt/callboard/.env on the VM, never in this repo.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: callboard
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: callboard
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U callboard"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    image: callboard-backend:vm
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://callboard:${DB_PASSWORD}@db:5432/callboard
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${PUBLIC_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    expose:
+      - "8000"
+
+  frontend:
+    image: callboard-frontend:vm
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+
+  # Terminates HTTPS (free Let's Encrypt certificate, renewed automatically) and passes traffic to the site
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

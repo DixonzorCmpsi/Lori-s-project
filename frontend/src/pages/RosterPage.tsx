@@ -16,27 +16,28 @@ import { formatRelativeTime, getInitials } from '@/utils/format';
 import type { Member, Team } from '@/types';
 import { PageTour } from '@/tours/PageTour';
 import { rosterTourSteps, teamsTourSteps } from '@/tours/pageTours';
+import { PageGuide } from '@/components/PageGuide';
 
 const spring = { type: 'spring' as const, stiffness: 100, damping: 20 };
 const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.1 } } };
 const fadeIn = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1, transition: spring } };
 
 const roleColors: Record<string, { bg: string; text: string; label: string }> = {
-  director: { bg: 'rgba(255,180,50,0.15)', text: 'hsl(38,70%,55%)', label: 'Director' },
-  staff:    { bg: 'rgba(100,180,255,0.12)', text: 'hsl(210,60%,60%)', label: 'Staff' },
-  cast:     { bg: 'rgba(255,255,255,0.06)', text: 'rgba(255,255,255,0.5)', label: 'Cast' },
+  director: { bg: 'rgb(var(--c-255-180-50) / 0.15)', text: 'hsl(var(--h-38-70-55))', label: 'Director' },
+  staff:    { bg: 'rgb(var(--c-100-180-255) / 0.12)', text: 'hsl(var(--h-210-60-60))', label: 'Staff' },
+  cast:     { bg: 'rgb(var(--c-255-255-255) / 0.06)', text: 'rgb(var(--c-255-255-255) / 0.5)', label: 'Cast' },
 };
 
 // Team colors for the teams tab
 const TEAM_COLORS = [
-  { bg: 'rgba(255,180,60,0.12)',  border: 'rgba(255,180,60,0.25)',  text: 'hsl(38,85%,62%)',   avatarBg: 'rgba(255,180,60,0.15)',  chipBg: 'rgba(255,180,60,0.1)' },
-  { bg: 'rgba(100,180,255,0.10)', border: 'rgba(100,180,255,0.22)', text: 'hsl(210,80%,68%)',  avatarBg: 'rgba(100,180,255,0.12)', chipBg: 'rgba(100,180,255,0.08)' },
-  { bg: 'rgba(160,120,255,0.10)', border: 'rgba(160,120,255,0.22)', text: 'hsl(265,75%,72%)',  avatarBg: 'rgba(160,120,255,0.12)', chipBg: 'rgba(160,120,255,0.08)' },
-  { bg: 'rgba(80,220,140,0.10)',  border: 'rgba(80,220,140,0.22)',  text: 'hsl(155,65%,55%)',  avatarBg: 'rgba(80,220,140,0.12)',  chipBg: 'rgba(80,220,140,0.08)' },
-  { bg: 'rgba(255,120,140,0.10)', border: 'rgba(255,120,140,0.22)', text: 'hsl(350,80%,70%)',  avatarBg: 'rgba(255,120,140,0.12)', chipBg: 'rgba(255,120,140,0.08)' },
-  { bg: 'rgba(255,160,80,0.10)',  border: 'rgba(255,160,80,0.22)',  text: 'hsl(25,85%,62%)',   avatarBg: 'rgba(255,160,80,0.12)',  chipBg: 'rgba(255,160,80,0.08)' },
-  { bg: 'rgba(80,200,220,0.10)',  border: 'rgba(80,200,220,0.22)',  text: 'hsl(188,65%,58%)',  avatarBg: 'rgba(80,200,220,0.12)',  chipBg: 'rgba(80,200,220,0.08)' },
-  { bg: 'rgba(220,180,80,0.10)',  border: 'rgba(220,180,80,0.22)',  text: 'hsl(45,70%,58%)',   avatarBg: 'rgba(220,180,80,0.12)',  chipBg: 'rgba(220,180,80,0.08)' },
+  { bg: 'rgb(var(--c-255-180-60) / 0.12)',  border: 'rgb(var(--c-255-180-60) / 0.25)',  text: 'hsl(var(--h-38-85-62))',   avatarBg: 'rgb(var(--c-255-180-60) / 0.15)',  chipBg: 'rgb(var(--c-255-180-60) / 0.1)' },
+  { bg: 'rgb(var(--c-100-180-255) / 0.10)', border: 'rgb(var(--c-100-180-255) / 0.22)', text: 'hsl(var(--h-210-80-68))',  avatarBg: 'rgb(var(--c-100-180-255) / 0.12)', chipBg: 'rgb(var(--c-100-180-255) / 0.08)' },
+  { bg: 'rgb(var(--c-160-120-255) / 0.10)', border: 'rgb(var(--c-160-120-255) / 0.22)', text: 'hsl(var(--h-265-75-72))',  avatarBg: 'rgb(var(--c-160-120-255) / 0.12)', chipBg: 'rgb(var(--c-160-120-255) / 0.08)' },
+  { bg: 'rgb(var(--c-80-220-140) / 0.10)',  border: 'rgb(var(--c-80-220-140) / 0.22)',  text: 'hsl(var(--h-155-65-55))',  avatarBg: 'rgb(var(--c-80-220-140) / 0.12)',  chipBg: 'rgb(var(--c-80-220-140) / 0.08)' },
+  { bg: 'rgb(var(--c-255-120-140) / 0.10)', border: 'rgb(var(--c-255-120-140) / 0.22)', text: 'hsl(var(--h-350-80-70))',  avatarBg: 'rgb(var(--c-255-120-140) / 0.12)', chipBg: 'rgb(var(--c-255-120-140) / 0.08)' },
+  { bg: 'rgb(var(--c-255-160-80) / 0.10)',  border: 'rgb(var(--c-255-160-80) / 0.22)',  text: 'hsl(var(--h-25-85-62))',   avatarBg: 'rgb(var(--c-255-160-80) / 0.12)',  chipBg: 'rgb(var(--c-255-160-80) / 0.08)' },
+  { bg: 'rgb(var(--c-80-200-220) / 0.10)',  border: 'rgb(var(--c-80-200-220) / 0.22)',  text: 'hsl(var(--h-188-65-58))',  avatarBg: 'rgb(var(--c-80-200-220) / 0.12)',  chipBg: 'rgb(var(--c-80-200-220) / 0.08)' },
+  { bg: 'rgb(var(--c-220-180-80) / 0.10)',  border: 'rgb(var(--c-220-180-80) / 0.22)',  text: 'hsl(var(--h-45-70-58))',   avatarBg: 'rgb(var(--c-220-180-80) / 0.12)',  chipBg: 'rgb(var(--c-220-180-80) / 0.08)' },
 ];
 
 function getTeamColor(teams: Team[] | null, teamId: string) {
@@ -210,34 +211,37 @@ export function RosterPage() {
 
   return (
     <div>
-      {isDirector && <PageTour tourId={tab === 'roster' ? 'page-roster' : 'page-teams'} steps={tab === 'roster' ? rosterTourSteps : teamsTourSteps} />}
+      {(tab === 'roster' ? isDirector : isDirectorOrStaff) && <PageTour tourId={tab === 'roster' ? 'page-roster' : 'page-teams'} steps={tab === 'roster' ? rosterTourSteps : teamsTourSteps} />}
 
       {/* Tab switcher — Roster / Manage */}
       <div className="flex items-center justify-between mb-6">
-        <ChalkText size="lg">{tab === 'roster' ? 'Production Roster' : 'Manage'}</ChalkText>
+        <ChalkText size="lg">{tab === 'roster' ? 'Members' : 'Teams'}</ChalkText>
         <div className="flex items-center gap-1">
           {isDirectorOrStaff && (
-            <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>
+            <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid rgb(var(--c-255-255-255) / 0.2)' }}>
               {(['roster', 'manage'] as const).map(t => (
                 <button
                   key={t}
+                  title={t === 'roster' ? 'See everyone in the production' : 'Organize cast into teams and message a team'}
                   onClick={() => { setTab(t); setManageTeamId(null); setShowTeamBuilder(false); }}
                   className="px-4 py-1.5 text-[10px] uppercase tracking-widest cursor-pointer font-semibold"
                   style={{
-                    background: tab === t ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    color: tab === t ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)',
+                    background: tab === t ? 'rgb(var(--c-255-255-255) / 0.12)' : 'transparent',
+                    color: tab === t ? 'rgb(var(--c-255-255-255) / 0.9)' : 'rgb(var(--c-255-255-255) / 0.5)',
                   }}
                 >
-                  {t}
+                  {t === 'roster' ? 'Roster' : 'Teams'}
                 </button>
               ))}
             </div>
           )}
-          <span className="ml-3" style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', fontFamily: '"JetBrains Mono", monospace' }}>
+          <span className="ml-3" style={{ color: 'rgb(var(--c-255-255-255) / 0.35)', fontSize: '12px', fontFamily: '"JetBrains Mono", monospace' }}>
             {(members || []).length} members
           </span>
         </div>
       </div>
+
+      {isDirectorOrStaff ? <PageGuide page={tab === 'roster' ? 'members' : 'teams'} /> : <PageGuide page="members" />}
 
       <AnimatePresence mode="wait">
       {/* ═══ ROSTER TAB ═══ */}
@@ -252,7 +256,7 @@ export function RosterPage() {
                   <div>
                     <p className="text-[10px] font-mono break-all leading-relaxed opacity-60 mb-2">{inviteUrl}</p>
                     <div className="flex flex-wrap gap-2 items-center">
-                      <button onClick={copyInvite} className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded cursor-pointer" style={{ background: 'rgba(0,0,0,0.08)' }}>Copy</button>
+                      <button onClick={copyInvite} className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded cursor-pointer" style={{ background: 'rgb(var(--c-0-0-0) / 0.08)' }}>Copy</button>
                       <button onClick={handleRegenerate} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded cursor-pointer opacity-60" disabled={busy}>Regen</button>
                       <span className="text-[9px] opacity-40">
                         {invite!.use_count}/{invite!.max_uses} used · expires {formatRelativeTime(invite!.expires_at)}
@@ -262,7 +266,7 @@ export function RosterPage() {
                 ) : (
                   <button onClick={handleCreateInvite} disabled={busy}
                     className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"
-                    style={{ background: 'rgba(0,0,0,0.08)' }}>
+                    style={{ background: 'rgb(var(--c-0-0-0) / 0.08)' }}>
                     {busy ? 'Creating...' : 'Generate Invite Link'}
                   </button>
                 )}
@@ -280,7 +284,7 @@ export function RosterPage() {
             <div key={group.label} className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <ChalkText size="sm">{group.label}</ChalkText>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px' }}>({group.list.length})</span>
+                <span style={{ color: 'rgb(var(--c-255-255-255) / 0.25)', fontSize: '10px' }}>({group.list.length})</span>
               </div>
               <motion.div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
@@ -294,25 +298,25 @@ export function RosterPage() {
                       style={{ background: rc.bg, border: `1px solid ${rc.bg}` }}
                     >
                       <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold"
-                        style={{ background: 'rgba(0,0,0,0.15)', color: rc.text }}>
+                        style={{ background: 'rgb(var(--c-0-0-0) / 0.15)', color: rc.text }}>
                         {getInitials(m.name || m.email)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{m.name || m.email || 'Member'}</p>
+                        <p className="text-sm truncate" style={{ color: 'rgb(var(--c-255-255-255) / 0.8)' }}>{m.name || m.email || 'Member'}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] capitalize" style={{ color: rc.text }}>{rc.label}</span>
                           {m.role === 'cast' && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-sm" style={{
-                              background: m.conflicts_submitted ? 'rgba(80,200,80,0.1)' : 'rgba(255,180,50,0.1)',
-                              color: m.conflicts_submitted ? 'rgba(100,220,100,0.8)' : 'rgba(255,200,80,0.8)',
+                              background: m.conflicts_submitted ? 'rgb(var(--c-80-200-80) / 0.1)' : 'rgb(var(--c-255-180-50) / 0.1)',
+                              color: m.conflicts_submitted ? 'rgb(var(--c-100-220-100) / 0.8)' : 'rgb(var(--c-255-200-80) / 0.8)',
                             }}>
-                              {m.conflicts_submitted ? 'Conflicts in' : 'Pending'}
+                              <span title={m.conflicts_submitted ? 'This person has told you which dates they can’t make.' : 'This person has not yet submitted the dates they can’t make.'}>{m.conflicts_submitted ? 'Conflicts submitted' : 'Conflicts not in yet'}</span>
                             </span>
                           )}
                           {m.profile_complete === false && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-sm"
-                              style={{ background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.8)' }}>
-                              No age
+                              style={{ background: 'rgb(var(--c-255-80-80) / 0.1)', color: 'rgb(var(--c-255-120-120) / 0.8)' }}>
+                              <span title="This person has not entered their birth year, which the under-18 safety rules need.">Age not given</span>
                             </span>
                           )}
                         </div>
@@ -321,16 +325,16 @@ export function RosterPage() {
                         <div className="flex gap-1 flex-shrink-0">
                           {m.role === ROLES.CAST && (
                             <button onClick={() => setConfirmAction({ type: 'promote', member: m })}
-                              className="text-[9px] px-1.5 py-1 rounded cursor-pointer" style={{ color: 'rgba(100,180,255,0.7)' }}>Up</button>
+                              className="text-[9px] px-1.5 py-1 rounded cursor-pointer" title="Give this person stage manager tools (schedule, call sheet, reports). You can undo this." style={{ color: 'rgb(var(--c-100-180-255) / 0.9)' }}>Make staff</button>
                           )}
                           {m.role === ROLES.STAFF && (
                             <button onClick={() => setConfirmAction({ type: 'demote', member: m })}
-                              className="text-[9px] px-1.5 py-1 rounded cursor-pointer" style={{ color: 'rgba(255,200,80,0.7)' }}>Down</button>
+                              className="text-[9px] px-1.5 py-1 rounded cursor-pointer" title="Return this person to the cast. They lose the stage manager tools." style={{ color: 'rgb(var(--c-255-200-80) / 0.9)' }}>Make cast</button>
                           )}
                           <button onClick={() => setConfirmAction({ type: 'remove', member: m })}
-                            className="text-[9px] px-1.5 py-1 rounded cursor-pointer" style={{ color: 'rgba(255,120,120,0.6)' }}>x</button>
+                            className="text-[9px] px-1.5 py-1 rounded cursor-pointer" title="Take this person out of the production. They can rejoin with the invite link." style={{ color: 'rgb(var(--c-255-120-120) / 0.9)' }}>Remove</button>
                           <button onClick={() => setConfirmAction({ type: 'block', member: m })}
-                            className="text-[9px] px-1.5 py-1 rounded cursor-pointer" style={{ color: 'rgba(255,80,80,0.5)' }}>Ban</button>
+                            className="text-[9px] px-1.5 py-1 rounded cursor-pointer" title="Remove this person and stop them rejoining with the invite link." style={{ color: 'rgb(var(--c-255-80-80) / 0.8)' }}>Block</button>
                         </div>
                       )}
                     </motion.div>
@@ -352,14 +356,14 @@ export function RosterPage() {
             <div className="mt-6">
               <div className="flex items-center gap-2 mb-3">
                 <ChalkText size="sm">Blocked</ChalkText>
-                <span style={{ color: 'rgba(255,120,120,0.5)', fontSize: '10px' }}>({blockedMembers.length})</span>
+                <span style={{ color: 'rgb(var(--c-255-120-120) / 0.5)', fontSize: '10px' }}>({blockedMembers.length})</span>
               </div>
               <div className="space-y-1.5">
                 {blockedMembers.map(b => (
                   <div key={b.user_id} className="flex items-center justify-between px-4 py-2 rounded-sm"
-                    style={{ background: 'rgba(255,80,80,0.04)', border: '1px solid rgba(255,80,80,0.1)' }}>
+                    style={{ background: 'rgb(var(--c-255-80-80) / 0.04)', border: '1px solid rgb(var(--c-255-80-80) / 0.1)' }}>
                     <div>
-                      <span className="text-xs" style={{ color: 'rgba(255,150,150,0.7)' }}>{b.name || b.email}</span>
+                      <span className="text-xs" style={{ color: 'rgb(var(--c-255-150-150) / 0.7)' }}>{b.name || b.email}</span>
                       {b.reason && <span className="text-[9px] ml-2" style={{ color: 'var(--t-subtle-text)' }}>— {b.reason}</span>}
                     </div>
                     <button
@@ -369,7 +373,7 @@ export function RosterPage() {
                         catch { toast('Failed', 'error'); }
                       }}
                       className="text-[9px] cursor-pointer px-2 py-0.5 rounded"
-                      style={{ color: 'rgba(150,220,150,0.6)', background: 'rgba(100,200,100,0.06)' }}
+                      style={{ color: 'rgb(var(--c-150-220-150) / 0.6)', background: 'rgb(var(--c-100-200-100) / 0.06)' }}
                     >
                       Unblock
                     </button>
@@ -527,8 +531,8 @@ export function RosterPage() {
                           }}
                           className="px-3 py-1 text-[9px] uppercase tracking-widest cursor-pointer font-semibold"
                           style={{
-                            background: announceType === t ? 'rgba(255,255,255,0.12)' : 'transparent',
-                            color: announceType === t ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
+                            background: announceType === t ? 'rgb(var(--c-255-255-255) / 0.12)' : 'transparent',
+                            color: announceType === t ? 'rgb(var(--c-255-255-255) / 0.9)' : 'rgb(var(--c-255-255-255) / 0.45)',
                           }}
                         >
                           {t}
@@ -554,8 +558,8 @@ export function RosterPage() {
                       disabled={announcing || !announceBody.trim()}
                       className="text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-sm cursor-pointer"
                       style={{
-                        background: !announceBody.trim() ? 'var(--t-subtle-bg)' : 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
-                        color: !announceBody.trim() ? 'var(--t-subtle-text)' : 'hsl(220, 6%, 9%)',
+                        background: !announceBody.trim() ? 'var(--t-subtle-bg)' : 'var(--btn-primary-bg)',
+                        color: !announceBody.trim() ? 'var(--t-subtle-text)' : 'var(--btn-primary-text)',
                         opacity: announcing ? 0.5 : 1,
                       }}
                     >
@@ -586,7 +590,7 @@ export function RosterPage() {
                           onClick={() => handleRemoveFromTeam(m.user_id)}
                           disabled={removingUserId === m.user_id}
                           className="text-[9px] cursor-pointer px-2 py-0.5 rounded"
-                          style={{ color: 'rgba(255,150,150,0.7)', background: 'rgba(255,80,80,0.08)' }}
+                          style={{ color: 'rgb(var(--c-255-150-150) / 0.7)', background: 'rgb(var(--c-255-80-80) / 0.08)' }}
                         >
                           {removingUserId === m.user_id ? '...' : 'Remove'}
                         </button>
@@ -633,8 +637,8 @@ export function RosterPage() {
                   disabled={creatingTeam || !newTeamName.trim()}
                   className="text-[10px] uppercase tracking-widest font-bold px-4 py-2 rounded-sm cursor-pointer"
                   style={{
-                    background: !newTeamName.trim() ? 'var(--t-subtle-bg)' : 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
-                    color: !newTeamName.trim() ? 'var(--t-subtle-text)' : 'hsl(220, 6%, 9%)',
+                    background: !newTeamName.trim() ? 'var(--t-subtle-bg)' : 'var(--btn-primary-bg)',
+                    color: !newTeamName.trim() ? 'var(--t-subtle-text)' : 'var(--btn-primary-text)',
                     opacity: creatingTeam ? 0.5 : 1,
                   }}
                   whileHover={newTeamName.trim() ? { scale: 1.02 } : {}}
@@ -654,7 +658,7 @@ export function RosterPage() {
                         style={{ background: c.chipBg, border: `1px solid ${c.border}` }}>
                         <span className="text-xs font-medium" style={{ color: c.text }}>{t.name}</span>
                         <span className="text-[9px] font-mono" style={{ color: c.text, opacity: 0.7 }}>{teamCounts[t.id] || 0}</span>
-                        <button onClick={() => setDeleteTarget(t)} className="text-[10px] cursor-pointer ml-1" style={{ color: 'rgba(255,100,100,0.6)' }}>x</button>
+                        <button onClick={() => setDeleteTarget(t)} className="text-[10px] cursor-pointer ml-1" style={{ color: 'rgb(var(--c-255-100-100) / 0.6)' }}>x</button>
                       </div>
                     );
                   })}
@@ -674,9 +678,9 @@ export function RosterPage() {
                         disabled={savingTeams}
                         className="text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-sm cursor-pointer"
                         style={{
-                          background: 'linear-gradient(180deg, hsl(38, 70%, 50%) 0%, hsl(38, 65%, 42%) 100%)',
-                          color: 'hsl(220, 6%, 9%)',
-                          boxShadow: '0 2px 8px rgba(212,175,55,0.2)',
+                          background: 'var(--btn-primary-bg)',
+                          color: 'var(--btn-primary-text)',
+                          boxShadow: '0 2px 8px rgb(var(--c-212-175-55) / 0.2)',
                           opacity: savingTeams ? 0.5 : 1,
                         }}
                         initial={{ opacity: 0, scale: 0.9 }}

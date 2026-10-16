@@ -1,19 +1,18 @@
 """Conflicts router."""
 
 import uuid
-from datetime import datetime
-from typing import Any, Optional, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
 from app.database import async_session_maker
 from app.models import (
+    CastConflict,
+    ConflictSubmission,
     Production,
     ProductionMember,
-    ConflictSubmission,
-    CastConflict,
     RehearsalDate,
 )
 from app.routers.auth import get_current_user
@@ -24,11 +23,11 @@ router = APIRouter()
 
 class ConflictDate(BaseModel):
     rehearsal_date_id: str
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 class SubmitConflictsRequest(BaseModel):
-    dates: List[ConflictDate]
+    dates: list[ConflictDate]
 
 
 async def check_production_member(production_id: str, user_id: str) -> ProductionMember:
@@ -54,7 +53,11 @@ async def check_production_member(production_id: str, user_id: str) -> Productio
 
 def _get_total_windows(production: Production, member: ProductionMember) -> int:
     """Total conflict submission windows for a member (1 initial + extras)."""
-    extra = member.extra_conflict_windows if member.extra_conflict_windows is not None else production.extra_conflict_windows
+    extra = (
+        member.extra_conflict_windows
+        if member.extra_conflict_windows is not None
+        else production.extra_conflict_windows
+    )
     return 1 + extra
 
 
@@ -82,7 +85,9 @@ async def submit_conflicts(
         result = await session.execute(stmt)
         production = result.scalar_one_or_none()
         if not production:
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Production not found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "Production not found"}
+            )
 
         # Re-fetch member inside this session for updates
         stmt = select(ProductionMember).where(
@@ -93,9 +98,13 @@ async def submit_conflicts(
         db_member = result.scalar_one()
 
         # Count existing submissions
-        stmt = select(func.count()).select_from(ConflictSubmission).where(
-            ConflictSubmission.production_id == production_id,
-            ConflictSubmission.user_id == current_user["id"],
+        stmt = (
+            select(func.count())
+            .select_from(ConflictSubmission)
+            .where(
+                ConflictSubmission.production_id == production_id,
+                ConflictSubmission.user_id == current_user["id"],
+            )
         )
         result = await session.execute(stmt)
         submission_count = result.scalar() or 0
@@ -203,7 +212,9 @@ async def get_conflict_status(
         result = await session.execute(stmt)
         production = result.scalar_one_or_none()
         if not production:
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Production not found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "Production not found"}
+            )
 
         # Re-fetch member in this session
         stmt = select(ProductionMember).where(
@@ -213,9 +224,13 @@ async def get_conflict_status(
         result = await session.execute(stmt)
         db_member = result.scalar_one()
 
-        stmt = select(func.count()).select_from(ConflictSubmission).where(
-            ConflictSubmission.production_id == production_id,
-            ConflictSubmission.user_id == current_user["id"],
+        stmt = (
+            select(func.count())
+            .select_from(ConflictSubmission)
+            .where(
+                ConflictSubmission.production_id == production_id,
+                ConflictSubmission.user_id == current_user["id"],
+            )
         )
         result = await session.execute(stmt)
         submission_count = result.scalar() or 0
@@ -280,8 +295,7 @@ async def get_conflicts(
                     "type": d.type,
                     "conflict_count": len(by_date.get(d.id, [])),
                     "conflicts": [
-                        {"user_id": c.user_id, "reason": c.reason}
-                        for c in by_date.get(d.id, [])
+                        {"user_id": c.user_id, "reason": c.reason} for c in by_date.get(d.id, [])
                     ],
                 }
                 for d in dates

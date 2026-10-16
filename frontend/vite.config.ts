@@ -9,6 +9,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    // Loaded on demand by the document viewer. Listing them avoids a page reload the first time one opens in dev.
+    include: ['mammoth', 'dompurify', 'read-excel-file/browser'],
+  },
   server: {
     proxy: {
       '/api': {

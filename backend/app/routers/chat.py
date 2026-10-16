@@ -2,29 +2,29 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, and_
+from sqlalchemy import select
 
 from app.database import async_session_maker
 from app.models import (
-    ProductionMember,
     Conversation,
     ConversationParticipant,
     Message,
+    ProductionMember,
     User,
-    ChatRateLimit,
 )
 from app.routers.auth import get_current_user
-from app.services.business_logic import can_send_message, FIELD_MAX_LENGTHS
+from app.services.business_logic import FIELD_MAX_LENGTHS, can_send_message
 
 router = APIRouter()
 
 # In-memory chat rate limits (reset when module is reimported or app is recreated)
 import time as _time_mod
 from collections import defaultdict as _defaultdict
+
 _chat_rate_limits: dict = _defaultdict(list)
 
 
@@ -55,8 +55,11 @@ async def check_production_member(production_id: str, user_id: str) -> Productio
 
 
 async def check_chat_permission_with_teams(
-    sender_role: str, recipient_role: str,
-    production_id: str, sender_id: str, recipient_id: str,
+    sender_role: str,
+    recipient_role: str,
+    production_id: str,
+    sender_id: str,
+    recipient_id: str,
 ) -> bool:
     """Check if sender can message recipient (role-based + team-based)."""
     if can_send_message(sender_role, recipient_role):
@@ -64,6 +67,7 @@ async def check_chat_permission_with_teams(
     # Cast-to-cast: allow if they share a team
     if sender_role == "cast" and recipient_role == "cast":
         from app.models import Team, TeamMember
+
         async with async_session_maker() as session:
             stmt = select(Team).where(Team.production_id == production_id)
             result = await session.execute(stmt)
@@ -103,6 +107,7 @@ async def get_contacts(
 
             # Then add teammates
             from app.models import Team, TeamMember
+
             stmt = select(Team).where(Team.production_id == production_id)
             result = await session.execute(stmt)
             teams = result.scalars().all()
@@ -282,8 +287,11 @@ async def send_message(
 
         # Check chat permission (role-based + team-based)
         allowed = await check_chat_permission_with_teams(
-            member.role, recipient_member.role,
-            production_id, current_user["id"], recipient_id,
+            member.role,
+            recipient_member.role,
+            production_id,
+            current_user["id"],
+            recipient_id,
         )
         if not allowed:
             raise HTTPException(
@@ -298,26 +306,29 @@ async def send_message(
         if len(_chat_rate_limits[uid]) >= 30:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={"error": "RATE_LIMITED", "message": "Rate limit exceeded. Try again later."},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Rate limit exceeded. Try again later.",
+                },
             )
         _chat_rate_limits[uid].append(now)
 
         # Find or create conversation (deduplication)
         # Look for existing conversation between these two users in this production
-        from sqlalchemy import and_
-        my_convos = select(ConversationParticipant.conversation_id).where(
-            ConversationParticipant.user_id == current_user["id"]
-        ).subquery()
-        their_convos = select(ConversationParticipant.conversation_id).where(
-            ConversationParticipant.user_id == recipient_id
-        ).subquery()
-        stmt = (
-            select(Conversation)
-            .where(
-                Conversation.production_id == production_id,
-                Conversation.id.in_(select(my_convos)),
-                Conversation.id.in_(select(their_convos)),
-            )
+        my_convos = (
+            select(ConversationParticipant.conversation_id)
+            .where(ConversationParticipant.user_id == current_user["id"])
+            .subquery()
+        )
+        their_convos = (
+            select(ConversationParticipant.conversation_id)
+            .where(ConversationParticipant.user_id == recipient_id)
+            .subquery()
+        )
+        stmt = select(Conversation).where(
+            Conversation.production_id == production_id,
+            Conversation.id.in_(select(my_convos)),
+            Conversation.id.in_(select(their_convos)),
         )
         result = await session.execute(stmt)
         conv = result.scalar_one_or_none()
@@ -328,16 +339,20 @@ async def send_message(
                 production_id=production_id,
             )
             session.add(conv)
-            session.add(ConversationParticipant(
-                id=str(uuid.uuid4()),
-                conversation_id=conv.id,
-                user_id=current_user["id"],
-            ))
-            session.add(ConversationParticipant(
-                id=str(uuid.uuid4()),
-                conversation_id=conv.id,
-                user_id=recipient_id,
-            ))
+            session.add(
+                ConversationParticipant(
+                    id=str(uuid.uuid4()),
+                    conversation_id=conv.id,
+                    user_id=current_user["id"],
+                )
+            )
+            session.add(
+                ConversationParticipant(
+                    id=str(uuid.uuid4()),
+                    conversation_id=conv.id,
+                    user_id=recipient_id,
+                )
+            )
             await session.flush()
 
         # Create message
@@ -565,6 +580,7 @@ async def get_deleted_messages(
 
 # --- Group / Broadcast Messaging ---
 
+
 class BroadcastRequest(BaseModel):
     body: str
     target: str = "all"  # "all", "cast", "staff", or a scene_id
@@ -581,12 +597,19 @@ async def broadcast_message(
     Creates individual conversations with each recipient."""
     member = await check_production_member(production_id, current_user["id"])
     if member.role not in ("director", "staff"):
-        raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Only director/staff can broadcast"})
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "FORBIDDEN", "message": "Only director/staff can broadcast"},
+        )
 
     if not body.body or not body.body.strip():
-        raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Message body required"})
+        raise HTTPException(
+            status_code=400, detail={"error": "INVALID", "message": "Message body required"}
+        )
     if len(body.body) > 2000:
-        raise HTTPException(status_code=400, detail={"error": "INVALID", "message": "Message too long (max 2000)"})
+        raise HTTPException(
+            status_code=400, detail={"error": "INVALID", "message": "Message too long (max 2000)"}
+        )
 
     async with async_session_maker() as session:
         # Determine recipients
@@ -607,30 +630,50 @@ async def broadcast_message(
             )
         else:
             # Try team first, then scene
-            from app.models import Team, TeamMember, SceneRole
-            team = (await session.execute(
-                select(Team).where(Team.id == body.target, Team.production_id == production_id)
-            )).scalar_one_or_none()
+            from app.models import SceneRole, Team, TeamMember
+
+            team = (
+                await session.execute(
+                    select(Team).where(Team.id == body.target, Team.production_id == production_id)
+                )
+            ).scalar_one_or_none()
 
             if team:
-                team_members = (await session.execute(
-                    select(TeamMember).where(TeamMember.team_id == team.id)
-                )).scalars().all()
+                team_members = (
+                    (await session.execute(select(TeamMember).where(TeamMember.team_id == team.id)))
+                    .scalars()
+                    .all()
+                )
                 team_user_ids = [m.user_id for m in team_members]
                 if not team_user_ids:
-                    raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No members in this team"})
+                    raise HTTPException(
+                        status_code=404,
+                        detail={"error": "NOT_FOUND", "message": "No members in this team"},
+                    )
                 stmt = select(ProductionMember).where(
                     ProductionMember.production_id == production_id,
                     ProductionMember.user_id.in_(team_user_ids),
                 )
             else:
                 # Scene-specific broadcast
-                scene_roles = (await session.execute(
-                    select(SceneRole).where(SceneRole.scene_id == body.target)
-                )).scalars().all()
+                scene_roles = (
+                    (
+                        await session.execute(
+                            select(SceneRole).where(SceneRole.scene_id == body.target)
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
                 scene_user_ids = [r.user_id for r in scene_roles]
                 if not scene_user_ids:
-                    raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No members found for this target"})
+                    raise HTTPException(
+                        status_code=404,
+                        detail={
+                            "error": "NOT_FOUND",
+                            "message": "No members found for this target",
+                        },
+                    )
                 stmt = select(ProductionMember).where(
                     ProductionMember.production_id == production_id,
                     ProductionMember.user_id.in_(scene_user_ids),
@@ -644,13 +687,16 @@ async def broadcast_message(
                 continue
 
             # Find or create conversation
-            from sqlalchemy import exists
-            subq = select(ConversationParticipant.conversation_id).where(
-                ConversationParticipant.user_id == current_user["id"]
-            ).correlate(Conversation)
-            subq2 = select(ConversationParticipant.conversation_id).where(
-                ConversationParticipant.user_id == recipient.user_id
-            ).correlate(Conversation)
+            subq = (
+                select(ConversationParticipant.conversation_id)
+                .where(ConversationParticipant.user_id == current_user["id"])
+                .correlate(Conversation)
+            )
+            subq2 = (
+                select(ConversationParticipant.conversation_id)
+                .where(ConversationParticipant.user_id == recipient.user_id)
+                .correlate(Conversation)
+            )
 
             conv_result = await session.execute(
                 select(Conversation).where(
@@ -665,12 +711,16 @@ async def broadcast_message(
                 conv = Conversation(id=str(uuid.uuid4()), production_id=production_id)
                 session.add(conv)
                 await session.flush()
-                session.add(ConversationParticipant(
-                    id=str(uuid.uuid4()), conversation_id=conv.id, user_id=current_user["id"]
-                ))
-                session.add(ConversationParticipant(
-                    id=str(uuid.uuid4()), conversation_id=conv.id, user_id=recipient.user_id
-                ))
+                session.add(
+                    ConversationParticipant(
+                        id=str(uuid.uuid4()), conversation_id=conv.id, user_id=current_user["id"]
+                    )
+                )
+                session.add(
+                    ConversationParticipant(
+                        id=str(uuid.uuid4()), conversation_id=conv.id, user_id=recipient.user_id
+                    )
+                )
 
             msg = Message(
                 id=str(uuid.uuid4()),
@@ -688,9 +738,10 @@ async def broadcast_message(
 
 # --- Report Delay (one-way cast -> director) ---
 
+
 class ReportDelayRequest(BaseModel):
     message: str = Field(max_length=500)
-    rehearsal_date_id: Optional[str] = None
+    rehearsal_date_id: str | None = None
 
 
 @router.post("/{production_id}/report-delay", status_code=201)
@@ -713,7 +764,9 @@ async def report_delay(
         )
         director = director_result.scalar_one_or_none()
         if not director:
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "No director found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "No director found"}
+            )
 
         # Find or create conversation with director
         subq = select(ConversationParticipant.conversation_id).where(
@@ -735,12 +788,16 @@ async def report_delay(
             conv = Conversation(id=str(uuid.uuid4()), production_id=production_id)
             session.add(conv)
             await session.flush()
-            session.add(ConversationParticipant(
-                id=str(uuid.uuid4()), conversation_id=conv.id, user_id=current_user["id"]
-            ))
-            session.add(ConversationParticipant(
-                id=str(uuid.uuid4()), conversation_id=conv.id, user_id=director.user_id
-            ))
+            session.add(
+                ConversationParticipant(
+                    id=str(uuid.uuid4()), conversation_id=conv.id, user_id=current_user["id"]
+                )
+            )
+            session.add(
+                ConversationParticipant(
+                    id=str(uuid.uuid4()), conversation_id=conv.id, user_id=director.user_id
+                )
+            )
 
         # Send formatted delay message
         delay_text = f"[DELAY NOTICE] {body.message}"

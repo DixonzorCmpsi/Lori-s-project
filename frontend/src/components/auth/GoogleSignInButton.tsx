@@ -23,11 +23,6 @@ interface GoogleCredentialResponse {
   credential: string; // JWT ID token
 }
 
-function decodeJwtPayload(token: string): any {
-  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(atob(base64));
-}
-
 interface Props {
   text?: 'signin_with' | 'signup_with';
 }
@@ -40,17 +35,12 @@ export function GoogleSignInButton({ text = 'signin_with' }: Props) {
 
   const handleCredentialResponse = useCallback(async (response: GoogleCredentialResponse) => {
     try {
-      const payload = decodeJwtPayload(response.credential);
-
       // Call backend directly with fetch (not apiClient) to avoid stale token issues
       const res = await fetch('/api/auth/google/callback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          google_id: payload.sub,
-          email: payload.email,
-          name: payload.name,
-        }),
+        // The server verifies this token with Google; it never trusts fields sent separately
+        body: JSON.stringify({ credential: response.credential }),
       });
 
       if (!res.ok) {

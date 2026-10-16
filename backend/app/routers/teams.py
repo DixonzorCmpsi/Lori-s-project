@@ -1,14 +1,14 @@
 """Teams router — create groups, assign cast members."""
 
 import uuid
-from typing import Any, Optional, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.database import async_session_maker
-from app.models import Production, ProductionMember, Team, TeamMember
+from app.models import ProductionMember, Team, TeamMember
 from app.routers.auth import get_current_user
 
 router = APIRouter()
@@ -35,12 +35,12 @@ class CreateTeamRequest(BaseModel):
 
 
 class AssignMembersRequest(BaseModel):
-    user_ids: List[str]
+    user_ids: list[str]
 
 
 class CycleAssignmentRequest(BaseModel):
     user_id: str
-    team_id: Optional[str] = None  # None = remove from all teams
+    team_id: str | None = None  # None = remove from all teams
 
 
 @router.get("/productions/{production_id}/teams")
@@ -57,7 +57,9 @@ async def list_teams(
         )
         result = await session.execute(stmt)
         if not result.scalar_one_or_none():
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"})
+            raise HTTPException(
+                status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"}
+            )
 
         stmt = select(Team).where(Team.production_id == production_id)
         result = await session.execute(stmt)
@@ -68,12 +70,14 @@ async def list_teams(
             stmt = select(TeamMember).where(TeamMember.team_id == team.id)
             result = await session.execute(stmt)
             members = result.scalars().all()
-            team_data.append({
-                "id": team.id,
-                "name": team.name,
-                "member_count": len(members),
-                "member_user_ids": [m.user_id for m in members],
-            })
+            team_data.append(
+                {
+                    "id": team.id,
+                    "name": team.name,
+                    "member_count": len(members),
+                    "member_user_ids": [m.user_id for m in members],
+                }
+            )
         return team_data
 
 
@@ -87,7 +91,10 @@ async def create_team(
     await _require_staff(production_id, current_user["id"])
 
     if not body.name or len(body.name) > 200:
-        raise HTTPException(status_code=400, detail={"error": "VALIDATION_ERROR", "message": "Name required (max 200 chars)"})
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "VALIDATION_ERROR", "message": "Name required (max 200 chars)"},
+        )
 
     async with async_session_maker() as session:
         team = Team(
@@ -114,7 +121,9 @@ async def delete_team(
         result = await session.execute(stmt)
         team = result.scalar_one_or_none()
         if not team:
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Team not found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "Team not found"}
+            )
         await session.delete(team)
         await session.commit()
         return {"message": "Team deleted"}
@@ -135,7 +144,9 @@ async def assign_members(
         result = await session.execute(stmt)
         team = result.scalar_one_or_none()
         if not team:
-            raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Team not found"})
+            raise HTTPException(
+                status_code=404, detail={"error": "NOT_FOUND", "message": "Team not found"}
+            )
 
         # Clear existing members
         stmt = select(TeamMember).where(TeamMember.team_id == team_id)
@@ -181,7 +192,9 @@ async def cycle_member_team(
         # Assign to new team if specified
         if body.team_id:
             if body.team_id not in prod_team_ids:
-                raise HTTPException(status_code=404, detail={"error": "NOT_FOUND", "message": "Team not found"})
+                raise HTTPException(
+                    status_code=404, detail={"error": "NOT_FOUND", "message": "Team not found"}
+                )
             tm = TeamMember(id=str(uuid.uuid4()), team_id=body.team_id, user_id=body.user_id)
             session.add(tm)
 
@@ -202,7 +215,9 @@ async def get_my_team(
         )
         result = await session.execute(stmt)
         if not result.scalar_one_or_none():
-            raise HTTPException(status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"})
+            raise HTTPException(
+                status_code=403, detail={"error": "FORBIDDEN", "message": "Not a member"}
+            )
 
         # Find teams this user is in
         stmt = select(Team).where(Team.production_id == production_id)

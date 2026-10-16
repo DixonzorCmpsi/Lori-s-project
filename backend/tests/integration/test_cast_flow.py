@@ -29,9 +29,7 @@ Tests the COMPLETE Cast member journey through the application:
   25. Delete account
 """
 
-import pytest
 import io
-from datetime import date, timedelta
 
 
 class TestCastFullFlow:
@@ -49,12 +47,15 @@ class TestCastFullFlow:
 
     async def test_step_02_register_with_age_gate(self, client):
         """Cast registers — adult passes age gate."""
-        response = await client.post("/api/auth/register", json={
-            "email": "castmember@example.com",
-            "name": "Alex Cast",
-            "password": "CastP@ssword1!",
-            "date_of_birth": "2005-06-15",  # 20 years old in 2026
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "castmember@example.com",
+                "name": "Alex Cast",
+                "password": "CastP@ssword1!",
+                "date_of_birth": "2005-06-15",  # 20 years old in 2026
+            },
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["age_range"] == "18+"
@@ -62,38 +63,50 @@ class TestCastFullFlow:
 
     async def test_step_03_register_under_13_blocked(self, client):
         """Another user under 13 is blocked at registration."""
-        response = await client.post("/api/auth/register", json={
-            "email": "tooyoung@example.com",
-            "name": "Young Kid",
-            "password": "CastP@ssword1!",
-            "date_of_birth": "2016-01-01",  # Under 13
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "tooyoung@example.com",
+                "name": "Young Kid",
+                "password": "CastP@ssword1!",
+                "date_of_birth": "2016-01-01",  # Under 13
+            },
+        )
         assert response.status_code == 400
 
     async def test_step_04_teen_registers_ok(self, client):
         """Teen (13-17) can register with correct age_range."""
-        response = await client.post("/api/auth/register", json={
-            "email": "teen@example.com",
-            "name": "Teen Cast",
-            "password": "TeenP@ssword1!",
-            "date_of_birth": "2012-06-15",  # 14 years old in 2026
-        })
+        response = await client.post(
+            "/api/auth/register",
+            json={
+                "email": "teen@example.com",
+                "name": "Teen Cast",
+                "password": "TeenP@ssword1!",
+                "date_of_birth": "2012-06-15",  # 14 years old in 2026
+            },
+        )
         assert response.status_code == 201
         assert response.json()["age_range"] == "13-17"
 
     async def test_step_05_verify_email(self, client):
         """Cast verifies their email."""
-        response = await client.post("/api/auth/verify-email", json={
-            "token": "cast-verification-token",
-        })
+        response = await client.post(
+            "/api/auth/verify-email",
+            json={
+                "token": "cast-verification-token",
+            },
+        )
         assert response.status_code == 200
 
     async def test_step_06_login(self, client):
         """Cast logs in."""
-        response = await client.post("/api/auth/login", json={
-            "email": "castmember@example.com",
-            "password": "CastP@ssword1!",
-        })
+        response = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "castmember@example.com",
+                "password": "CastP@ssword1!",
+            },
+        )
         assert response.status_code == 200
         assert "access_token" in response.json()
 
@@ -104,9 +117,13 @@ class TestCastFullFlow:
     async def test_step_07_join_production(self, client, auth_headers):
         """Cast joins production via invite token — auto-assigned Cast role."""
         headers = auth_headers(self.__class__.cast_user_id)
-        response = await client.post("/api/join", json={
-            "token": "valid-invite-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "valid-invite-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["role"] == "cast"
@@ -115,9 +132,13 @@ class TestCastFullFlow:
     async def test_step_08_rejoin_is_idempotent(self, client, auth_headers):
         """Clicking invite link again when already a member is a no-op."""
         headers = auth_headers(self.__class__.cast_user_id)
-        response = await client.post("/api/join", json={
-            "token": "valid-invite-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "valid-invite-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
 
     # ------------------------------------------------------------------ #

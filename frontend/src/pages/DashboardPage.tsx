@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApi } from '@/hooks/useApi';
@@ -28,6 +29,8 @@ const item = {
 export function DashboardPage() {
   usePageTitle('Dashboard');
   const navigate = useNavigate();
+  const { uiStyle } = useTheme();
+  const modern = uiStyle === 'default';
   const { data: theaters, isLoading: theatersLoading } = useApi<Theater[]>(
     () => apiClient('/theaters')
   );
@@ -108,14 +111,18 @@ export function DashboardPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-12"
+      className={modern ? '' : 'max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-12'}
     >
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-16 border-b border-border pb-6 sm:pb-8">
+      <div className={modern
+        ? 'flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6'
+        : 'flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-16 border-b border-border pb-6 sm:pb-8'}>
         <div className="max-w-xl">
-          <h1 className="text-4xl md:text-6xl font-bold font-heading text-foreground mb-4 tracking-tighter leading-[0.9]">
+          <h1 className={modern
+            ? 'text-2xl font-semibold text-foreground mb-1'
+            : 'text-4xl md:text-6xl font-bold font-heading text-foreground mb-4 tracking-tighter leading-[0.9]'}>
             Current <span className="text-accent">Productions</span>
           </h1>
-          <p className="text-muted text-lg font-light max-w-[45ch]">
+          <p className={modern ? 'text-muted text-sm' : 'text-muted text-lg font-light max-w-[45ch]'}>
             Manage your active theater productions, schedules, and cast conflicts from a centralized backstage hub.
           </p>
         </div>
@@ -128,7 +135,7 @@ export function DashboardPage() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
+        className={modern ? 'page-grid' : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6'}
       >
         {sortedProductions.map((prod, idx) => (
           <motion.button
@@ -139,8 +146,8 @@ export function DashboardPage() {
             onClick={() => navigate(`/production/${prod.id}`)}
             className={`
               group relative liquid-glass p-6 text-left transition-all duration-500
-              ${idx % 4 === 0 ? 'md:col-span-2 md:row-span-1' : ''}
-              ${idx % 7 === 0 ? 'lg:col-span-2' : ''}
+              ${!modern && idx % 4 === 0 ? 'md:col-span-2 md:row-span-1' : ''}
+              ${!modern && idx % 7 === 0 ? 'lg:col-span-2' : ''}
             `}
           >
             <div className="flex flex-col h-full justify-between gap-8">

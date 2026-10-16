@@ -11,7 +11,6 @@ Covers:
 - SCHED-13: Director hard-deletes rehearsal date
 """
 
-import pytest
 from datetime import date, timedelta
 
 
@@ -22,12 +21,16 @@ class TestAddRehearsalDate:
         """Director can add a new rehearsal date to existing schedule."""
         headers = auth_headers("director-id")
         today = date.today()
-        response = await client.post("/api/productions/prod-id/schedule", json={
-            "date": (today + timedelta(days=45)).isoformat(),
-            "start_time": "18:00",
-            "end_time": "21:00",
-            "type": "regular",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/schedule",
+            json={
+                "date": (today + timedelta(days=45)).isoformat(),
+                "start_time": "18:00",
+                "end_time": "21:00",
+                "type": "regular",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["type"] == "regular"
@@ -37,25 +40,34 @@ class TestAddRehearsalDate:
         headers = auth_headers("director-id")
         today = date.today()
         for date_type in ["regular", "tech", "dress", "performance"]:
-            response = await client.post("/api/productions/prod-id/schedule", json={
-                "date": (today + timedelta(days=45 + hash(date_type) % 30)).isoformat(),
-                "start_time": "18:00",
-                "end_time": "21:00",
-                "type": date_type,
-            }, headers=headers)
+            response = await client.post(
+                "/api/productions/prod-id/schedule",
+                json={
+                    "date": (today + timedelta(days=45 + hash(date_type) % 30)).isoformat(),
+                    "start_time": "18:00",
+                    "end_time": "21:00",
+                    "type": date_type,
+                },
+                headers=headers,
+            )
             assert response.status_code == 201
 
     async def test_add_rehearsal_invalid_type(self, client, auth_headers):
         """Invalid type is rejected."""
         headers = auth_headers("director-id")
         today = date.today()
-        response = await client.post("/api/productions/prod-id/schedule", json={
-            "date": (today + timedelta(days=45)).isoformat(),
-            "start_time": "18:00",
-            "end_time": "21:00",
-            "type": "invalid_type",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/schedule",
+            json={
+                "date": (today + timedelta(days=45)).isoformat(),
+                "start_time": "18:00",
+                "end_time": "21:00",
+                "type": "invalid_type",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
+
 
 class TestEditRehearsalTime:
     """DIR-06: Director edits a rehearsal time."""
@@ -63,10 +75,14 @@ class TestEditRehearsalTime:
     async def test_change_rehearsal_time(self, client, auth_headers):
         """Director updates start/end time for a specific date."""
         headers = auth_headers("director-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "start_time": "19:00",
-            "end_time": "22:00",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "start_time": "19:00",
+                "end_time": "22:00",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["start_time"] == "19:00"
@@ -75,10 +91,14 @@ class TestEditRehearsalTime:
     async def test_change_time_start_after_end_rejected(self, client, auth_headers):
         """Start time >= end time is rejected."""
         headers = auth_headers("director-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "start_time": "22:00",
-            "end_time": "18:00",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "start_time": "22:00",
+                "end_time": "18:00",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
 
@@ -88,18 +108,26 @@ class TestAddNote:
     async def test_add_note_to_date(self, client, auth_headers):
         """Director can add a note to a rehearsal date."""
         headers = auth_headers("director-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "note": "Focus on Act 2 scenes",
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "note": "Focus on Act 2 scenes",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
         assert response.json()["note"] == "Focus on Act 2 scenes"
 
     async def test_note_max_1000_chars(self, client, auth_headers):
         """Note exceeding 1000 characters is rejected."""
         headers = auth_headers("director-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "note": "A" * 1001,
-        }, headers=headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "note": "A" * 1001,
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
 
@@ -116,6 +144,7 @@ class TestCancelRehearsal:
         assert response.status_code == 200
         data = response.json()
         assert data["is_cancelled"] is True
+
 
 class TestSoftDeleteRehearsal:
     """DIR-22, SCHED-08: Director soft-deletes a rehearsal date."""
@@ -148,6 +177,7 @@ class TestSoftDeleteRehearsal:
         for d in dates:
             assert d.get("is_deleted") is not True
 
+
 class TestHardDeleteRehearsal:
     """SCHED-13: Director hard-deletes a rehearsal date."""
 
@@ -172,12 +202,16 @@ class TestScheduleAuthorization:
     async def test_cast_cannot_add_date(self, client, auth_headers):
         """CAST-08: Cast cannot modify schedule."""
         cast_headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/schedule", json={
-            "date": "2026-06-01",
-            "start_time": "18:00",
-            "end_time": "21:00",
-            "type": "regular",
-        }, headers=cast_headers)
+        response = await client.post(
+            "/api/productions/prod-id/schedule",
+            json={
+                "date": "2026-06-01",
+                "start_time": "18:00",
+                "end_time": "21:00",
+                "type": "regular",
+            },
+            headers=cast_headers,
+        )
         assert response.status_code == 403
 
     async def test_cast_cannot_cancel(self, client, auth_headers):
@@ -192,10 +226,14 @@ class TestScheduleAuthorization:
     async def test_staff_can_edit_schedule(self, client, auth_headers):
         """Staff can edit schedule (same permissions as Director for schedule)."""
         staff_headers = auth_headers("staff-member-id")
-        response = await client.patch("/api/productions/prod-id/schedule/date-id", json={
-            "start_time": "19:00",
-            "end_time": "22:00",
-        }, headers=staff_headers)
+        response = await client.patch(
+            "/api/productions/prod-id/schedule/date-id",
+            json={
+                "start_time": "19:00",
+                "end_time": "22:00",
+            },
+            headers=staff_headers,
+        )
         assert response.status_code == 200
 
 

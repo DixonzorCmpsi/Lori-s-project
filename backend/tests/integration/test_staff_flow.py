@@ -27,8 +27,6 @@ Flow:
   20. Existing posts remain visible after demotion
 """
 
-import pytest
-
 
 class TestStaffFullFlow:
     """Complete Staff journey — promotion through demotion."""
@@ -40,9 +38,13 @@ class TestStaffFullFlow:
     async def test_step_01_join_as_cast(self, client, auth_headers):
         """Staff member starts by joining as Cast via invite link."""
         headers = auth_headers("staff-to-be-id")
-        response = await client.post("/api/join", json={
-            "token": "valid-invite-token",
-        }, headers=headers)
+        response = await client.post(
+            "/api/join",
+            json={
+                "token": "valid-invite-token",
+            },
+            headers=headers,
+        )
         assert response.status_code == 200
         assert response.json()["role"] == "cast"
         self.__class__.production_id = response.json()["production_id"]

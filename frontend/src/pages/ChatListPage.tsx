@@ -13,6 +13,7 @@ import { PageTour } from '@/tours/PageTour';
 import { chatTourSteps } from '@/tours/pageTours';
 import { useAuth } from '@/hooks/useAuth';
 import type { Team, Conversation } from '@/types';
+import { PageGuide } from '@/components/PageGuide';
 
 function ConversationRow({ conv, productionId, navigate }: { conv: Conversation; productionId: string; navigate: (path: string) => void }) {
   return (
@@ -45,7 +46,7 @@ function ConversationRow({ conv, productionId, navigate }: { conv: Conversation;
         )}
         {conv.unread_count > 0 && (
           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-            style={{ background: 'hsl(0,70%,50%)', color: 'white', minWidth: '18px', textAlign: 'center' }}>
+            style={{ background: 'hsl(var(--h-0-70-50))', color: 'white', minWidth: '18px', textAlign: 'center' }}>
             {conv.unread_count}
           </span>
         )}
@@ -200,10 +201,12 @@ export function ChatListPage() {
         <ChalkText size="lg">Messages</ChalkText>
         <button data-tour="chat-new-message" onClick={openContactPicker}
           className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded cursor-pointer"
-          style={{ background: 'rgba(255,220,100,0.1)', color: 'rgba(255,220,100,0.8)', border: '1px solid rgba(255,220,100,0.15)' }}>
+          style={{ background: 'rgb(var(--c-255-220-100) / 0.1)', color: 'rgb(var(--c-255-220-100) / 0.8)', border: '1px solid rgb(var(--c-255-220-100) / 0.15)' }}>
           New Message
         </button>
       </div>
+
+      <PageGuide page="chat" />
 
       {(!conversations || conversations.length === 0) ? (
         <div className="text-center py-12">
@@ -241,7 +244,7 @@ export function ChatListPage() {
                   style={{ background: 'var(--t-subtle-bg)', border: `1px solid var(--t-section-border)` }}
                 >
                   <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold"
-                    style={{ background: 'rgba(212,175,55,0.12)', color: 'var(--color-accent)' }}>
+                    style={{ background: 'rgb(var(--c-212-175-55) / 0.12)', color: 'var(--color-accent)' }}>
                     {isExpanded ? '▾' : '▸'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -263,7 +266,7 @@ export function ChatListPage() {
                     )}
                     {totalUnread > 0 && (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                        style={{ background: 'hsl(0,70%,50%)', color: 'white', minWidth: '18px', textAlign: 'center' }}>
+                        style={{ background: 'hsl(var(--h-0-70-50))', color: 'white', minWidth: '18px', textAlign: 'center' }}>
                         {totalUnread}
                       </span>
                     )}

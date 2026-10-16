@@ -1,7 +1,56 @@
 /** Shared Joyride styles — reads CSS custom properties so it works in light and dark */
 
+/** Default (clean app) style — everything comes from theme tokens */
+function getDefaultTourStyles() {
+  const small = window.innerWidth < 640;
+  return {
+    tooltip: {
+      background: 'var(--t-surface)',
+      borderRadius: '12px',
+      border: '1px solid var(--t-border)',
+      boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+      padding: small ? '14px 16px' : '20px 24px',
+      maxWidth: small ? 'calc(100vw - 2rem)' : '360px',
+      fontFamily: 'var(--font-body)',
+    },
+    tooltipContainer: { textAlign: 'left' as const },
+    tooltipTitle: {
+      fontFamily: 'var(--font-body)',
+      color: 'var(--t-foreground)',
+      fontSize: small ? '14px' : '16px',
+      fontWeight: 600,
+      marginBottom: '4px',
+    },
+    tooltipContent: {
+      color: 'var(--t-muted)',
+      fontSize: small ? '12px' : '13px',
+      lineHeight: '1.6',
+      padding: '4px 0 8px',
+    },
+    tooltipFooter: { marginTop: '0' },
+    buttonPrimary: {
+      background: 'var(--color-accent)',
+      color: 'var(--t-background)',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '13px',
+      fontWeight: 600,
+      padding: '8px 16px',
+      cursor: 'pointer',
+    },
+    buttonBack: { color: 'var(--t-muted)', fontSize: '13px', fontWeight: 500, marginRight: '8px' },
+    buttonClose: { top: '8px', right: '8px', width: '24px', height: '24px', color: 'var(--t-muted)', padding: '0' },
+    buttonSkip: { color: 'var(--t-muted)', fontSize: '13px' },
+    arrow: { color: 'var(--t-surface)' },
+    spotlight: {},
+    overlay: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  };
+}
+
 /** Build styles dynamically so they pick up the current theme */
-export function getTheaterTourStyles() {
+export function getTheaterTourStyles(uiStyle?: 'default' | 'fancy') {
+  const useDefault = uiStyle ? uiStyle === 'default' : document.documentElement.classList.contains('ui-default');
+  if (useDefault) return getDefaultTourStyles();
   const isDark = !document.documentElement.classList.contains('light');
   return {
     tooltip: {

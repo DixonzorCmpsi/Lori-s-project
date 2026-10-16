@@ -20,10 +20,6 @@ Covers:
 - CHAT-20: Staff tries to delete another user's message (403)
 """
 
-import pytest
-from freezegun import freeze_time
-from datetime import datetime, timedelta
-
 
 class TestSendMessage:
     """CHAT-01, CHAT-02, CHAT-03: Sending messages between roles."""
@@ -31,10 +27,14 @@ class TestSendMessage:
     async def test_director_messages_cast(self, client, auth_headers):
         """CHAT-01: Director sends message to cast member."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "Welcome to the production!",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "Welcome to the production!",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["body"] == "Welcome to the production!"
@@ -43,37 +43,53 @@ class TestSendMessage:
     async def test_cast_messages_director(self, client, auth_headers):
         """CHAT-02: Cast sends message to director."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "director-id",
-            "body": "I have a question about rehearsal.",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "director-id",
+                "body": "I have a question about rehearsal.",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_cast_messages_staff(self, client, auth_headers):
         """CHAT-03: Cast sends message to staff member."""
         headers = auth_headers("cast-member-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "staff-member-id",
-            "body": "Need help with costume.",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "staff-member-id",
+                "body": "Need help with costume.",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_director_messages_staff(self, client, auth_headers):
         """Director can message staff."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "staff-member-id",
-            "body": "Please review the schedule.",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "staff-member-id",
+                "body": "Please review the schedule.",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_staff_messages_cast(self, client, auth_headers):
         """Staff can message cast."""
         headers = auth_headers("staff-member-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "Your costume fitting is tomorrow.",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "Your costume fitting is tomorrow.",
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
 
@@ -83,20 +99,28 @@ class TestCastBoundaryEnforcement:
     async def test_cast_cannot_message_cast(self, client, auth_headers):
         """CHAT-04: Cast messaging another cast returns 403."""
         headers = auth_headers("cast-member-1")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-2",
-            "body": "Hey there!",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-2",
+                "body": "Hey there!",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
         assert response.json()["error"] == "FORBIDDEN"
 
     async def test_cast_boundary_enforced_on_api(self, client, auth_headers):
         """Even crafted API calls from cast-to-cast are blocked."""
         headers = auth_headers("cast-member-1")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-2",
-            "body": "Trying to bypass UI",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-2",
+                "body": "Trying to bypass UI",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
 
@@ -147,14 +171,22 @@ class TestConversationDeduplication:
     async def test_second_message_reuses_conversation(self, client, auth_headers):
         """Two messages between same users use same conversation."""
         headers = auth_headers("director-id")
-        resp1 = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "First message",
-        }, headers=headers)
-        resp2 = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "Second message",
-        }, headers=headers)
+        resp1 = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "First message",
+            },
+            headers=headers,
+        )
+        resp2 = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "Second message",
+            },
+            headers=headers,
+        )
         assert resp1.status_code == 201
         assert resp2.status_code == 201
         assert resp1.json()["conversation_id"] == resp2.json()["conversation_id"]
@@ -172,28 +204,40 @@ class TestMessageValidation:
     async def test_message_exceeds_2000_chars(self, client, auth_headers):
         """Message > 2000 characters rejected."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "A" * 2001,
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "A" * 2001,
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
     async def test_message_exactly_2000_chars(self, client, auth_headers):
         """Message at exactly 2000 characters accepted."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "A" * 2000,
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "A" * 2000,
+            },
+            headers=headers,
+        )
         assert response.status_code == 201
 
     async def test_empty_message_rejected(self, client, auth_headers):
         """Empty message body rejected."""
         headers = auth_headers("director-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "",
+            },
+            headers=headers,
+        )
         assert response.status_code == 400
 
 
@@ -203,10 +247,14 @@ class TestChatAccessControl:
     async def test_non_member_cannot_send(self, client, auth_headers):
         """User not in production cannot send messages."""
         headers = auth_headers("outsider-id")
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "I'm not in this production!",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "I'm not in this production!",
+            },
+            headers=headers,
+        )
         assert response.status_code == 403
 
     async def test_non_member_cannot_view_contacts(self, client, auth_headers):
@@ -235,17 +283,25 @@ class TestChatRateLimiting:
         """31st message in one minute is rate limited."""
         headers = auth_headers("director-id")
         for i in range(30):
-            response = await client.post("/api/productions/prod-id/messages", json={
-                "recipient_id": "cast-member-id",
-                "body": f"Message {i}",
-            }, headers=headers)
+            response = await client.post(
+                "/api/productions/prod-id/messages",
+                json={
+                    "recipient_id": "cast-member-id",
+                    "body": f"Message {i}",
+                },
+                headers=headers,
+            )
             assert response.status_code == 201
 
         # 31st should be rate limited
-        response = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "One too many",
-        }, headers=headers)
+        response = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "One too many",
+            },
+            headers=headers,
+        )
         assert response.status_code == 429
 
 
@@ -256,10 +312,14 @@ class TestUnreadCount:
         """Receiving a message increments unread count."""
         # Director sends message to cast
         director_headers = auth_headers("director-id")
-        await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "cast-member-id",
-            "body": "Check this",
-        }, headers=director_headers)
+        await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "cast-member-id",
+                "body": "Check this",
+            },
+            headers=director_headers,
+        )
 
         # Cast checks unread count
         cast_headers = auth_headers("cast-member-id")
@@ -300,10 +360,14 @@ class TestMessageModeration:
         """CHAT-18: User can delete own message within 5 minutes."""
         headers = auth_headers("cast-member-id")
         # Create a message
-        create_resp = await client.post("/api/productions/prod-id/messages", json={
-            "recipient_id": "director-id",
-            "body": "Oops, typo",
-        }, headers=headers)
+        create_resp = await client.post(
+            "/api/productions/prod-id/messages",
+            json={
+                "recipient_id": "director-id",
+                "body": "Oops, typo",
+            },
+            headers=headers,
+        )
         message_id = create_resp.json().get("id", "msg-id")
 
         # Delete within 5 minutes
